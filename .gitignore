@@ -136,3 +136,8 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.toptal.com/developers/gitignore/api/rust,rust-analyzer,linux,macos,windows,visualstudiocode,vim
+
+.env
+.envrc
+
+
