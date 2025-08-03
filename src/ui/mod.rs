@@ -47,18 +47,21 @@ fn render_mode_tabs(frame: &mut Frame, area: Rect, app: &App) {
         ("Query Editor", ViewState::QueryEditor),
     ];
 
-    let tab_width = area.width / 3;
+    let num_tabs = tabs.len() as u16;
+    let base_width = area.width / num_tabs;
+    let remainder = area.width % num_tabs;
     let mut tab_areas = Vec::new();
-    
-    for i in 0..3 {
-        let x = i as u16 * tab_width;
-        let width = if i == 2 { area.width - x } else { tab_width };
+    let mut x = 0;
+    for i in 0..num_tabs {
+        // Distribute remainder: first 'remainder' tabs get an extra pixel
+        let width = base_width + if i < remainder { 1 } else { 0 };
         tab_areas.push(Rect {
             x: area.x + x,
             y: area.y,
             width,
             height: area.height,
         });
+        x += width;
     }
 
     for (i, (tab_name, view_state)) in tabs.iter().enumerate() {
