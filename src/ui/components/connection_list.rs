@@ -1,4 +1,4 @@
-use crate::app::App;
+use crate::app::{App, ConnectionListPane};
 use ratatui::prelude::*;
 use ratatui::widgets::*;
 
@@ -25,17 +25,32 @@ fn render_projects_list(frame: &mut Frame, area: Rect, app: &App) {
         })
         .collect();
 
+    let is_focused = app.connection_list_state.focused_pane == ConnectionListPane::Projects;
+    let border_style = if is_focused {
+        Style::default().fg(Color::Yellow)
+    } else {
+        Style::default().fg(Color::White)
+    };
+
+    let title = "Projects";
+
     let projects_list = List::new(projects)
         .block(
             Block::default()
                 .borders(Borders::ALL)
-                .title("Projects")
+                .title(title)
+                .border_style(border_style)
         )
         .style(Style::default().fg(Color::White))
         .highlight_style(Style::default().add_modifier(Modifier::REVERSED))
         .highlight_symbol(">> ");
 
-    frame.render_widget(projects_list, area);
+    let mut state = ListState::default();
+    if is_focused {
+        state.select(Some(app.connection_list_state.projects_list_index));
+    }
+
+    frame.render_stateful_widget(projects_list, area, &mut state);
 }
 
 fn render_connections_list(frame: &mut Frame, area: Rect, app: &App) {
@@ -54,15 +69,30 @@ fn render_connections_list(frame: &mut Frame, area: Rect, app: &App) {
         })
         .collect();
 
+    let is_focused = app.connection_list_state.focused_pane == ConnectionListPane::Connections;
+    let border_style = if is_focused {
+        Style::default().fg(Color::Yellow)
+    } else {
+        Style::default().fg(Color::White)
+    };
+
+    let title = "Connections";
+
     let connections_list = List::new(connections)
         .block(
             Block::default()
                 .borders(Borders::ALL)
-                .title("Connections")
+                .title(title)
+                .border_style(border_style)
         )
         .style(Style::default().fg(Color::White))
         .highlight_style(Style::default().add_modifier(Modifier::REVERSED))
         .highlight_symbol(">> ");
 
-    frame.render_widget(connections_list, area);
+    let mut state = ListState::default();
+    if is_focused {
+        state.select(Some(app.connection_list_state.connections_list_index));
+    }
+
+    frame.render_stateful_widget(connections_list, area, &mut state);
 }

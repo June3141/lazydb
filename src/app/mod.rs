@@ -1,3 +1,10 @@
 pub mod state;
 
-pub use state::{App, ViewState};
+pub use state::{
+    App, 
+    ViewState, 
+    ConnectionListPane, 
+    DatabaseExplorerPane, 
+    QueryEditorPane, 
+    Direction
+};

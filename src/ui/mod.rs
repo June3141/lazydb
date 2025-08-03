@@ -103,7 +103,7 @@ fn render_main_content(frame: &mut Frame, area: Rect, app: &App) {
 }
 
 fn render_footer(frame: &mut Frame, area: Rect, _app: &App) {
-    let footer_text = "q: Quit | Tab: Switch View | Enter: Select";
+    let footer_text = "q: Quit | Tab: Switch View | hjkl/←↓↑→: Navigate | Ctrl+hjkl/Ctrl+←↓↑→: Switch Pane | Esc: Home";
     let footer = ratatui::widgets::Paragraph::new(footer_text)
         .style(Style::default().fg(Color::Gray))
         .alignment(Alignment::Center)
