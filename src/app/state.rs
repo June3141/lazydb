@@ -164,8 +164,8 @@ impl App {
                             }
                         }
                         Direction::Down => {
-                            // Use actual structure list length
-                            if self.database_explorer_state.structure_list_index < self.database_explorer_state.structure_list.len().saturating_sub(1) {
+                            // TODO: Use actual structure list length
+                            if self.database_explorer_state.structure_list_index < 5 {
                                 self.database_explorer_state.structure_list_index += 1;
                             }
                         }

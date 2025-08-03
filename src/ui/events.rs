@@ -9,16 +9,16 @@ pub fn handle_events(app: &mut App) -> anyhow::Result<()> {
                 if key_event.modifiers.contains(KeyModifiers::CONTROL) {
                     match key_event.code {
                         KeyCode::Char('h') | KeyCode::Left => {
-                            app.move_focus_pane(Direction::Left);
+                            app.move_focus_next_pane();
                         }
                         KeyCode::Char('j') | KeyCode::Down => {
-                            app.move_focus_pane(Direction::Down);
+                            app.move_focus_next_pane();
                         }
                         KeyCode::Char('k') | KeyCode::Up => {
-                            app.move_focus_pane(Direction::Up);
+                            app.move_focus_next_pane();
                         }
                         KeyCode::Char('l') | KeyCode::Right => {
-                            app.move_focus_pane(Direction::Right);
+                            app.move_focus_next_pane();
                         }
                         _ => {}
                     }
