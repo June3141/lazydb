@@ -16,7 +16,7 @@ pub struct QueryResult {
 }
 
 pub struct ConnectionManager {
-    // 今のところは接続を一時的に文字列として保存
+    // Store connections as strings for now
     connections: std::collections::HashMap<String, String>,
 }
 
@@ -30,19 +30,19 @@ impl ConnectionManager {
     pub async fn add_connection(&mut self, connection: &Connection) -> anyhow::Result<()> {
         match connection.database_type {
             DatabaseType::PostgreSQL => {
-                // TODO: PostgreSQL接続の実装
+                // TODO: Implement PostgreSQL connection
                 anyhow::bail!("PostgreSQL support not implemented yet");
             }
             DatabaseType::MySQL => {
-                // TODO: MySQL接続の実装
+                // TODO: Implement MySQL connection
                 anyhow::bail!("MySQL support not implemented yet");
             }
             DatabaseType::SQLite => {
-                // TODO: SQLite接続の実装
+                // TODO: Implement SQLite connection
                 anyhow::bail!("SQLite support not implemented yet");
             }
             DatabaseType::MongoDB => {
-                // TODO: MongoDB接続の実装
+                // TODO: Implement MongoDB connection
                 anyhow::bail!("MongoDB support not implemented yet");
             }
         }
