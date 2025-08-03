@@ -1,0 +1,78 @@
+# LazyDB Configuration Example
+# This file demonstrates the YAML configuration structure for database connections
+
+connections:
+  - id: "postgres_prod"
+    name: "Production PostgreSQL"
+    database_type: "PostgreSQL"
+    host: "prod-db.example.com"
+    port: 5432
+    username: "app_user"
+    database_name: "production_db"
+    # パスワードは暗号化されて保存されます (secure_password フィールド)
+    tags:
+      - "production"
+      - "primary"
+
+  - id: "mysql_dev"
+    name: "Development MySQL"
+    database_type: "MySQL"
+    host: "localhost"
+    port: 3306
+    username: "dev_user"
+    database_name: "dev_db"
+    tags:
+      - "development"
+      - "local"
+
+  - id: "sqlite_local"
+    name: "Local SQLite"
+    database_type: "SQLite"
+    host: "localhost"
+    port: 0  # SQLiteでは不要
+    username: ""  # SQLiteでは不要
+    database_name: "./data/local.db"
+    tags:
+      - "local"
+      - "file-based"
+
+  - id: "mongo_cluster"
+    name: "MongoDB Cluster"
+    database_type: "MongoDB"
+    host: "cluster.mongodb.example.com"
+    port: 27017
+    username: "mongo_user"
+    database_name: "app_database"
+    tags:
+      - "nosql"
+      - "cluster"
+
+projects:
+  - id: "web_app"
+    name: "Web Application"
+    connection_ids:
+      - "postgres_prod"
+      - "mysql_dev"
+
+  - id: "analytics"
+    name: "Analytics Project"
+    connection_ids:
+      - "mongo_cluster"
+      - "sqlite_local"
+
+# Connection groups help organize connections (prevents file bloat)
+connection_groups:
+  - name: "Production"
+    description: "Production environment databases"
+    connections:
+      - "postgres_prod"
+      - "mongo_cluster"
+
+  - name: "Development"
+    description: "Development and testing databases"
+    connections:
+      - "mysql_dev"
+      - "sqlite_local"
+
+# Default group to show when app starts
+default_connection_group: "Development"
