@@ -141,3 +141,8 @@ $RECYCLE.BIN/
 .envrc
 
 
+
+
+# Added by cargo
+
+/target
