@@ -6,7 +6,7 @@ use std::num::NonZeroU32;
 
 const CREDENTIAL_LEN: usize = digest::SHA256_OUTPUT_LEN;
 const SALT_LEN: usize = 16;
-const PBKDF2_ITERATIONS: NonZeroU32 = unsafe { NonZeroU32::new_unchecked(100_000) };
+const PBKDF2_ITERATIONS: NonZeroU32 = NonZeroU32::new(100_000).unwrap();
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SecurePassword {
