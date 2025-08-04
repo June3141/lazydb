@@ -93,18 +93,6 @@ pub struct ConnectionFormFields {
     pub database_name: String,
 }
 
-#[derive(Debug, Clone)]
-pub struct InputDialogState {
-    pub input_type: InputDialogType,
-    pub input_text: String,
-    pub cursor_position: usize,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum InputDialogType {
-    NewProject,
-}
-
 impl App {
     pub fn new() -> anyhow::Result<Self> {
         let config = Config::load()?;
