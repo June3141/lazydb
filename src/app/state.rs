@@ -8,6 +8,19 @@ pub struct App {
     pub connection_list_state: ConnectionListState,
     pub database_explorer_state: DatabaseExplorerState,
     pub query_editor_state: QueryEditorState,
+    pub input_dialog_state: Option<InputDialogState>,
+}
+
+#[derive(Debug, Clone)]
+pub struct InputDialogState {
+    pub input_type: InputDialogType,
+    pub input_text: String,
+    pub cursor_position: usize,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum InputDialogType {
+    NewProject,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -73,6 +86,7 @@ impl App {
             query_editor_state: QueryEditorState {
                 focused_pane: QueryEditorPane::Editor,
             },
+            input_dialog_state: None,
         })
     }
 
@@ -177,6 +191,70 @@ impl App {
                 // Query editor movement will be handled separately
             }
         }
+    }
+
+    pub fn show_new_project_dialog(&mut self) {
+        self.input_dialog_state = Some(InputDialogState {
+            input_type: InputDialogType::NewProject,
+            input_text: String::new(),
+            cursor_position: 0,
+        });
+    }
+
+    pub fn close_input_dialog(&mut self) {
+        self.input_dialog_state = None;
+    }
+
+    pub fn handle_input_dialog_input(&mut self, ch: char) {
+        if let Some(ref mut dialog_state) = self.input_dialog_state {
+            dialog_state.input_text.insert(dialog_state.cursor_position, ch);
+            dialog_state.cursor_position += 1;
+        }
+    }
+
+    pub fn handle_input_dialog_backspace(&mut self) {
+        if let Some(ref mut dialog_state) = self.input_dialog_state {
+            if dialog_state.cursor_position > 0 {
+                dialog_state.cursor_position -= 1;
+                dialog_state.input_text.remove(dialog_state.cursor_position);
+            }
+        }
+    }
+
+    pub fn handle_input_dialog_left(&mut self) {
+        if let Some(ref mut dialog_state) = self.input_dialog_state {
+            if dialog_state.cursor_position > 0 {
+                dialog_state.cursor_position -= 1;
+            }
+        }
+    }
+
+    pub fn handle_input_dialog_right(&mut self) {
+        if let Some(ref mut dialog_state) = self.input_dialog_state {
+            if dialog_state.cursor_position < dialog_state.input_text.len() {
+                dialog_state.cursor_position += 1;
+            }
+        }
+    }
+
+    pub fn submit_input_dialog(&mut self) -> anyhow::Result<()> {
+        if let Some(dialog_state) = &self.input_dialog_state {
+            match dialog_state.input_type {
+                InputDialogType::NewProject => {
+                    if !dialog_state.input_text.trim().is_empty() {
+                        let project = crate::config::Project {
+                            id: uuid::Uuid::new_v4().to_string(),
+                            name: dialog_state.input_text.trim().to_string(),
+                            connection_ids: Vec::new(),
+                        };
+                        self.config.add_project(project);
+                        self.config.save()?;
+                    }
+                }
+            }
+        }
+        self.close_input_dialog();
+        Ok(())
     }
 }
 

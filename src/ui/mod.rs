@@ -18,6 +18,11 @@ pub fn render(frame: &mut Frame, app: &App) {
     render_header(frame, chunks[0], app);
     render_main_content(frame, chunks[1], app);
     render_footer(frame, chunks[2], app);
+    
+    // Render input dialog on top if present
+    if app.input_dialog_state.is_some() {
+        components::input_dialog::render(frame, app);
+    }
 }
 
 fn render_header(frame: &mut Frame, area: Rect, app: &App) {
@@ -103,7 +108,7 @@ fn render_main_content(frame: &mut Frame, area: Rect, app: &App) {
 }
 
 fn render_footer(frame: &mut Frame, area: Rect, _app: &App) {
-    let footer_text = "q: Quit | Tab: Switch View | hjkl/←↓↑→: Navigate | Ctrl+hjkl/Ctrl+←↓↑→: Switch Pane | Esc: Home";
+    let footer_text = "q: Quit | Tab: Switch View | hjkl/←↓↑→: Navigate | Ctrl+hjkl/Ctrl+←↓↑→: Switch Pane | Shift+A: Add Project | Esc: Home";
     let footer = ratatui::widgets::Paragraph::new(footer_text)
         .style(Style::default().fg(Color::Gray))
         .alignment(Alignment::Center)
