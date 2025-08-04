@@ -1,4 +1,4 @@
-use crate::config::Config;
+use crate::config::{Config, DatabaseType};
 
 #[derive(Debug)]
 pub struct App {
@@ -6,6 +6,7 @@ pub struct App {
     pub should_quit: bool,
     pub current_view: ViewState,
     pub connection_list_state: ConnectionListState,
+    pub new_connection_state: NewConnectionState,
     pub database_explorer_state: DatabaseExplorerState,
     pub query_editor_state: QueryEditorState,
     pub input_dialog_state: Option<InputDialogState>,
@@ -26,6 +27,7 @@ pub enum InputDialogType {
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum ViewState {
     ConnectionList,
+    NewConnection,
     DatabaseExplorer,
     QueryEditor,
 }
@@ -66,6 +68,43 @@ pub enum QueryEditorPane {
     Results,
 }
 
+#[derive(Debug, Clone)]
+pub struct NewConnectionState {
+    pub step: NewConnectionStep,
+    pub selected_database_type: Option<DatabaseType>,
+    pub database_type_index: usize,
+    pub form_fields: ConnectionFormFields,
+    pub current_field: usize,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum NewConnectionStep {
+    SelectDatabaseType,
+    FillConnectionDetails,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConnectionFormFields {
+    pub name: String,
+    pub host: String,
+    pub port: String,
+    pub username: String,
+    pub password: String,
+    pub database_name: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct InputDialogState {
+    pub input_type: InputDialogType,
+    pub input_text: String,
+    pub cursor_position: usize,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum InputDialogType {
+    NewProject,
+}
+
 impl App {
     pub fn new() -> anyhow::Result<Self> {
         let config = Config::load()?;
@@ -78,6 +117,13 @@ impl App {
                 focused_pane: ConnectionListPane::Projects,
                 projects_list_index: 0,
                 connections_list_index: 0,
+            },
+            new_connection_state: NewConnectionState {
+                step: NewConnectionStep::SelectDatabaseType,
+                selected_database_type: None,
+                database_type_index: 0,
+                form_fields: ConnectionFormFields::default(),
+                current_field: 0,
             },
             database_explorer_state: DatabaseExplorerState {
                 focused_pane: DatabaseExplorerPane::Structure,
@@ -101,6 +147,13 @@ impl App {
             ViewState::ConnectionList => {
                 self.connection_list_state.focused_pane = ConnectionListPane::Projects;
             }
+            ViewState::NewConnection => {
+                self.new_connection_state.step = NewConnectionStep::SelectDatabaseType;
+                self.new_connection_state.selected_database_type = None;
+                self.new_connection_state.database_type_index = 0;
+                self.new_connection_state.form_fields = ConnectionFormFields::default();
+                self.new_connection_state.current_field = 0;
+            }
             ViewState::DatabaseExplorer => {
                 self.database_explorer_state.focused_pane = DatabaseExplorerPane::Structure;
             }
@@ -117,6 +170,9 @@ impl App {
                     ConnectionListPane::Projects => ConnectionListPane::Connections,
                     ConnectionListPane::Connections => ConnectionListPane::Projects,
                 };
+            }
+            ViewState::NewConnection => {
+                // No panes to switch in new connection view
             }
             ViewState::DatabaseExplorer => {
                 self.database_explorer_state.focused_pane = match self.database_explorer_state.focused_pane {
@@ -168,6 +224,9 @@ impl App {
                         }
                     }
                 }
+            }
+            ViewState::NewConnection => {
+                // Movement within new connection view is handled in events.rs
             }
             ViewState::DatabaseExplorer => {
                 if self.database_explorer_state.focused_pane == DatabaseExplorerPane::Structure {
@@ -264,4 +323,17 @@ pub enum Direction {
     Down,
     Left,
     Right,
+}
+
+impl Default for ConnectionFormFields {
+    fn default() -> Self {
+        Self {
+            name: String::new(),
+            host: String::new(),
+            port: String::new(),
+            username: String::new(),
+            password: String::new(),
+            database_name: String::new(),
+        }
+    }
 }

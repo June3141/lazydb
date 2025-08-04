@@ -48,6 +48,7 @@ fn render_header(frame: &mut Frame, area: Rect, app: &App) {
 fn render_mode_tabs(frame: &mut Frame, area: Rect, app: &App) {
     let tabs = vec![
         ("Connections", ViewState::ConnectionList),
+        ("New Connection", ViewState::NewConnection),
         ("Database Explorer", ViewState::DatabaseExplorer),
         ("Query Editor", ViewState::QueryEditor),
     ];
@@ -97,6 +98,9 @@ fn render_main_content(frame: &mut Frame, area: Rect, app: &App) {
     match app.current_view {
         ViewState::ConnectionList => {
             components::connection_list::render(frame, area, app);
+        }
+        ViewState::NewConnection => {
+            components::new_connection::render(frame, area, app);
         }
         ViewState::DatabaseExplorer => {
             components::database_explorer::render(frame, area, app);

@@ -7,5 +7,7 @@ pub use state::{
     DatabaseExplorerPane, 
     QueryEditorPane, 
     Direction,
-    InputDialogType
+    InputDialogType,
+    NewConnectionStep,
+    ConnectionFormFields,
 };
