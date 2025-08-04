@@ -21,7 +21,7 @@ fn render_projects_list(frame: &mut Frame, area: Rect, app: &App) {
         .projects
         .iter()
         .map(|project| {
-            ListItem::new(project.name.clone())
+            ListItem::new(format!("📁 {}", project.name))
         })
         .collect();
 

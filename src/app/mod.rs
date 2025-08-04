@@ -6,5 +6,6 @@ pub use state::{
     ConnectionListPane, 
     DatabaseExplorerPane, 
     QueryEditorPane, 
-    Direction
+    Direction,
+    InputDialogType
 };
