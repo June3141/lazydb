@@ -83,10 +83,10 @@ impl Config {
     }
 
     fn config_path() -> anyhow::Result<PathBuf> {
-        let config_dir =
-            dirs::config_dir().ok_or_else(|| anyhow::anyhow!("Could not find config directory"))?;
+        let home_dir =
+            dirs::home_dir().ok_or_else(|| anyhow::anyhow!("Could not find home directory"))?;
 
-        Ok(config_dir.join("lazydb").join("config.yaml"))
+        Ok(home_dir.join(".config").join("lazydb").join("config.yaml"))
     }
 
     pub fn add_connection(&mut self, connection: Connection) {
