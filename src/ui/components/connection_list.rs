@@ -20,9 +20,7 @@ fn render_projects_list(frame: &mut Frame, area: Rect, app: &App) {
         .config
         .projects
         .iter()
-        .map(|project| {
-            ListItem::new(format!("📁 {}", project.name))
-        })
+        .map(|project| ListItem::new(format!("📁 {}", project.name)))
         .collect();
 
     let is_focused = app.connection_list_state.focused_pane == ConnectionListPane::Projects;
@@ -39,7 +37,7 @@ fn render_projects_list(frame: &mut Frame, area: Rect, app: &App) {
             Block::default()
                 .borders(Borders::ALL)
                 .title(title)
-                .border_style(border_style)
+                .border_style(border_style),
         )
         .style(Style::default().fg(Color::White))
         .highlight_style(Style::default().add_modifier(Modifier::REVERSED))
@@ -60,10 +58,9 @@ fn render_connections_list(frame: &mut Frame, area: Rect, app: &App) {
         .iter()
         .map(|connection| {
             let database_type = format!("{:?}", connection.database_type);
-            let connection_info = format!("{} ({}:{})", 
-                connection.name, 
-                database_type,
-                connection.host
+            let connection_info = format!(
+                "{} ({}:{})",
+                connection.name, database_type, connection.host
             );
             ListItem::new(connection_info)
         })
@@ -83,7 +80,7 @@ fn render_connections_list(frame: &mut Frame, area: Rect, app: &App) {
             Block::default()
                 .borders(Borders::ALL)
                 .title(title)
-                .border_style(border_style)
+                .border_style(border_style),
         )
         .style(Style::default().fg(Color::White))
         .highlight_style(Style::default().add_modifier(Modifier::REVERSED))

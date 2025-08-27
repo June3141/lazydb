@@ -57,7 +57,7 @@ pub enum DatabaseType {
 impl Config {
     pub fn load() -> anyhow::Result<Self> {
         let config_path = Self::config_path()?;
-        
+
         if config_path.exists() {
             let content = std::fs::read_to_string(&config_path)?;
             let config: Config = serde_yaml::from_str(&content)?;
@@ -69,24 +69,23 @@ impl Config {
         }
     }
 
-
     pub fn save(&self) -> anyhow::Result<()> {
         let config_path = Self::config_path()?;
-        
+
         if let Some(parent) = config_path.parent() {
             std::fs::create_dir_all(parent)?;
         }
-        
+
         let content = serde_yaml::to_string(self)?;
         std::fs::write(&config_path, content)?;
-        
+
         Ok(())
     }
 
     fn config_path() -> anyhow::Result<PathBuf> {
-        let config_dir = dirs::config_dir()
-            .ok_or_else(|| anyhow::anyhow!("Could not find config directory"))?;
-        
+        let config_dir =
+            dirs::config_dir().ok_or_else(|| anyhow::anyhow!("Could not find config directory"))?;
+
         Ok(config_dir.join("lazydb").join("config.yaml"))
     }
 
@@ -106,11 +105,11 @@ impl Config {
         for connection in &self.connections {
             connection.validate()?;
         }
-        
+
         for group in &self.connection_groups {
             group.validate(&self.connections)?;
         }
-        
+
         Ok(())
     }
 }
@@ -165,23 +164,23 @@ impl Connection {
         if self.id.is_empty() {
             return Err(anyhow::anyhow!("Connection ID cannot be empty"));
         }
-        
+
         if self.name.is_empty() {
             return Err(anyhow::anyhow!("Connection name cannot be empty"));
         }
-        
+
         if self.host.is_empty() {
             return Err(anyhow::anyhow!("Host cannot be empty"));
         }
-        
+
         if self.port == 0 {
             return Err(anyhow::anyhow!("Port must be greater than 0"));
         }
-        
+
         if self.username.is_empty() {
             return Err(anyhow::anyhow!("Username cannot be empty"));
         }
-        
+
         Ok(())
     }
 }

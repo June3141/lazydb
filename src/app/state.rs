@@ -10,6 +10,7 @@ pub struct App {
     pub database_explorer_state: DatabaseExplorerState,
     pub query_editor_state: QueryEditorState,
     pub input_dialog_state: Option<InputDialogState>,
+    pub connection_dialog_state: Option<ConnectionDialogState>,
 }
 
 #[derive(Debug, Clone)]
@@ -24,10 +25,14 @@ pub enum InputDialogType {
     NewProject,
 }
 
+#[derive(Debug, Clone)]
+pub struct ConnectionDialogState {
+    pub is_open: bool,
+}
+
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum ViewState {
     ConnectionList,
-    NewConnection,
     DatabaseExplorer,
     QueryEditor,
 }
@@ -75,10 +80,13 @@ pub struct NewConnectionState {
     pub database_type_index: usize,
     pub form_fields: ConnectionFormFields,
     pub current_field: usize,
+    pub selected_project_id: Option<String>,
+    pub project_index: usize,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum NewConnectionStep {
+    SelectProject,
     SelectDatabaseType,
     FillConnectionDetails,
 }
@@ -96,7 +104,7 @@ pub struct ConnectionFormFields {
 impl App {
     pub fn new() -> anyhow::Result<Self> {
         let config = Config::load()?;
-        
+
         Ok(Self {
             config,
             should_quit: false,
@@ -107,11 +115,13 @@ impl App {
                 connections_list_index: 0,
             },
             new_connection_state: NewConnectionState {
-                step: NewConnectionStep::SelectDatabaseType,
+                step: NewConnectionStep::SelectProject,
                 selected_database_type: None,
                 database_type_index: 0,
                 form_fields: ConnectionFormFields::default(),
                 current_field: 0,
+                selected_project_id: None,
+                project_index: 0,
             },
             database_explorer_state: DatabaseExplorerState {
                 focused_pane: DatabaseExplorerPane::Structure,
@@ -121,6 +131,7 @@ impl App {
                 focused_pane: QueryEditorPane::Editor,
             },
             input_dialog_state: None,
+            connection_dialog_state: None,
         })
     }
 
@@ -135,13 +146,6 @@ impl App {
             ViewState::ConnectionList => {
                 self.connection_list_state.focused_pane = ConnectionListPane::Projects;
             }
-            ViewState::NewConnection => {
-                self.new_connection_state.step = NewConnectionStep::SelectDatabaseType;
-                self.new_connection_state.selected_database_type = None;
-                self.new_connection_state.database_type_index = 0;
-                self.new_connection_state.form_fields = ConnectionFormFields::default();
-                self.new_connection_state.current_field = 0;
-            }
             ViewState::DatabaseExplorer => {
                 self.database_explorer_state.focused_pane = DatabaseExplorerPane::Structure;
             }
@@ -154,19 +158,18 @@ impl App {
     pub fn move_focus_next_pane(&mut self) {
         match self.current_view {
             ViewState::ConnectionList => {
-                self.connection_list_state.focused_pane = match self.connection_list_state.focused_pane {
-                    ConnectionListPane::Projects => ConnectionListPane::Connections,
-                    ConnectionListPane::Connections => ConnectionListPane::Projects,
-                };
-            }
-            ViewState::NewConnection => {
-                // No panes to switch in new connection view
+                self.connection_list_state.focused_pane =
+                    match self.connection_list_state.focused_pane {
+                        ConnectionListPane::Projects => ConnectionListPane::Connections,
+                        ConnectionListPane::Connections => ConnectionListPane::Projects,
+                    };
             }
             ViewState::DatabaseExplorer => {
-                self.database_explorer_state.focused_pane = match self.database_explorer_state.focused_pane {
-                    DatabaseExplorerPane::Structure => DatabaseExplorerPane::Content,
-                    DatabaseExplorerPane::Content => DatabaseExplorerPane::Structure,
-                };
+                self.database_explorer_state.focused_pane =
+                    match self.database_explorer_state.focused_pane {
+                        DatabaseExplorerPane::Structure => DatabaseExplorerPane::Content,
+                        DatabaseExplorerPane::Content => DatabaseExplorerPane::Structure,
+                    };
             }
             ViewState::QueryEditor => {
                 self.query_editor_state.focused_pane = match self.query_editor_state.focused_pane {
@@ -179,43 +182,38 @@ impl App {
 
     pub fn move_within_pane(&mut self, direction: Direction) {
         match self.current_view {
-            ViewState::ConnectionList => {
-                match self.connection_list_state.focused_pane {
-                    ConnectionListPane::Projects => {
-                        match direction {
-                            Direction::Up => {
-                                if self.connection_list_state.projects_list_index > 0 {
-                                    self.connection_list_state.projects_list_index -= 1;
-                                }
-                            }
-                            Direction::Down => {
-                                if self.connection_list_state.projects_list_index < self.config.projects.len().saturating_sub(1) {
-                                    self.connection_list_state.projects_list_index += 1;
-                                }
-                            }
-                            _ => {}
+            ViewState::ConnectionList => match self.connection_list_state.focused_pane {
+                ConnectionListPane::Projects => match direction {
+                    Direction::Up => {
+                        if self.connection_list_state.projects_list_index > 0 {
+                            self.connection_list_state.projects_list_index -= 1;
                         }
                     }
-                    ConnectionListPane::Connections => {
-                        match direction {
-                            Direction::Up => {
-                                if self.connection_list_state.connections_list_index > 0 {
-                                    self.connection_list_state.connections_list_index -= 1;
-                                }
-                            }
-                            Direction::Down => {
-                                if self.connection_list_state.connections_list_index < self.config.connections.len().saturating_sub(1) {
-                                    self.connection_list_state.connections_list_index += 1;
-                                }
-                            }
-                            _ => {}
+                    Direction::Down => {
+                        if self.connection_list_state.projects_list_index
+                            < self.config.projects.len().saturating_sub(1)
+                        {
+                            self.connection_list_state.projects_list_index += 1;
                         }
                     }
-                }
-            }
-            ViewState::NewConnection => {
-                // Movement within new connection view is handled in events.rs
-            }
+                    _ => {}
+                },
+                ConnectionListPane::Connections => match direction {
+                    Direction::Up => {
+                        if self.connection_list_state.connections_list_index > 0 {
+                            self.connection_list_state.connections_list_index -= 1;
+                        }
+                    }
+                    Direction::Down => {
+                        if self.connection_list_state.connections_list_index
+                            < self.config.connections.len().saturating_sub(1)
+                        {
+                            self.connection_list_state.connections_list_index += 1;
+                        }
+                    }
+                    _ => {}
+                },
+            },
             ViewState::DatabaseExplorer => {
                 if self.database_explorer_state.focused_pane == DatabaseExplorerPane::Structure {
                     match direction {
@@ -254,7 +252,9 @@ impl App {
 
     pub fn handle_input_dialog_input(&mut self, ch: char) {
         if let Some(ref mut dialog_state) = self.input_dialog_state {
-            dialog_state.input_text.insert(dialog_state.cursor_position, ch);
+            dialog_state
+                .input_text
+                .insert(dialog_state.cursor_position, ch);
             dialog_state.cursor_position += 1;
         }
     }
@@ -302,6 +302,22 @@ impl App {
         }
         self.close_input_dialog();
         Ok(())
+    }
+
+    pub fn show_new_connection_dialog(&mut self) {
+        self.connection_dialog_state = Some(ConnectionDialogState { is_open: true });
+        // Reset connection state
+        self.new_connection_state.step = NewConnectionStep::SelectProject;
+        self.new_connection_state.selected_database_type = None;
+        self.new_connection_state.database_type_index = 0;
+        self.new_connection_state.form_fields = ConnectionFormFields::default();
+        self.new_connection_state.current_field = 0;
+        self.new_connection_state.selected_project_id = None;
+        self.new_connection_state.project_index = 0;
+    }
+
+    pub fn close_connection_dialog(&mut self) {
+        self.connection_dialog_state = None;
     }
 }
 

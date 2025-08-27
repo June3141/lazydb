@@ -36,7 +36,7 @@ mod tests {
         println!("YAML output:\n{}", yaml_content);
 
         let deserialized: Config = serde_yaml::from_str(&yaml_content).unwrap();
-        
+
         assert_eq!(deserialized.connections.len(), 1);
         assert_eq!(deserialized.connections[0].id, "test_id");
         assert_eq!(deserialized.connections[0].name, "Test Connection");
@@ -45,7 +45,10 @@ mod tests {
 
         assert_eq!(deserialized.connection_groups.len(), 1);
         assert_eq!(deserialized.connection_groups[0].name, "Test Group");
-        assert_eq!(deserialized.default_connection_group, Some("Test Group".to_string()));
+        assert_eq!(
+            deserialized.default_connection_group,
+            Some("Test Group".to_string())
+        );
     }
 
     #[test]
@@ -153,6 +156,10 @@ mod tests {
 
         assert_eq!(loaded_config.connections.len(), 1);
         assert_eq!(loaded_config.connections[0].id, "file_test");
-        assert!(loaded_config.connections[0].verify_password("file_test_password").unwrap());
+        assert!(
+            loaded_config.connections[0]
+                .verify_password("file_test_password")
+                .unwrap()
+        );
     }
 }

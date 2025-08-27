@@ -9,20 +9,19 @@ pub fn render(frame: &mut Frame, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(4),  // Header (increased for tabs)
-            Constraint::Min(0),     // Main content
-            Constraint::Length(3),  // Footer
+            Constraint::Length(4), // Header (increased for tabs)
+            Constraint::Min(0),    // Main content
+            Constraint::Length(3), // Footer
         ])
         .split(frame.area());
 
     render_header(frame, chunks[0], app);
     render_main_content(frame, chunks[1], app);
     render_footer(frame, chunks[2], app);
-    
-    // Render input dialog on top if present
-    if app.input_dialog_state.is_some() {
-        components::input_dialog::render(frame, app);
-    }
+
+    // Render dialogs on top
+    components::input_dialog::render(frame, app);
+    components::connection_dialog::render(frame, app);
 }
 
 fn render_header(frame: &mut Frame, area: Rect, app: &App) {
@@ -30,14 +29,18 @@ fn render_header(frame: &mut Frame, area: Rect, app: &App) {
     let header_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(1),  // Title
-            Constraint::Length(3),  // Tabs
+            Constraint::Length(1), // Title
+            Constraint::Length(3), // Tabs
         ])
         .split(area);
 
     // Render title
     let title = ratatui::widgets::Paragraph::new("LazyDB")
-        .style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+        .style(
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        )
         .alignment(Alignment::Center);
     frame.render_widget(title, header_chunks[0]);
 
@@ -48,7 +51,6 @@ fn render_header(frame: &mut Frame, area: Rect, app: &App) {
 fn render_mode_tabs(frame: &mut Frame, area: Rect, app: &App) {
     let tabs = vec![
         ("Connections", ViewState::ConnectionList),
-        ("New Connection", ViewState::NewConnection),
         ("Database Explorer", ViewState::DatabaseExplorer),
         ("Query Editor", ViewState::QueryEditor),
     ];
@@ -78,17 +80,13 @@ fn render_mode_tabs(frame: &mut Frame, area: Rect, app: &App) {
                 .bg(Color::Yellow)
                 .add_modifier(Modifier::BOLD)
         } else {
-            Style::default()
-                .fg(Color::White)
+            Style::default().fg(Color::White)
         };
 
         let tab = ratatui::widgets::Paragraph::new(*tab_name)
             .style(style)
             .alignment(Alignment::Center)
-            .block(
-                ratatui::widgets::Block::default()
-                    .borders(ratatui::widgets::Borders::ALL)
-            );
+            .block(ratatui::widgets::Block::default().borders(ratatui::widgets::Borders::ALL));
 
         frame.render_widget(tab, tab_areas[i]);
     }
@@ -98,9 +96,6 @@ fn render_main_content(frame: &mut Frame, area: Rect, app: &App) {
     match app.current_view {
         ViewState::ConnectionList => {
             components::connection_list::render(frame, area, app);
-        }
-        ViewState::NewConnection => {
-            components::new_connection::render(frame, area, app);
         }
         ViewState::DatabaseExplorer => {
             components::database_explorer::render(frame, area, app);
@@ -112,14 +107,11 @@ fn render_main_content(frame: &mut Frame, area: Rect, app: &App) {
 }
 
 fn render_footer(frame: &mut Frame, area: Rect, _app: &App) {
-    let footer_text = "q: Quit | Tab: Switch View | hjkl/←↓↑→: Navigate | Ctrl+hjkl/Ctrl+←↓↑→: Switch Pane | Shift+A: Add Project | Esc: Home";
+    let footer_text = "q: Quit | Tab: Switch View | hjkl/←↓↑→: Navigate | Ctrl+hjkl/Ctrl+←↓↑→: Switch Pane | Shift+A: Add Project | a: Add Connection | Esc: Home";
     let footer = ratatui::widgets::Paragraph::new(footer_text)
         .style(Style::default().fg(Color::Gray))
         .alignment(Alignment::Center)
-        .block(
-            ratatui::widgets::Block::default()
-                .borders(ratatui::widgets::Borders::ALL)
-        );
+        .block(ratatui::widgets::Block::default().borders(ratatui::widgets::Borders::ALL));
 
     frame.render_widget(footer, area);
 }

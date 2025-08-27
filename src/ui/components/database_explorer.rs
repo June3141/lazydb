@@ -39,7 +39,7 @@ fn render_database_structure(frame: &mut Frame, area: Rect, app: &App) {
             Block::default()
                 .borders(Borders::ALL)
                 .title(title)
-                .border_style(border_style)
+                .border_style(border_style),
         )
         .style(Style::default().fg(Color::White))
         .highlight_style(Style::default().add_modifier(Modifier::REVERSED))
@@ -68,7 +68,7 @@ fn render_table_content(frame: &mut Frame, area: Rect, app: &App) {
             Block::default()
                 .borders(Borders::ALL)
                 .title(title)
-                .border_style(border_style)
+                .border_style(border_style),
         )
         .style(Style::default().fg(Color::Gray))
         .alignment(Alignment::Center);

@@ -1,12 +1,53 @@
+use crate::app::{App, ConnectionListPane, Direction, NewConnectionStep, ViewState};
+use crate::config::{Connection, DatabaseType};
 use crossterm::event::{self, Event, KeyCode, KeyEventKind, KeyModifiers};
-use crate::app::{App, ViewState, Direction, ConnectionListPane, NewConnectionStep};
-use crate::config::{DatabaseType, Connection};
 
 pub fn handle_events(app: &mut App) -> anyhow::Result<()> {
     if event::poll(std::time::Duration::from_millis(50))? {
         if let Event::Key(key_event) = event::read()? {
             if key_event.kind == KeyEventKind::Press {
-                // Handle input dialog events first
+                // Handle connection dialog events first
+                if app.connection_dialog_state.is_some() {
+                    match key_event.code {
+                        KeyCode::Enter => {
+                            handle_connection_dialog_enter(app)?;
+                        }
+                        KeyCode::Esc => {
+                            app.close_connection_dialog();
+                        }
+                        KeyCode::Tab => {
+                            if app.new_connection_state.step
+                                == NewConnectionStep::FillConnectionDetails
+                            {
+                                handle_connection_dialog_tab(app);
+                            }
+                        }
+                        KeyCode::Backspace => {
+                            if app.new_connection_state.step
+                                == NewConnectionStep::FillConnectionDetails
+                            {
+                                handle_connection_dialog_backspace(app);
+                            }
+                        }
+                        KeyCode::Char('j') | KeyCode::Down => {
+                            handle_connection_dialog_down(app);
+                        }
+                        KeyCode::Char('k') | KeyCode::Up => {
+                            handle_connection_dialog_up(app);
+                        }
+                        KeyCode::Char(c) => {
+                            if app.new_connection_state.step
+                                == NewConnectionStep::FillConnectionDetails
+                            {
+                                handle_connection_dialog_char_input(app, c);
+                            }
+                        }
+                        _ => {}
+                    }
+                    return Ok(());
+                }
+
+                // Handle input dialog events
                 if app.input_dialog_state.is_some() {
                     match key_event.code {
                         KeyCode::Enter => {
@@ -37,8 +78,10 @@ pub fn handle_events(app: &mut App) -> anyhow::Result<()> {
                     match key_event.code {
                         KeyCode::Char('A') => {
                             // Only show new project dialog if we're in ConnectionList view and Projects pane is focused
-                            if app.current_view == ViewState::ConnectionList 
-                                && app.connection_list_state.focused_pane == ConnectionListPane::Projects {
+                            if app.current_view == ViewState::ConnectionList
+                                && app.connection_list_state.focused_pane
+                                    == ConnectionListPane::Projects
+                            {
                                 app.show_new_project_dialog();
                             }
                         }
@@ -66,64 +109,46 @@ pub fn handle_events(app: &mut App) -> anyhow::Result<()> {
                     match key_event.code {
                         KeyCode::Char('q') => app.quit(),
                         KeyCode::Tab => {
-                            if app.current_view == ViewState::NewConnection {
-                                handle_new_connection_tab(app);
-                            } else {
-                                let next_view = match app.current_view {
-                                    ViewState::ConnectionList => ViewState::NewConnection,
-                                    ViewState::NewConnection => ViewState::DatabaseExplorer,
-                                    ViewState::DatabaseExplorer => ViewState::QueryEditor,
-                                    ViewState::QueryEditor => ViewState::ConnectionList,
-                                };
-                                app.switch_view(next_view);
-                            }
+                            let next_view = match app.current_view {
+                                ViewState::ConnectionList => ViewState::DatabaseExplorer,
+                                ViewState::DatabaseExplorer => ViewState::QueryEditor,
+                                ViewState::QueryEditor => ViewState::ConnectionList,
+                            };
+                            app.switch_view(next_view);
                         }
                         KeyCode::Esc => {
                             app.switch_view(ViewState::ConnectionList);
                         }
                         KeyCode::Enter => {
-                            if app.current_view == ViewState::NewConnection {
-                                handle_new_connection_enter(app)?;
-                            }
+                            // Handle enter key for other views if needed
                         }
                         // Vim-style navigation within panes
                         KeyCode::Char('h') | KeyCode::Left => {
-                            if app.current_view == ViewState::NewConnection {
-                                // Handle left navigation in new connection view
-                            } else {
-                                app.move_within_pane(Direction::Left);
-                            }
+                            app.move_within_pane(Direction::Left);
                         }
                         KeyCode::Char('j') | KeyCode::Down => {
-                            if app.current_view == ViewState::NewConnection {
-                                handle_new_connection_down(app);
-                            } else {
-                                app.move_within_pane(Direction::Down);
-                            }
+                            app.move_within_pane(Direction::Down);
                         }
                         KeyCode::Char('k') | KeyCode::Up => {
-                            if app.current_view == ViewState::NewConnection {
-                                handle_new_connection_up(app);
-                            } else {
-                                app.move_within_pane(Direction::Up);
-                            }
+                            app.move_within_pane(Direction::Up);
                         }
                         KeyCode::Char('l') | KeyCode::Right => {
-                            if app.current_view == ViewState::NewConnection {
-                                // Handle right navigation in new connection view
-                            } else {
-                                app.move_within_pane(Direction::Right);
+                            app.move_within_pane(Direction::Right);
+                        }
+                        KeyCode::Char('a') => {
+                            // Show new connection dialog if in ConnectionList view and Connections pane is focused
+                            if app.current_view == ViewState::ConnectionList
+                                && app.connection_list_state.focused_pane
+                                    == ConnectionListPane::Connections
+                            {
+                                app.show_new_connection_dialog();
                             }
                         }
-                        KeyCode::Char(c) => {
-                            if app.current_view == ViewState::NewConnection {
-                                handle_new_connection_char_input(app, c);
-                            }
+                        KeyCode::Char(_c) => {
+                            // Handle character input for other views if needed
                         }
                         KeyCode::Backspace => {
-                            if app.current_view == ViewState::NewConnection {
-                                handle_new_connection_backspace(app);
-                            }
+                            // Handle backspace for other views if needed
                         }
                         _ => {}
                     }
@@ -136,6 +161,11 @@ pub fn handle_events(app: &mut App) -> anyhow::Result<()> {
 
 fn handle_new_connection_up(app: &mut App) {
     match app.new_connection_state.step {
+        NewConnectionStep::SelectProject => {
+            if app.new_connection_state.project_index > 0 {
+                app.new_connection_state.project_index -= 1;
+            }
+        }
         NewConnectionStep::SelectDatabaseType => {
             if app.new_connection_state.database_type_index > 0 {
                 app.new_connection_state.database_type_index -= 1;
@@ -151,6 +181,12 @@ fn handle_new_connection_up(app: &mut App) {
 
 fn handle_new_connection_down(app: &mut App) {
     match app.new_connection_state.step {
+        NewConnectionStep::SelectProject => {
+            let max_index = app.config.projects.len().saturating_sub(1);
+            if app.new_connection_state.project_index < max_index {
+                app.new_connection_state.project_index += 1;
+            }
+        }
         NewConnectionStep::SelectDatabaseType => {
             let max_index = 3; // PostgreSQL, MySQL, SQLite, MongoDB (0-3)
             if app.new_connection_state.database_type_index < max_index {
@@ -158,7 +194,12 @@ fn handle_new_connection_down(app: &mut App) {
             }
         }
         NewConnectionStep::FillConnectionDetails => {
-            let max_fields = get_form_field_count(app.new_connection_state.selected_database_type.as_ref().unwrap());
+            let max_fields = get_form_field_count(
+                app.new_connection_state
+                    .selected_database_type
+                    .as_ref()
+                    .unwrap(),
+            );
             if app.new_connection_state.current_field < max_fields - 1 {
                 app.new_connection_state.current_field += 1;
             }
@@ -168,6 +209,14 @@ fn handle_new_connection_down(app: &mut App) {
 
 fn handle_new_connection_enter(app: &mut App) -> anyhow::Result<()> {
     match app.new_connection_state.step {
+        NewConnectionStep::SelectProject => {
+            if !app.config.projects.is_empty() {
+                let selected_project = &app.config.projects[app.new_connection_state.project_index];
+                app.new_connection_state.selected_project_id = Some(selected_project.id.clone());
+                app.new_connection_state.step = NewConnectionStep::SelectDatabaseType;
+                app.new_connection_state.database_type_index = 0;
+            }
+        }
         NewConnectionStep::SelectDatabaseType => {
             let database_types = vec![
                 DatabaseType::PostgreSQL,
@@ -175,12 +224,13 @@ fn handle_new_connection_enter(app: &mut App) -> anyhow::Result<()> {
                 DatabaseType::SQLite,
                 DatabaseType::MongoDB,
             ];
-            
-            let selected_type = database_types[app.new_connection_state.database_type_index].clone();
+
+            let selected_type =
+                database_types[app.new_connection_state.database_type_index].clone();
             app.new_connection_state.selected_database_type = Some(selected_type.clone());
             app.new_connection_state.step = NewConnectionStep::FillConnectionDetails;
             app.new_connection_state.current_field = 0;
-            
+
             // Set default values based on database type
             match selected_type {
                 DatabaseType::PostgreSQL => {
@@ -209,16 +259,26 @@ fn handle_new_connection_enter(app: &mut App) -> anyhow::Result<()> {
 
 fn handle_new_connection_tab(app: &mut App) {
     if app.new_connection_state.step == NewConnectionStep::FillConnectionDetails {
-        let max_fields = get_form_field_count(app.new_connection_state.selected_database_type.as_ref().unwrap());
-        app.new_connection_state.current_field = (app.new_connection_state.current_field + 1) % max_fields;
+        let max_fields = get_form_field_count(
+            app.new_connection_state
+                .selected_database_type
+                .as_ref()
+                .unwrap(),
+        );
+        app.new_connection_state.current_field =
+            (app.new_connection_state.current_field + 1) % max_fields;
     }
 }
 
 fn handle_new_connection_char_input(app: &mut App, c: char) {
     if app.new_connection_state.step == NewConnectionStep::FillConnectionDetails {
         let field_index = app.new_connection_state.current_field;
-        let db_type = app.new_connection_state.selected_database_type.as_ref().unwrap();
-        
+        let db_type = app
+            .new_connection_state
+            .selected_database_type
+            .as_ref()
+            .unwrap();
+
         match get_field_at_index(db_type, field_index) {
             0 => app.new_connection_state.form_fields.name.push(c), // Name
             1 => {
@@ -240,10 +300,16 @@ fn handle_new_connection_char_input(app: &mut App, c: char) {
 fn handle_new_connection_backspace(app: &mut App) {
     if app.new_connection_state.step == NewConnectionStep::FillConnectionDetails {
         let field_index = app.new_connection_state.current_field;
-        let db_type = app.new_connection_state.selected_database_type.as_ref().unwrap();
-        
+        let db_type = app
+            .new_connection_state
+            .selected_database_type
+            .as_ref()
+            .unwrap();
+
         match get_field_at_index(db_type, field_index) {
-            0 => { app.new_connection_state.form_fields.name.pop(); }
+            0 => {
+                app.new_connection_state.form_fields.name.pop();
+            }
             1 => {
                 if matches!(db_type, DatabaseType::SQLite) {
                     app.new_connection_state.form_fields.database_name.pop();
@@ -251,10 +317,18 @@ fn handle_new_connection_backspace(app: &mut App) {
                     app.new_connection_state.form_fields.host.pop();
                 }
             }
-            2 => { app.new_connection_state.form_fields.port.pop(); }
-            3 => { app.new_connection_state.form_fields.username.pop(); }
-            4 => { app.new_connection_state.form_fields.password.pop(); }
-            5 => { app.new_connection_state.form_fields.database_name.pop(); }
+            2 => {
+                app.new_connection_state.form_fields.port.pop();
+            }
+            3 => {
+                app.new_connection_state.form_fields.username.pop();
+            }
+            4 => {
+                app.new_connection_state.form_fields.password.pop();
+            }
+            5 => {
+                app.new_connection_state.form_fields.database_name.pop();
+            }
             _ => {}
         }
     }
@@ -263,7 +337,7 @@ fn handle_new_connection_backspace(app: &mut App) {
 fn get_form_field_count(db_type: &DatabaseType) -> usize {
     match db_type {
         DatabaseType::SQLite => 2, // Name, Database file path
-        _ => 6, // Name, Host, Port, Username, Password, Database name
+        _ => 6,                    // Name, Host, Port, Username, Password, Database name
     }
 }
 
@@ -282,15 +356,21 @@ fn get_field_at_index(db_type: &DatabaseType, index: usize) -> usize {
 
 fn save_new_connection(app: &mut App) -> anyhow::Result<()> {
     let form_fields = &app.new_connection_state.form_fields;
-    let db_type = app.new_connection_state.selected_database_type.as_ref().unwrap().clone();
-    
+    let db_type = app
+        .new_connection_state
+        .selected_database_type
+        .as_ref()
+        .unwrap()
+        .clone();
+
     // Generate a unique ID
-    let id = format!("{}_{}_{}", 
+    let id = format!(
+        "{}_{}_{}",
         format!("{:?}", db_type).to_lowercase(),
         form_fields.name.replace(" ", "_").to_lowercase(),
         chrono::Utc::now().timestamp_millis()
     );
-    
+
     // Parse port
     let port = form_fields.port.parse::<u16>().unwrap_or(match db_type {
         DatabaseType::PostgreSQL => 5432,
@@ -298,18 +378,30 @@ fn save_new_connection(app: &mut App) -> anyhow::Result<()> {
         DatabaseType::MongoDB => 27017,
         DatabaseType::SQLite => 0,
     });
-    
+
     let mut connection = Connection::new(
         id,
         form_fields.name.clone(),
         db_type,
-        if matches!(app.new_connection_state.selected_database_type.as_ref().unwrap(), DatabaseType::SQLite) {
+        if matches!(
+            app.new_connection_state
+                .selected_database_type
+                .as_ref()
+                .unwrap(),
+            DatabaseType::SQLite
+        ) {
             "localhost".to_string()
         } else {
             form_fields.host.clone()
         },
         port,
-        if matches!(app.new_connection_state.selected_database_type.as_ref().unwrap(), DatabaseType::SQLite) {
+        if matches!(
+            app.new_connection_state
+                .selected_database_type
+                .as_ref()
+                .unwrap(),
+            DatabaseType::SQLite
+        ) {
             "".to_string()
         } else {
             form_fields.username.clone()
@@ -320,15 +412,169 @@ fn save_new_connection(app: &mut App) -> anyhow::Result<()> {
             Some(form_fields.database_name.clone())
         },
     );
-    
+
     // Set password if provided
-    if !form_fields.password.is_empty() && !matches!(app.new_connection_state.selected_database_type.as_ref().unwrap(), DatabaseType::SQLite) {
+    if !form_fields.password.is_empty()
+        && !matches!(
+            app.new_connection_state
+                .selected_database_type
+                .as_ref()
+                .unwrap(),
+            DatabaseType::SQLite
+        )
+    {
         connection.set_password(&form_fields.password)?;
     }
-    
+
+    let connection_id = connection.id.clone();
+
     // Add to config and save
     app.config.add_connection(connection);
+
+    // Add connection to selected project
+    if let Some(project_id) = &app.new_connection_state.selected_project_id {
+        if let Some(project) = app.config.projects.iter_mut().find(|p| p.id == *project_id) {
+            project.connection_ids.push(connection_id);
+        }
+    }
+
     app.config.save()?;
-    
+
     Ok(())
+}
+
+// Connection dialog handlers - reuse existing logic but with dialog closing
+fn handle_connection_dialog_up(app: &mut App) {
+    handle_new_connection_up(app);
+}
+
+fn handle_connection_dialog_down(app: &mut App) {
+    handle_new_connection_down(app);
+}
+
+fn handle_connection_dialog_enter(app: &mut App) -> anyhow::Result<()> {
+    match app.new_connection_state.step {
+        NewConnectionStep::SelectProject => {
+            if !app.config.projects.is_empty() {
+                let selected_project = &app.config.projects[app.new_connection_state.project_index];
+                app.new_connection_state.selected_project_id = Some(selected_project.id.clone());
+                app.new_connection_state.step = NewConnectionStep::SelectDatabaseType;
+                app.new_connection_state.database_type_index = 0;
+            }
+        }
+        NewConnectionStep::SelectDatabaseType => {
+            let database_types = vec![
+                DatabaseType::PostgreSQL,
+                DatabaseType::MySQL,
+                DatabaseType::SQLite,
+                DatabaseType::MongoDB,
+            ];
+
+            let selected_type =
+                database_types[app.new_connection_state.database_type_index].clone();
+            app.new_connection_state.selected_database_type = Some(selected_type.clone());
+            app.new_connection_state.step = NewConnectionStep::FillConnectionDetails;
+            app.new_connection_state.current_field = 0;
+
+            // Set default values based on database type
+            match selected_type {
+                DatabaseType::PostgreSQL => {
+                    app.new_connection_state.form_fields.port = "5432".to_string();
+                }
+                DatabaseType::MySQL => {
+                    app.new_connection_state.form_fields.port = "3306".to_string();
+                }
+                DatabaseType::MongoDB => {
+                    app.new_connection_state.form_fields.port = "27017".to_string();
+                }
+                DatabaseType::SQLite => {
+                    app.new_connection_state.form_fields.host = "localhost".to_string();
+                    app.new_connection_state.form_fields.port = "0".to_string();
+                }
+            }
+        }
+        NewConnectionStep::FillConnectionDetails => {
+            // Save the connection and close dialog
+            save_new_connection(app)?;
+            app.close_connection_dialog();
+        }
+    }
+    Ok(())
+}
+
+fn handle_connection_dialog_tab(app: &mut App) {
+    if app.new_connection_state.step == NewConnectionStep::FillConnectionDetails {
+        let max_fields = get_form_field_count(
+            app.new_connection_state
+                .selected_database_type
+                .as_ref()
+                .unwrap(),
+        );
+        app.new_connection_state.current_field =
+            (app.new_connection_state.current_field + 1) % max_fields;
+    }
+}
+
+fn handle_connection_dialog_char_input(app: &mut App, c: char) {
+    if app.new_connection_state.step == NewConnectionStep::FillConnectionDetails {
+        let field_index = app.new_connection_state.current_field;
+        let db_type = app
+            .new_connection_state
+            .selected_database_type
+            .as_ref()
+            .unwrap();
+
+        match get_field_at_index(db_type, field_index) {
+            0 => app.new_connection_state.form_fields.name.push(c), // Name
+            1 => {
+                if matches!(db_type, DatabaseType::SQLite) {
+                    app.new_connection_state.form_fields.database_name.push(c); // SQLite file path
+                } else {
+                    app.new_connection_state.form_fields.host.push(c); // Host
+                }
+            }
+            2 => app.new_connection_state.form_fields.port.push(c), // Port
+            3 => app.new_connection_state.form_fields.username.push(c), // Username
+            4 => app.new_connection_state.form_fields.password.push(c), // Password
+            5 => app.new_connection_state.form_fields.database_name.push(c), // Database name
+            _ => {}
+        }
+    }
+}
+
+fn handle_connection_dialog_backspace(app: &mut App) {
+    if app.new_connection_state.step == NewConnectionStep::FillConnectionDetails {
+        let field_index = app.new_connection_state.current_field;
+        let db_type = app
+            .new_connection_state
+            .selected_database_type
+            .as_ref()
+            .unwrap();
+
+        match get_field_at_index(db_type, field_index) {
+            0 => {
+                app.new_connection_state.form_fields.name.pop();
+            }
+            1 => {
+                if matches!(db_type, DatabaseType::SQLite) {
+                    app.new_connection_state.form_fields.database_name.pop();
+                } else {
+                    app.new_connection_state.form_fields.host.pop();
+                }
+            }
+            2 => {
+                app.new_connection_state.form_fields.port.pop();
+            }
+            3 => {
+                app.new_connection_state.form_fields.username.pop();
+            }
+            4 => {
+                app.new_connection_state.form_fields.password.pop();
+            }
+            5 => {
+                app.new_connection_state.form_fields.database_name.pop();
+            }
+            _ => {}
+        }
+    }
 }

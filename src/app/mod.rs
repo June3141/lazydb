@@ -1,13 +1,6 @@
 pub mod state;
 
 pub use state::{
-    App, 
-    ViewState, 
-    ConnectionListPane, 
-    DatabaseExplorerPane, 
-    QueryEditorPane, 
-    Direction,
-    InputDialogType,
-    NewConnectionStep,
-    ConnectionFormFields,
+    App, ConnectionDialogState, ConnectionFormFields, ConnectionListPane, DatabaseExplorerPane,
+    Direction, InputDialogType, NewConnectionStep, QueryEditorPane, ViewState,
 };

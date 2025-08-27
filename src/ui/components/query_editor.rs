@@ -30,7 +30,7 @@ fn render_query_input(frame: &mut Frame, area: Rect, app: &App) {
             Block::default()
                 .borders(Borders::ALL)
                 .title(title)
-                .border_style(border_style)
+                .border_style(border_style),
         )
         .style(Style::default().fg(Color::White))
         .wrap(Wrap { trim: true });
@@ -53,7 +53,7 @@ fn render_query_results(frame: &mut Frame, area: Rect, app: &App) {
             Block::default()
                 .borders(Borders::ALL)
                 .title(title)
-                .border_style(border_style)
+                .border_style(border_style),
         )
         .style(Style::default().fg(Color::Gray))
         .alignment(Alignment::Center);
