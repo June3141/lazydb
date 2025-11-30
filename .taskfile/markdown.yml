@@ -1,0 +1,27 @@
+version: "3"
+
+vars:
+  MD_FILES: "**/*.md"
+
+tasks:
+  fmt:
+    desc: Format Markdown files
+    cmds:
+      - npx markdownlint-cli2 --fix "{{.MD_FILES}}"
+
+  lint:
+    desc: Lint Markdown files
+    cmds:
+      - npx markdownlint-cli2 "{{.MD_FILES}}"
+
+  fix:
+    desc: Fix Markdown issues
+    aliases: [fmt]
+    cmds:
+      - npx markdownlint-cli2 --fix "{{.MD_FILES}}"
+
+  check:
+    desc: Check Markdown
+    aliases: [lint]
+    cmds:
+      - npx markdownlint-cli2 "{{.MD_FILES}}"

@@ -1,0 +1,49 @@
+version: "3"
+
+tasks:
+  fmt:
+    desc: Format Rust code
+    cmds:
+      - cargo fmt
+
+  fmt-check:
+    desc: Check Rust code formatting
+    cmds:
+      - cargo fmt --check
+
+  lint:
+    desc: Lint Rust code with Clippy
+    cmds:
+      - cargo clippy -- -D warnings
+
+  fix:
+    desc: Fix Rust code issues
+    cmds:
+      - cargo fmt
+      - cargo clippy --fix --allow-dirty --allow-staged
+
+  check:
+    desc: Check Rust code (format + lint)
+    cmds:
+      - task: fmt-check
+      - task: lint
+
+  build:
+    desc: Build the project
+    cmds:
+      - cargo build
+
+  build-release:
+    desc: Build the project in release mode
+    cmds:
+      - cargo build --release
+
+  test:
+    desc: Run tests
+    cmds:
+      - cargo test
+
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - cargo clean
