@@ -4,7 +4,7 @@ vars:
   MD_FILES: "**/*.md"
 
 tasks:
-  fmt:
+  format:
     desc: Format Markdown files
     cmds:
       - npx markdownlint-cli2 --fix "{{.MD_FILES}}"
@@ -16,7 +16,7 @@ tasks:
 
   fix:
     desc: Fix Markdown issues
-    aliases: [fmt]
+    aliases: [format]
     cmds:
       - npx markdownlint-cli2 --fix "{{.MD_FILES}}"
 

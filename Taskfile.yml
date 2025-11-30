@@ -12,11 +12,11 @@ tasks:
     cmds:
       - task --list
 
-  fmt:
+  format:
     desc: Format all code
     cmds:
-      - task: rust:fmt
-      - task: markdown:fmt
+      - task: rust:format
+      - task: markdown:format
 
   lint:
     desc: Lint all code

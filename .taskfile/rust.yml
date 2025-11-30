@@ -1,12 +1,12 @@
 version: "3"
 
 tasks:
-  fmt:
+  format:
     desc: Format Rust code
     cmds:
       - cargo fmt
 
-  fmt-check:
+  format-check:
     desc: Check Rust code formatting
     cmds:
       - cargo fmt --check
@@ -25,7 +25,7 @@ tasks:
   check:
     desc: Check Rust code (format + lint)
     cmds:
-      - task: fmt-check
+      - task: format-check
       - task: lint
 
   build:
