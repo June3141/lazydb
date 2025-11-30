@@ -1,0 +1,23 @@
+{
+  // Ignore patterns
+  "ignores": [".claude/**", "node_modules/**", "target/**"],
+
+  // Config for markdownlint
+  "config": {
+    // Default state for all rules
+    "default": true,
+
+    // MD013 - Line length
+    "MD013": {
+      "line_length": 120,
+      "code_blocks": false,
+      "tables": false
+    },
+
+    // MD033 - Allow inline HTML
+    "MD033": false,
+
+    // MD041 - First line should be a top-level heading
+    "MD041": true
+  }
+}
