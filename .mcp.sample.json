@@ -1,0 +1,45 @@
+{
+	"mcpServers": {
+		"context7": {
+			"type": "stdio",
+			"command": "npx",
+			"args": ["--yes", "@upstash/context7-mcp"],
+			"env": {}
+		},
+		"serena": {
+			"type": "stdio",
+			"command": "uvx",
+			"args": [
+				"--from",
+				"git+https://github.com/oraios/serena",
+				"serena",
+				"start-mcp-server"
+			],
+			"env": {}
+		},
+		"rust-analyzer": {
+			"command": "rust-analyzer-mcp"
+		},
+		"rust-mcp-server": {
+			"type": "stdio",
+			"command": "rust-mcp-server",
+			"args": ["--log-file", "./target/logs/rust_mcp.log"]
+		},
+		"rust-docs": {
+			"command": "npx",
+			"args": ["-y", "@nuskey8/docs-rs-mcp"]
+		},
+		"tui-test": {
+			"command": "uv",
+			"args": ["run", "mcp-server-tui-test"]
+		},
+		"filesystem": {
+			"command": "npx",
+			"args": [
+				"-y",
+				"@modelcontextprotocol/server-filesystem",
+				"/path/to/other/allowed/dir"
+			]
+		}
+	}
+}
