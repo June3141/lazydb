@@ -322,9 +322,9 @@ impl App {
 
     fn activate_current_item(&mut self) {
         if let Some(table_idx) = self.selected_table {
+            // Table selected: generate query for the table
             if let Some(conn) = self.connections.get(self.selected_connection) {
                 if let Some(table) = conn.tables.get(table_idx) {
-                    // Generate query for selected table
                     self.query = format!("SELECT * FROM {} LIMIT 50;", table.name);
                     self.status_message = format!(
                         "Selected: {}.{} ({} rows)",
@@ -333,9 +333,9 @@ impl App {
                 }
             }
         } else {
-            // Toggle expand/collapse on connection
-            if let Some(conn) = self.connections.get_mut(self.selected_connection) {
-                conn.expanded = !conn.expanded;
+            // Connection selected: connect to database (placeholder for future)
+            if let Some(conn) = self.connections.get(self.selected_connection) {
+                self.status_message = format!("Connected to {}", conn.name);
             }
         }
     }
