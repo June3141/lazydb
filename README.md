@@ -82,6 +82,10 @@ Connections are stored locally in `~/.config/lazydb/connections.toml`.
 | `:`          | Command mode              |
 | `?`          | Show help                 |
 
+## Documentation
+
+- [Architecture](docs/architecture.md) - TEA パターンとディレクトリ構成
+
 ## Requirements
 
 - Rust 1.75+ (for building from source)

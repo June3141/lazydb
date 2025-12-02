@@ -1,0 +1,64 @@
+mod help_bar;
+mod main_panel;
+mod sidebar;
+mod status_bar;
+pub mod utils;
+
+use crate::app::App;
+use ratatui::{
+    layout::{Constraint, Direction, Layout},
+    Frame,
+};
+
+use help_bar::draw_help_bar;
+use main_panel::{draw_main_panel, draw_query_editor};
+use sidebar::{draw_connections_tree, draw_table_summary};
+use status_bar::draw_status_bar;
+
+pub fn draw(frame: &mut Frame, app: &App) {
+    let size = frame.area();
+
+    // Main layout: Sidebar | Main area
+    let main_chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Length(28), // Sidebar width
+            Constraint::Min(40),    // Main area
+        ])
+        .split(size);
+
+    // Sidebar layout: Connections tree | Table info summary
+    let sidebar_chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Min(8),     // Connections tree
+            Constraint::Length(7),  // Table info summary (compact)
+        ])
+        .split(main_chunks[0]);
+
+    // Main area layout: Query editor | Main panel | Status
+    let right_chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(5),  // Query editor
+            Constraint::Min(10),    // Main panel (Schema/Data)
+            Constraint::Length(3),  // Status bar
+        ])
+        .split(main_chunks[1]);
+
+    // Bottom layout: Help bar
+    let bottom_chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Min(0),
+            Constraint::Length(1), // Help bar
+        ])
+        .split(size);
+
+    draw_connections_tree(frame, app, sidebar_chunks[0]);
+    draw_table_summary(frame, app, sidebar_chunks[1]);
+    draw_query_editor(frame, app, right_chunks[0]);
+    draw_main_panel(frame, app, right_chunks[1]);
+    draw_status_bar(frame, app, right_chunks[2]);
+    draw_help_bar(frame, bottom_chunks[1]);
+}
