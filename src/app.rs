@@ -1,4 +1,5 @@
 use crate::message::Message;
+use crate::model::{Column, Connection, QueryResult, Table};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Focus {
@@ -11,38 +12,6 @@ pub enum Focus {
 pub enum MainPanelTab {
     Schema,
     Data,
-}
-
-#[derive(Debug, Clone)]
-pub struct Connection {
-    pub name: String,
-    pub host: String,
-    pub port: u16,
-    pub database: String,
-    pub expanded: bool,
-    pub tables: Vec<Table>,
-}
-
-#[derive(Debug, Clone)]
-pub struct Column {
-    pub name: String,
-    pub data_type: String,
-    pub is_primary_key: bool,
-}
-
-#[derive(Debug, Clone)]
-pub struct Table {
-    pub name: String,
-    pub row_count: usize,
-    pub columns: Vec<Column>,
-    pub size_bytes: u64,
-}
-
-#[derive(Debug, Clone)]
-pub struct QueryResult {
-    pub columns: Vec<String>,
-    pub rows: Vec<Vec<String>>,
-    pub execution_time_ms: u64,
 }
 
 pub struct App {
@@ -272,9 +241,9 @@ impl App {
                 };
             }
 
-            Message::Select => {
+            Message::Activate => {
                 if self.focus == Focus::Sidebar {
-                    self.select_current_item();
+                    self.activate_current_item();
                 }
             }
 
@@ -351,7 +320,7 @@ impl App {
         }
     }
 
-    fn select_current_item(&mut self) {
+    fn activate_current_item(&mut self) {
         if let Some(table_idx) = self.selected_table {
             if let Some(conn) = self.connections.get(self.selected_connection) {
                 if let Some(table) = conn.tables.get(table_idx) {

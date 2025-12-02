@@ -5,7 +5,7 @@ pub enum Message {
     NavigateDown,
     NextFocus,
     PrevFocus,
-    Select,
+    Activate,
     ToggleExpandCollapse,
     SwitchToSchema,
     SwitchToData,

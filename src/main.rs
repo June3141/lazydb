@@ -1,5 +1,6 @@
 mod app;
 mod message;
+mod model;
 mod ui;
 
 use anyhow::Result;
@@ -61,7 +62,7 @@ fn run_app(
                 (KeyCode::Down | KeyCode::Char('j'), _) => Message::NavigateDown,
                 (KeyCode::Tab, _) => Message::NextFocus,
                 (KeyCode::BackTab, _) => Message::PrevFocus,
-                (KeyCode::Enter, _) => Message::Select,
+                (KeyCode::Enter, _) => Message::Activate,
                 (KeyCode::Char('e'), _) => Message::ToggleExpandCollapse,
                 (KeyCode::Char('s'), _) => Message::SwitchToSchema,
                 (KeyCode::Char('d'), _) => Message::SwitchToData,
