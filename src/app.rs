@@ -517,14 +517,6 @@ impl App {
                 }
             }
 
-            Message::ToggleExpandCollapse => {
-                if self.focus == Focus::Sidebar {
-                    if let Some(conn) = self.connections.get_mut(self.selected_connection) {
-                        conn.expanded = !conn.expanded;
-                    }
-                }
-            }
-
             Message::SwitchToSchema => {
                 self.main_panel_tab = MainPanelTab::Schema;
             }
@@ -692,9 +684,9 @@ impl App {
                 }
             }
         } else {
-            // Connection selected: connect to database (placeholder for future)
-            if let Some(conn) = self.connections.get(self.selected_connection) {
-                self.status_message = format!("Connected to {}", conn.name);
+            // Connection selected: toggle expand/collapse
+            if let Some(conn) = self.connections.get_mut(self.selected_connection) {
+                conn.expanded = !conn.expanded;
             }
         }
     }

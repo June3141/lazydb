@@ -84,7 +84,6 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut App)
                     (KeyCode::Tab, _) => Some(Message::NextFocus),
                     (KeyCode::BackTab, _) => Some(Message::PrevFocus),
                     (KeyCode::Enter, _) => Some(Message::Activate),
-                    (KeyCode::Char('e'), _) => Some(Message::ToggleExpandCollapse),
                     (KeyCode::Char('s'), _) => Some(Message::SwitchToSchema),
                     (KeyCode::Char('d'), _) => Some(Message::SwitchToData),
                     (KeyCode::Char('a'), _) if app.focus == Focus::Sidebar => {
