@@ -123,9 +123,9 @@ fn draw_data_content(frame: &mut Frame, app: &App, area: Rect) {
 
         // Create data rows
         let rows = result.rows.iter().map(|row_data| {
-            let cells = row_data.iter().map(|cell| {
-                Cell::from(cell.clone()).style(Style::default().fg(Color::White))
-            });
+            let cells = row_data
+                .iter()
+                .map(|cell| Cell::from(cell.clone()).style(Style::default().fg(Color::White)));
             Row::new(cells).height(1)
         });
 
@@ -142,8 +142,8 @@ fn draw_data_content(frame: &mut Frame, app: &App, area: Rect) {
 
         frame.render_widget(table, area);
     } else {
-        let empty = Paragraph::new("No data to display")
-            .style(Style::default().fg(Color::DarkGray));
+        let empty =
+            Paragraph::new("No data to display").style(Style::default().fg(Color::DarkGray));
         frame.render_widget(empty, area);
     }
 }

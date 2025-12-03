@@ -4,7 +4,7 @@ mod model;
 mod ui;
 
 use anyhow::Result;
-use app::App;
+use app::{App, Focus, ModalField, ModalState};
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers},
     execute,
@@ -44,37 +44,96 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn run_app(
-    terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
-    app: &mut App,
-) -> Result<()> {
+fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut App) -> Result<()> {
     loop {
         // View: render UI
         terminal.draw(|frame| ui::draw(frame, app))?;
 
         // Handle input events
         if let Event::Key(key) = event::read()? {
-            let message = match (key.code, key.modifiers) {
-                (KeyCode::Char('q'), _) | (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
-                    Message::Quit
+            let message = if app.is_modal_open() {
+                // Modal is open - handle modal-specific keys
+                handle_modal_input(app, key.code)
+            } else {
+                // Normal mode
+                match (key.code, key.modifiers) {
+                    (KeyCode::Char('q'), _) | (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
+                        Some(Message::Quit)
+                    }
+                    (KeyCode::Up | KeyCode::Char('k'), _) => Some(Message::NavigateUp),
+                    (KeyCode::Down | KeyCode::Char('j'), _) => Some(Message::NavigateDown),
+                    (KeyCode::Tab, _) => Some(Message::NextFocus),
+                    (KeyCode::BackTab, _) => Some(Message::PrevFocus),
+                    (KeyCode::Enter, _) => Some(Message::Activate),
+                    (KeyCode::Char('e'), _) => Some(Message::ToggleExpandCollapse),
+                    (KeyCode::Char('s'), _) => Some(Message::SwitchToSchema),
+                    (KeyCode::Char('d'), _) => Some(Message::SwitchToData),
+                    (KeyCode::Char('a'), _) if app.focus == Focus::Sidebar => {
+                        Some(Message::OpenAddConnectionModal)
+                    }
+                    _ => None,
                 }
-                (KeyCode::Up | KeyCode::Char('k'), _) => Message::NavigateUp,
-                (KeyCode::Down | KeyCode::Char('j'), _) => Message::NavigateDown,
-                (KeyCode::Tab, _) => Message::NextFocus,
-                (KeyCode::BackTab, _) => Message::PrevFocus,
-                (KeyCode::Enter, _) => Message::Activate,
-                (KeyCode::Char('e'), _) => Message::ToggleExpandCollapse,
-                (KeyCode::Char('s'), _) => Message::SwitchToSchema,
-                (KeyCode::Char('d'), _) => Message::SwitchToData,
-                _ => continue,
             };
 
-            // Update: process message
-            if app.update(message) {
-                break;
+            if let Some(msg) = message {
+                // Update: process message
+                if app.update(msg) {
+                    break;
+                }
             }
         }
     }
 
     Ok(())
+}
+
+fn handle_modal_input(app: &App, key_code: KeyCode) -> Option<Message> {
+    match &app.modal_state {
+        ModalState::None => None,
+        ModalState::AddConnection(modal) => match key_code {
+            KeyCode::Esc => Some(Message::CloseModal),
+            KeyCode::Tab => Some(Message::ModalNextField),
+            KeyCode::BackTab => Some(Message::ModalPrevField),
+            KeyCode::Down | KeyCode::Char('j')
+                if matches!(
+                    modal.focused_field,
+                    ModalField::ButtonOk | ModalField::ButtonCancel
+                ) =>
+            {
+                Some(Message::ModalNextField)
+            }
+            KeyCode::Up | KeyCode::Char('k')
+                if matches!(
+                    modal.focused_field,
+                    ModalField::ButtonOk | ModalField::ButtonCancel
+                ) =>
+            {
+                Some(Message::ModalPrevField)
+            }
+            KeyCode::Left | KeyCode::Char('h')
+                if matches!(
+                    modal.focused_field,
+                    ModalField::ButtonOk | ModalField::ButtonCancel
+                ) =>
+            {
+                Some(Message::ModalPrevField)
+            }
+            KeyCode::Right | KeyCode::Char('l')
+                if matches!(
+                    modal.focused_field,
+                    ModalField::ButtonOk | ModalField::ButtonCancel
+                ) =>
+            {
+                Some(Message::ModalNextField)
+            }
+            KeyCode::Enter => match modal.focused_field {
+                ModalField::ButtonOk => Some(Message::ModalConfirm),
+                ModalField::ButtonCancel => Some(Message::CloseModal),
+                _ => Some(Message::ModalNextField),
+            },
+            KeyCode::Backspace => Some(Message::ModalInputBackspace),
+            KeyCode::Char(c) => Some(Message::ModalInputChar(c)),
+            _ => None,
+        },
+    }
 }
