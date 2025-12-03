@@ -12,6 +12,7 @@ pub fn draw_help_bar(frame: &mut Frame, area: Rect) {
         ("↑/k", "Up"),
         ("↓/j", "Down"),
         ("Tab", "Focus"),
+        ("S-hjkl", "Pane"),
         ("Enter", "Select"),
         ("e", "Expand"),
         ("s", "Schema"),

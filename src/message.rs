@@ -5,6 +5,11 @@ pub enum Message {
     NavigateDown,
     NextFocus,
     PrevFocus,
+    // Directional pane focus (Shift + h/j/k/l or arrow keys)
+    FocusLeft,
+    FocusRight,
+    FocusUp,
+    FocusDown,
     Activate,
     ToggleExpandCollapse,
     SwitchToSchema,

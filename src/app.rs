@@ -483,6 +483,34 @@ impl App {
                 };
             }
 
+            Message::FocusLeft => {
+                // QueryEditor/MainPanel -> Sidebar
+                if self.focus == Focus::QueryEditor || self.focus == Focus::MainPanel {
+                    self.focus = Focus::Sidebar;
+                }
+            }
+
+            Message::FocusRight => {
+                // Sidebar -> QueryEditor
+                if self.focus == Focus::Sidebar {
+                    self.focus = Focus::QueryEditor;
+                }
+            }
+
+            Message::FocusUp => {
+                // MainPanel -> QueryEditor
+                if self.focus == Focus::MainPanel {
+                    self.focus = Focus::QueryEditor;
+                }
+            }
+
+            Message::FocusDown => {
+                // QueryEditor -> MainPanel
+                if self.focus == Focus::QueryEditor {
+                    self.focus = Focus::MainPanel;
+                }
+            }
+
             Message::Activate => {
                 if self.focus == Focus::Sidebar {
                     self.activate_current_item();
