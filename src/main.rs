@@ -5,6 +5,7 @@ mod ui;
 
 use anyhow::Result;
 use app::{App, Focus, ModalField, ModalState};
+use clap::Parser;
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers},
     execute,
@@ -14,7 +15,15 @@ use message::Message;
 use ratatui::{backend::CrosstermBackend, Terminal};
 use std::io;
 
+/// A simple terminal UI for database management
+#[derive(Parser, Debug)]
+#[command(name = "lazydb")]
+#[command(version, about, long_about = None)]
+struct Args {}
+
 fn main() -> Result<()> {
+    let _args = Args::parse();
+
     // Setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
