@@ -9,4 +9,12 @@ pub enum Message {
     ToggleExpandCollapse,
     SwitchToSchema,
     SwitchToData,
+    // Modal messages
+    OpenAddConnectionModal,
+    CloseModal,
+    ModalConfirm,
+    ModalInputChar(char),
+    ModalInputBackspace,
+    ModalNextField,
+    ModalPrevField,
 }

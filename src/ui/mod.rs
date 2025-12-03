@@ -1,5 +1,6 @@
 mod help_bar;
 mod main_panel;
+mod modal;
 mod sidebar;
 mod status_bar;
 pub mod utils;
@@ -12,6 +13,7 @@ use ratatui::{
 
 use help_bar::draw_help_bar;
 use main_panel::{draw_main_panel, draw_query_editor};
+use modal::draw_modal;
 use sidebar::{draw_connections_tree, draw_table_summary};
 use status_bar::draw_status_bar;
 
@@ -31,8 +33,8 @@ pub fn draw(frame: &mut Frame, app: &App) {
     let sidebar_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Min(8),     // Connections tree
-            Constraint::Length(7),  // Table info summary (compact)
+            Constraint::Min(8),    // Connections tree
+            Constraint::Length(7), // Table info summary (compact)
         ])
         .split(main_chunks[0]);
 
@@ -40,9 +42,9 @@ pub fn draw(frame: &mut Frame, app: &App) {
     let right_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(5),  // Query editor
-            Constraint::Min(10),    // Main panel (Schema/Data)
-            Constraint::Length(3),  // Status bar
+            Constraint::Length(5), // Query editor
+            Constraint::Min(10),   // Main panel (Schema/Data)
+            Constraint::Length(3), // Status bar
         ])
         .split(main_chunks[1]);
 
@@ -61,4 +63,7 @@ pub fn draw(frame: &mut Frame, app: &App) {
     draw_main_panel(frame, app, right_chunks[1]);
     draw_status_bar(frame, app, right_chunks[2]);
     draw_help_bar(frame, bottom_chunks[1]);
+
+    // Draw modal on top if open
+    draw_modal(frame, &app.modal_state);
 }

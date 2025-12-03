@@ -49,8 +49,8 @@ pub fn draw_connections_tree(frame: &mut Frame, app: &App, area: Rect) {
 
         if conn.expanded {
             for (table_idx, table) in conn.tables.iter().enumerate() {
-                let is_selected_table = conn_idx == app.selected_connection
-                    && app.selected_table == Some(table_idx);
+                let is_selected_table =
+                    conn_idx == app.selected_connection && app.selected_table == Some(table_idx);
 
                 let table_style = if is_selected_table && is_focused {
                     Style::default()

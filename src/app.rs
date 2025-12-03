@@ -14,6 +14,77 @@ pub enum MainPanelTab {
     Data,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ModalField {
+    Name,
+    Host,
+    Port,
+    User,
+    Password,
+    Database,
+    ButtonOk,
+    ButtonCancel,
+}
+
+impl ModalField {
+    pub fn next(self) -> Self {
+        match self {
+            ModalField::Name => ModalField::Host,
+            ModalField::Host => ModalField::Port,
+            ModalField::Port => ModalField::User,
+            ModalField::User => ModalField::Password,
+            ModalField::Password => ModalField::Database,
+            ModalField::Database => ModalField::ButtonOk,
+            ModalField::ButtonOk => ModalField::ButtonCancel,
+            ModalField::ButtonCancel => ModalField::Name,
+        }
+    }
+
+    pub fn prev(self) -> Self {
+        match self {
+            ModalField::Name => ModalField::ButtonCancel,
+            ModalField::Host => ModalField::Name,
+            ModalField::Port => ModalField::Host,
+            ModalField::User => ModalField::Port,
+            ModalField::Password => ModalField::User,
+            ModalField::Database => ModalField::Password,
+            ModalField::ButtonOk => ModalField::Database,
+            ModalField::ButtonCancel => ModalField::ButtonOk,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct AddConnectionModal {
+    pub name: String,
+    pub host: String,
+    pub port: String,
+    pub user: String,
+    pub password: String,
+    pub database: String,
+    pub focused_field: ModalField,
+}
+
+impl Default for AddConnectionModal {
+    fn default() -> Self {
+        Self {
+            name: String::new(),
+            host: "localhost".to_string(),
+            port: "5432".to_string(),
+            user: String::new(),
+            password: String::new(),
+            database: String::new(),
+            focused_field: ModalField::Name,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum ModalState {
+    None,
+    AddConnection(AddConnectionModal),
+}
+
 pub struct App {
     pub connections: Vec<Connection>,
     pub selected_connection: usize,
@@ -23,6 +94,7 @@ pub struct App {
     pub focus: Focus,
     pub main_panel_tab: MainPanelTab,
     pub status_message: String,
+    pub modal_state: ModalState,
 }
 
 impl App {
@@ -40,10 +112,26 @@ impl App {
                         row_count: 15420,
                         size_bytes: 2_540_000,
                         columns: vec![
-                            Column { name: "id".to_string(), data_type: "INTEGER".to_string(), is_primary_key: true },
-                            Column { name: "name".to_string(), data_type: "VARCHAR(100)".to_string(), is_primary_key: false },
-                            Column { name: "email".to_string(), data_type: "VARCHAR(255)".to_string(), is_primary_key: false },
-                            Column { name: "created_at".to_string(), data_type: "TIMESTAMP".to_string(), is_primary_key: false },
+                            Column {
+                                name: "id".to_string(),
+                                data_type: "INTEGER".to_string(),
+                                is_primary_key: true,
+                            },
+                            Column {
+                                name: "name".to_string(),
+                                data_type: "VARCHAR(100)".to_string(),
+                                is_primary_key: false,
+                            },
+                            Column {
+                                name: "email".to_string(),
+                                data_type: "VARCHAR(255)".to_string(),
+                                is_primary_key: false,
+                            },
+                            Column {
+                                name: "created_at".to_string(),
+                                data_type: "TIMESTAMP".to_string(),
+                                is_primary_key: false,
+                            },
                         ],
                     },
                     Table {
@@ -51,11 +139,31 @@ impl App {
                         row_count: 89234,
                         size_bytes: 15_200_000,
                         columns: vec![
-                            Column { name: "id".to_string(), data_type: "INTEGER".to_string(), is_primary_key: true },
-                            Column { name: "user_id".to_string(), data_type: "INTEGER".to_string(), is_primary_key: false },
-                            Column { name: "total".to_string(), data_type: "DECIMAL(10,2)".to_string(), is_primary_key: false },
-                            Column { name: "status".to_string(), data_type: "VARCHAR(20)".to_string(), is_primary_key: false },
-                            Column { name: "created_at".to_string(), data_type: "TIMESTAMP".to_string(), is_primary_key: false },
+                            Column {
+                                name: "id".to_string(),
+                                data_type: "INTEGER".to_string(),
+                                is_primary_key: true,
+                            },
+                            Column {
+                                name: "user_id".to_string(),
+                                data_type: "INTEGER".to_string(),
+                                is_primary_key: false,
+                            },
+                            Column {
+                                name: "total".to_string(),
+                                data_type: "DECIMAL(10,2)".to_string(),
+                                is_primary_key: false,
+                            },
+                            Column {
+                                name: "status".to_string(),
+                                data_type: "VARCHAR(20)".to_string(),
+                                is_primary_key: false,
+                            },
+                            Column {
+                                name: "created_at".to_string(),
+                                data_type: "TIMESTAMP".to_string(),
+                                is_primary_key: false,
+                            },
                         ],
                     },
                     Table {
@@ -63,9 +171,21 @@ impl App {
                         row_count: 1523,
                         size_bytes: 890_000,
                         columns: vec![
-                            Column { name: "id".to_string(), data_type: "INTEGER".to_string(), is_primary_key: true },
-                            Column { name: "name".to_string(), data_type: "VARCHAR(200)".to_string(), is_primary_key: false },
-                            Column { name: "price".to_string(), data_type: "DECIMAL(10,2)".to_string(), is_primary_key: false },
+                            Column {
+                                name: "id".to_string(),
+                                data_type: "INTEGER".to_string(),
+                                is_primary_key: true,
+                            },
+                            Column {
+                                name: "name".to_string(),
+                                data_type: "VARCHAR(200)".to_string(),
+                                is_primary_key: false,
+                            },
+                            Column {
+                                name: "price".to_string(),
+                                data_type: "DECIMAL(10,2)".to_string(),
+                                is_primary_key: false,
+                            },
                         ],
                     },
                     Table {
@@ -73,11 +193,31 @@ impl App {
                         row_count: 8921,
                         size_bytes: 1_240_000,
                         columns: vec![
-                            Column { name: "id".to_string(), data_type: "INTEGER".to_string(), is_primary_key: true },
-                            Column { name: "name".to_string(), data_type: "VARCHAR(100)".to_string(), is_primary_key: false },
-                            Column { name: "email".to_string(), data_type: "VARCHAR(255)".to_string(), is_primary_key: false },
-                            Column { name: "created_at".to_string(), data_type: "DATE".to_string(), is_primary_key: false },
-                            Column { name: "active".to_string(), data_type: "BOOLEAN".to_string(), is_primary_key: false },
+                            Column {
+                                name: "id".to_string(),
+                                data_type: "INTEGER".to_string(),
+                                is_primary_key: true,
+                            },
+                            Column {
+                                name: "name".to_string(),
+                                data_type: "VARCHAR(100)".to_string(),
+                                is_primary_key: false,
+                            },
+                            Column {
+                                name: "email".to_string(),
+                                data_type: "VARCHAR(255)".to_string(),
+                                is_primary_key: false,
+                            },
+                            Column {
+                                name: "created_at".to_string(),
+                                data_type: "DATE".to_string(),
+                                is_primary_key: false,
+                            },
+                            Column {
+                                name: "active".to_string(),
+                                data_type: "BOOLEAN".to_string(),
+                                is_primary_key: false,
+                            },
                         ],
                     },
                     Table {
@@ -85,10 +225,26 @@ impl App {
                         row_count: 45123,
                         size_bytes: 8_900_000,
                         columns: vec![
-                            Column { name: "id".to_string(), data_type: "INTEGER".to_string(), is_primary_key: true },
-                            Column { name: "order_id".to_string(), data_type: "INTEGER".to_string(), is_primary_key: false },
-                            Column { name: "amount".to_string(), data_type: "DECIMAL(10,2)".to_string(), is_primary_key: false },
-                            Column { name: "issued_at".to_string(), data_type: "TIMESTAMP".to_string(), is_primary_key: false },
+                            Column {
+                                name: "id".to_string(),
+                                data_type: "INTEGER".to_string(),
+                                is_primary_key: true,
+                            },
+                            Column {
+                                name: "order_id".to_string(),
+                                data_type: "INTEGER".to_string(),
+                                is_primary_key: false,
+                            },
+                            Column {
+                                name: "amount".to_string(),
+                                data_type: "DECIMAL(10,2)".to_string(),
+                                is_primary_key: false,
+                            },
+                            Column {
+                                name: "issued_at".to_string(),
+                                data_type: "TIMESTAMP".to_string(),
+                                is_primary_key: false,
+                            },
                         ],
                     },
                 ],
@@ -105,8 +261,16 @@ impl App {
                         row_count: 150,
                         size_bytes: 24_000,
                         columns: vec![
-                            Column { name: "id".to_string(), data_type: "INTEGER".to_string(), is_primary_key: true },
-                            Column { name: "name".to_string(), data_type: "VARCHAR(100)".to_string(), is_primary_key: false },
+                            Column {
+                                name: "id".to_string(),
+                                data_type: "INTEGER".to_string(),
+                                is_primary_key: true,
+                            },
+                            Column {
+                                name: "name".to_string(),
+                                data_type: "VARCHAR(100)".to_string(),
+                                is_primary_key: false,
+                            },
                         ],
                     },
                     Table {
@@ -114,8 +278,16 @@ impl App {
                         row_count: 500,
                         size_bytes: 85_000,
                         columns: vec![
-                            Column { name: "id".to_string(), data_type: "INTEGER".to_string(), is_primary_key: true },
-                            Column { name: "user_id".to_string(), data_type: "INTEGER".to_string(), is_primary_key: false },
+                            Column {
+                                name: "id".to_string(),
+                                data_type: "INTEGER".to_string(),
+                                is_primary_key: true,
+                            },
+                            Column {
+                                name: "user_id".to_string(),
+                                data_type: "INTEGER".to_string(),
+                                is_primary_key: false,
+                            },
                         ],
                     },
                     Table {
@@ -123,8 +295,16 @@ impl App {
                         row_count: 100,
                         size_bytes: 15_000,
                         columns: vec![
-                            Column { name: "id".to_string(), data_type: "INTEGER".to_string(), is_primary_key: true },
-                            Column { name: "name".to_string(), data_type: "VARCHAR(200)".to_string(), is_primary_key: false },
+                            Column {
+                                name: "id".to_string(),
+                                data_type: "INTEGER".to_string(),
+                                is_primary_key: true,
+                            },
+                            Column {
+                                name: "name".to_string(),
+                                data_type: "VARCHAR(200)".to_string(),
+                                is_primary_key: false,
+                            },
                         ],
                     },
                 ],
@@ -141,8 +321,16 @@ impl App {
                         row_count: 1000,
                         size_bytes: 160_000,
                         columns: vec![
-                            Column { name: "id".to_string(), data_type: "INTEGER".to_string(), is_primary_key: true },
-                            Column { name: "name".to_string(), data_type: "VARCHAR(100)".to_string(), is_primary_key: false },
+                            Column {
+                                name: "id".to_string(),
+                                data_type: "INTEGER".to_string(),
+                                is_primary_key: true,
+                            },
+                            Column {
+                                name: "name".to_string(),
+                                data_type: "VARCHAR(100)".to_string(),
+                                is_primary_key: false,
+                            },
                         ],
                     },
                     Table {
@@ -150,8 +338,16 @@ impl App {
                         row_count: 5000,
                         size_bytes: 850_000,
                         columns: vec![
-                            Column { name: "id".to_string(), data_type: "INTEGER".to_string(), is_primary_key: true },
-                            Column { name: "user_id".to_string(), data_type: "INTEGER".to_string(), is_primary_key: false },
+                            Column {
+                                name: "id".to_string(),
+                                data_type: "INTEGER".to_string(),
+                                is_primary_key: true,
+                            },
+                            Column {
+                                name: "user_id".to_string(),
+                                data_type: "INTEGER".to_string(),
+                                is_primary_key: false,
+                            },
                         ],
                     },
                 ],
@@ -168,14 +364,54 @@ impl App {
                 "created_at".to_string(),
             ],
             rows: vec![
-                vec!["1".to_string(), "Alice Johnson".to_string(), "alice@example.com".to_string(), "2024-01-15".to_string()],
-                vec!["2".to_string(), "Bob Smith".to_string(), "bob@example.com".to_string(), "2024-01-16".to_string()],
-                vec!["3".to_string(), "Carol Williams".to_string(), "carol@example.com".to_string(), "2024-01-17".to_string()],
-                vec!["4".to_string(), "David Brown".to_string(), "david@example.com".to_string(), "2024-01-18".to_string()],
-                vec!["5".to_string(), "Eve Davis".to_string(), "eve@example.com".to_string(), "2024-01-19".to_string()],
-                vec!["6".to_string(), "Frank Miller".to_string(), "frank@example.com".to_string(), "2024-01-20".to_string()],
-                vec!["7".to_string(), "Grace Wilson".to_string(), "grace@example.com".to_string(), "2024-01-21".to_string()],
-                vec!["8".to_string(), "Henry Moore".to_string(), "henry@example.com".to_string(), "2024-01-22".to_string()],
+                vec![
+                    "1".to_string(),
+                    "Alice Johnson".to_string(),
+                    "alice@example.com".to_string(),
+                    "2024-01-15".to_string(),
+                ],
+                vec![
+                    "2".to_string(),
+                    "Bob Smith".to_string(),
+                    "bob@example.com".to_string(),
+                    "2024-01-16".to_string(),
+                ],
+                vec![
+                    "3".to_string(),
+                    "Carol Williams".to_string(),
+                    "carol@example.com".to_string(),
+                    "2024-01-17".to_string(),
+                ],
+                vec![
+                    "4".to_string(),
+                    "David Brown".to_string(),
+                    "david@example.com".to_string(),
+                    "2024-01-18".to_string(),
+                ],
+                vec![
+                    "5".to_string(),
+                    "Eve Davis".to_string(),
+                    "eve@example.com".to_string(),
+                    "2024-01-19".to_string(),
+                ],
+                vec![
+                    "6".to_string(),
+                    "Frank Miller".to_string(),
+                    "frank@example.com".to_string(),
+                    "2024-01-20".to_string(),
+                ],
+                vec![
+                    "7".to_string(),
+                    "Grace Wilson".to_string(),
+                    "grace@example.com".to_string(),
+                    "2024-01-21".to_string(),
+                ],
+                vec![
+                    "8".to_string(),
+                    "Henry Moore".to_string(),
+                    "henry@example.com".to_string(),
+                    "2024-01-22".to_string(),
+                ],
             ],
             execution_time_ms: 23,
         });
@@ -189,7 +425,13 @@ impl App {
             focus: Focus::Sidebar,
             main_panel_tab: MainPanelTab::Data,
             status_message: "Connected to Production DB".to_string(),
+            modal_state: ModalState::None,
         }
+    }
+
+    /// Check if a modal is currently open
+    pub fn is_modal_open(&self) -> bool {
+        !matches!(self.modal_state, ModalState::None)
     }
 
     /// Update app state based on message. Returns true if app should quit.
@@ -262,9 +504,98 @@ impl App {
             Message::SwitchToData => {
                 self.main_panel_tab = MainPanelTab::Data;
             }
+
+            Message::OpenAddConnectionModal => {
+                self.modal_state = ModalState::AddConnection(AddConnectionModal::default());
+            }
+
+            Message::CloseModal => {
+                self.modal_state = ModalState::None;
+            }
+
+            Message::ModalConfirm => {
+                if let ModalState::AddConnection(ref modal) = self.modal_state {
+                    if let Some(conn) = self.create_connection_from_modal(modal) {
+                        self.connections.push(conn);
+                        self.status_message = "Connection added".to_string();
+                    }
+                }
+                self.modal_state = ModalState::None;
+            }
+
+            Message::ModalInputChar(c) => {
+                if let ModalState::AddConnection(ref mut modal) = self.modal_state {
+                    match modal.focused_field {
+                        ModalField::Name => modal.name.push(c),
+                        ModalField::Host => modal.host.push(c),
+                        ModalField::Port => {
+                            if c.is_ascii_digit() && modal.port.len() < 5 {
+                                modal.port.push(c);
+                            }
+                        }
+                        ModalField::User => modal.user.push(c),
+                        ModalField::Password => modal.password.push(c),
+                        ModalField::Database => modal.database.push(c),
+                        ModalField::ButtonOk | ModalField::ButtonCancel => {}
+                    }
+                }
+            }
+
+            Message::ModalInputBackspace => {
+                if let ModalState::AddConnection(ref mut modal) = self.modal_state {
+                    match modal.focused_field {
+                        ModalField::Name => {
+                            modal.name.pop();
+                        }
+                        ModalField::Host => {
+                            modal.host.pop();
+                        }
+                        ModalField::Port => {
+                            modal.port.pop();
+                        }
+                        ModalField::User => {
+                            modal.user.pop();
+                        }
+                        ModalField::Password => {
+                            modal.password.pop();
+                        }
+                        ModalField::Database => {
+                            modal.database.pop();
+                        }
+                        ModalField::ButtonOk | ModalField::ButtonCancel => {}
+                    }
+                }
+            }
+
+            Message::ModalNextField => {
+                if let ModalState::AddConnection(ref mut modal) = self.modal_state {
+                    modal.focused_field = modal.focused_field.next();
+                }
+            }
+
+            Message::ModalPrevField => {
+                if let ModalState::AddConnection(ref mut modal) = self.modal_state {
+                    modal.focused_field = modal.focused_field.prev();
+                }
+            }
         }
 
         false
+    }
+
+    fn create_connection_from_modal(&self, modal: &AddConnectionModal) -> Option<Connection> {
+        let port: u16 = modal.port.parse().ok()?;
+        if modal.name.is_empty() || modal.host.is_empty() || modal.database.is_empty() {
+            return None;
+        }
+        Some(Connection {
+            name: modal.name.clone(),
+            host: modal.host.clone(),
+            port,
+            database: modal.database.clone(),
+            expanded: false,
+            tables: vec![],
+        })
     }
 
     fn navigate_sidebar_up(&mut self) {
