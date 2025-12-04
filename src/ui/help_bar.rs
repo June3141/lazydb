@@ -7,7 +7,7 @@ use ratatui::{
 };
 
 pub fn draw_help_bar(frame: &mut Frame, area: Rect) {
-    let help_items = vec![
+    let help_items = [
         ("q", "Quit"),
         ("↑/k", "Up"),
         ("↓/j", "Down"),
