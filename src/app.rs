@@ -1,5 +1,5 @@
 use crate::message::Message;
-use crate::model::{Column, Connection, QueryResult, Table};
+use crate::model::{Column, Connection, Project, QueryResult, Table};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Focus {
@@ -12,6 +12,13 @@ pub enum Focus {
 pub enum MainPanelTab {
     Schema,
     Data,
+}
+
+/// Sidebar display mode - switches between Projects list and Connections list
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum SidebarMode {
+    Projects,
+    Connections(usize), // project index
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -86,9 +93,11 @@ pub enum ModalState {
 }
 
 pub struct App {
-    pub connections: Vec<Connection>,
-    pub selected_connection: usize,
-    pub selected_table: Option<usize>,
+    pub projects: Vec<Project>,
+    pub sidebar_mode: SidebarMode,
+    pub selected_project_idx: usize,
+    pub selected_connection_idx: usize,
+    pub selected_table_idx: Option<usize>,
     pub query: String,
     pub result: Option<QueryResult>,
     pub focus: Focus,
@@ -99,332 +108,144 @@ pub struct App {
 
 impl App {
     pub fn new_with_sample_data() -> Self {
-        let connections = vec![
-            Connection {
-                name: "Production DB".to_string(),
-                host: "prod.example.com".to_string(),
-                port: 5432,
-                database: "app_production".to_string(),
-                expanded: true,
-                tables: vec![
-                    Table {
-                        name: "users".to_string(),
-                        row_count: 15420,
-                        size_bytes: 2_540_000,
-                        columns: vec![
-                            Column {
-                                name: "id".to_string(),
-                                data_type: "INTEGER".to_string(),
-                                is_primary_key: true,
-                            },
-                            Column {
-                                name: "name".to_string(),
-                                data_type: "VARCHAR(100)".to_string(),
-                                is_primary_key: false,
-                            },
-                            Column {
-                                name: "email".to_string(),
-                                data_type: "VARCHAR(255)".to_string(),
-                                is_primary_key: false,
-                            },
-                            Column {
-                                name: "created_at".to_string(),
-                                data_type: "TIMESTAMP".to_string(),
-                                is_primary_key: false,
-                            },
-                        ],
-                    },
-                    Table {
-                        name: "orders".to_string(),
-                        row_count: 89234,
-                        size_bytes: 15_200_000,
-                        columns: vec![
-                            Column {
-                                name: "id".to_string(),
-                                data_type: "INTEGER".to_string(),
-                                is_primary_key: true,
-                            },
-                            Column {
-                                name: "user_id".to_string(),
-                                data_type: "INTEGER".to_string(),
-                                is_primary_key: false,
-                            },
-                            Column {
-                                name: "total".to_string(),
-                                data_type: "DECIMAL(10,2)".to_string(),
-                                is_primary_key: false,
-                            },
-                            Column {
-                                name: "status".to_string(),
-                                data_type: "VARCHAR(20)".to_string(),
-                                is_primary_key: false,
-                            },
-                            Column {
-                                name: "created_at".to_string(),
-                                data_type: "TIMESTAMP".to_string(),
-                                is_primary_key: false,
-                            },
-                        ],
-                    },
-                    Table {
-                        name: "products".to_string(),
-                        row_count: 1523,
-                        size_bytes: 890_000,
-                        columns: vec![
-                            Column {
-                                name: "id".to_string(),
-                                data_type: "INTEGER".to_string(),
-                                is_primary_key: true,
-                            },
-                            Column {
-                                name: "name".to_string(),
-                                data_type: "VARCHAR(200)".to_string(),
-                                is_primary_key: false,
-                            },
-                            Column {
-                                name: "price".to_string(),
-                                data_type: "DECIMAL(10,2)".to_string(),
-                                is_primary_key: false,
-                            },
-                        ],
-                    },
-                    Table {
-                        name: "customers".to_string(),
-                        row_count: 8921,
-                        size_bytes: 1_240_000,
-                        columns: vec![
-                            Column {
-                                name: "id".to_string(),
-                                data_type: "INTEGER".to_string(),
-                                is_primary_key: true,
-                            },
-                            Column {
-                                name: "name".to_string(),
-                                data_type: "VARCHAR(100)".to_string(),
-                                is_primary_key: false,
-                            },
-                            Column {
-                                name: "email".to_string(),
-                                data_type: "VARCHAR(255)".to_string(),
-                                is_primary_key: false,
-                            },
-                            Column {
-                                name: "created_at".to_string(),
-                                data_type: "DATE".to_string(),
-                                is_primary_key: false,
-                            },
-                            Column {
-                                name: "active".to_string(),
-                                data_type: "BOOLEAN".to_string(),
-                                is_primary_key: false,
-                            },
-                        ],
-                    },
-                    Table {
-                        name: "invoices".to_string(),
-                        row_count: 45123,
-                        size_bytes: 8_900_000,
-                        columns: vec![
-                            Column {
-                                name: "id".to_string(),
-                                data_type: "INTEGER".to_string(),
-                                is_primary_key: true,
-                            },
-                            Column {
-                                name: "order_id".to_string(),
-                                data_type: "INTEGER".to_string(),
-                                is_primary_key: false,
-                            },
-                            Column {
-                                name: "amount".to_string(),
-                                data_type: "DECIMAL(10,2)".to_string(),
-                                is_primary_key: false,
-                            },
-                            Column {
-                                name: "issued_at".to_string(),
-                                data_type: "TIMESTAMP".to_string(),
-                                is_primary_key: false,
-                            },
-                        ],
-                    },
-                ],
-            },
-            Connection {
-                name: "Development".to_string(),
-                host: "localhost".to_string(),
-                port: 5432,
-                database: "app_development".to_string(),
-                expanded: false,
-                tables: vec![
-                    Table {
-                        name: "users".to_string(),
-                        row_count: 150,
-                        size_bytes: 24_000,
-                        columns: vec![
-                            Column {
-                                name: "id".to_string(),
-                                data_type: "INTEGER".to_string(),
-                                is_primary_key: true,
-                            },
-                            Column {
-                                name: "name".to_string(),
-                                data_type: "VARCHAR(100)".to_string(),
-                                is_primary_key: false,
-                            },
-                        ],
-                    },
-                    Table {
-                        name: "orders".to_string(),
-                        row_count: 500,
-                        size_bytes: 85_000,
-                        columns: vec![
-                            Column {
-                                name: "id".to_string(),
-                                data_type: "INTEGER".to_string(),
-                                is_primary_key: true,
-                            },
-                            Column {
-                                name: "user_id".to_string(),
-                                data_type: "INTEGER".to_string(),
-                                is_primary_key: false,
-                            },
-                        ],
-                    },
-                    Table {
-                        name: "products".to_string(),
-                        row_count: 100,
-                        size_bytes: 15_000,
-                        columns: vec![
-                            Column {
-                                name: "id".to_string(),
-                                data_type: "INTEGER".to_string(),
-                                is_primary_key: true,
-                            },
-                            Column {
-                                name: "name".to_string(),
-                                data_type: "VARCHAR(200)".to_string(),
-                                is_primary_key: false,
-                            },
-                        ],
-                    },
-                ],
-            },
-            Connection {
-                name: "Staging".to_string(),
-                host: "staging.example.com".to_string(),
-                port: 5432,
-                database: "app_staging".to_string(),
-                expanded: false,
-                tables: vec![
-                    Table {
-                        name: "users".to_string(),
-                        row_count: 1000,
-                        size_bytes: 160_000,
-                        columns: vec![
-                            Column {
-                                name: "id".to_string(),
-                                data_type: "INTEGER".to_string(),
-                                is_primary_key: true,
-                            },
-                            Column {
-                                name: "name".to_string(),
-                                data_type: "VARCHAR(100)".to_string(),
-                                is_primary_key: false,
-                            },
-                        ],
-                    },
-                    Table {
-                        name: "orders".to_string(),
-                        row_count: 5000,
-                        size_bytes: 850_000,
-                        columns: vec![
-                            Column {
-                                name: "id".to_string(),
-                                data_type: "INTEGER".to_string(),
-                                is_primary_key: true,
-                            },
-                            Column {
-                                name: "user_id".to_string(),
-                                data_type: "INTEGER".to_string(),
-                                is_primary_key: false,
-                            },
-                        ],
-                    },
-                ],
-            },
+        let projects = vec![
+            Project::new("Production").with_connections(vec![
+                Connection {
+                    name: "Main DB".to_string(),
+                    host: "prod.example.com".to_string(),
+                    port: 5432,
+                    database: "app_production".to_string(),
+                    expanded: true,
+                    tables: vec![
+                        Table {
+                            name: "users".to_string(),
+                            row_count: 15420,
+                            size_bytes: 2_540_000,
+                            columns: vec![
+                                Column { name: "id".to_string(), data_type: "INTEGER".to_string(), is_primary_key: true },
+                                Column { name: "name".to_string(), data_type: "VARCHAR(100)".to_string(), is_primary_key: false },
+                                Column { name: "email".to_string(), data_type: "VARCHAR(255)".to_string(), is_primary_key: false },
+                                Column { name: "created_at".to_string(), data_type: "TIMESTAMP".to_string(), is_primary_key: false },
+                            ],
+                        },
+                        Table {
+                            name: "orders".to_string(),
+                            row_count: 89234,
+                            size_bytes: 15_200_000,
+                            columns: vec![
+                                Column { name: "id".to_string(), data_type: "INTEGER".to_string(), is_primary_key: true },
+                                Column { name: "user_id".to_string(), data_type: "INTEGER".to_string(), is_primary_key: false },
+                                Column { name: "total".to_string(), data_type: "DECIMAL(10,2)".to_string(), is_primary_key: false },
+                                Column { name: "status".to_string(), data_type: "VARCHAR(20)".to_string(), is_primary_key: false },
+                            ],
+                        },
+                        Table {
+                            name: "customers".to_string(),
+                            row_count: 8921,
+                            size_bytes: 1_240_000,
+                            columns: vec![
+                                Column { name: "id".to_string(), data_type: "INTEGER".to_string(), is_primary_key: true },
+                                Column { name: "name".to_string(), data_type: "VARCHAR(100)".to_string(), is_primary_key: false },
+                                Column { name: "email".to_string(), data_type: "VARCHAR(255)".to_string(), is_primary_key: false },
+                                Column { name: "active".to_string(), data_type: "BOOLEAN".to_string(), is_primary_key: false },
+                            ],
+                        },
+                    ],
+                },
+                Connection {
+                    name: "Analytics DB".to_string(),
+                    host: "prod-analytics.example.com".to_string(),
+                    port: 5432,
+                    database: "analytics".to_string(),
+                    expanded: false,
+                    tables: vec![
+                        Table {
+                            name: "events".to_string(),
+                            row_count: 1_000_000,
+                            size_bytes: 50_000_000,
+                            columns: vec![
+                                Column { name: "id".to_string(), data_type: "BIGINT".to_string(), is_primary_key: true },
+                                Column { name: "event_type".to_string(), data_type: "VARCHAR(50)".to_string(), is_primary_key: false },
+                            ],
+                        },
+                    ],
+                },
+            ]),
+            Project::new("Development").with_connections(vec![
+                Connection {
+                    name: "Local DB".to_string(),
+                    host: "localhost".to_string(),
+                    port: 5432,
+                    database: "app_development".to_string(),
+                    expanded: false,
+                    tables: vec![
+                        Table {
+                            name: "users".to_string(),
+                            row_count: 150,
+                            size_bytes: 24_000,
+                            columns: vec![
+                                Column { name: "id".to_string(), data_type: "INTEGER".to_string(), is_primary_key: true },
+                                Column { name: "name".to_string(), data_type: "VARCHAR(100)".to_string(), is_primary_key: false },
+                            ],
+                        },
+                        Table {
+                            name: "orders".to_string(),
+                            row_count: 500,
+                            size_bytes: 85_000,
+                            columns: vec![
+                                Column { name: "id".to_string(), data_type: "INTEGER".to_string(), is_primary_key: true },
+                                Column { name: "user_id".to_string(), data_type: "INTEGER".to_string(), is_primary_key: false },
+                            ],
+                        },
+                    ],
+                },
+            ]),
+            Project::new("Staging").with_connections(vec![
+                Connection {
+                    name: "Stage DB".to_string(),
+                    host: "staging.example.com".to_string(),
+                    port: 5432,
+                    database: "app_staging".to_string(),
+                    expanded: false,
+                    tables: vec![
+                        Table {
+                            name: "users".to_string(),
+                            row_count: 1000,
+                            size_bytes: 160_000,
+                            columns: vec![
+                                Column { name: "id".to_string(), data_type: "INTEGER".to_string(), is_primary_key: true },
+                                Column { name: "name".to_string(), data_type: "VARCHAR(100)".to_string(), is_primary_key: false },
+                            ],
+                        },
+                    ],
+                },
+            ]),
         ];
 
         let query = "SELECT * FROM customers LIMIT 50;".to_string();
 
         let result = Some(QueryResult {
-            columns: vec![
-                "id".to_string(),
-                "name".to_string(),
-                "email".to_string(),
-                "created_at".to_string(),
-            ],
+            columns: vec!["id".to_string(), "name".to_string(), "email".to_string(), "created_at".to_string()],
             rows: vec![
-                vec![
-                    "1".to_string(),
-                    "Alice Johnson".to_string(),
-                    "alice@example.com".to_string(),
-                    "2024-01-15".to_string(),
-                ],
-                vec![
-                    "2".to_string(),
-                    "Bob Smith".to_string(),
-                    "bob@example.com".to_string(),
-                    "2024-01-16".to_string(),
-                ],
-                vec![
-                    "3".to_string(),
-                    "Carol Williams".to_string(),
-                    "carol@example.com".to_string(),
-                    "2024-01-17".to_string(),
-                ],
-                vec![
-                    "4".to_string(),
-                    "David Brown".to_string(),
-                    "david@example.com".to_string(),
-                    "2024-01-18".to_string(),
-                ],
-                vec![
-                    "5".to_string(),
-                    "Eve Davis".to_string(),
-                    "eve@example.com".to_string(),
-                    "2024-01-19".to_string(),
-                ],
-                vec![
-                    "6".to_string(),
-                    "Frank Miller".to_string(),
-                    "frank@example.com".to_string(),
-                    "2024-01-20".to_string(),
-                ],
-                vec![
-                    "7".to_string(),
-                    "Grace Wilson".to_string(),
-                    "grace@example.com".to_string(),
-                    "2024-01-21".to_string(),
-                ],
-                vec![
-                    "8".to_string(),
-                    "Henry Moore".to_string(),
-                    "henry@example.com".to_string(),
-                    "2024-01-22".to_string(),
-                ],
+                vec!["1".to_string(), "Alice Johnson".to_string(), "alice@example.com".to_string(), "2024-01-15".to_string()],
+                vec!["2".to_string(), "Bob Smith".to_string(), "bob@example.com".to_string(), "2024-01-16".to_string()],
+                vec!["3".to_string(), "Carol Williams".to_string(), "carol@example.com".to_string(), "2024-01-17".to_string()],
+                vec!["4".to_string(), "David Brown".to_string(), "david@example.com".to_string(), "2024-01-18".to_string()],
             ],
             execution_time_ms: 23,
         });
 
         App {
-            connections,
-            selected_connection: 0,
-            selected_table: Some(3), // customers
+            projects,
+            sidebar_mode: SidebarMode::Projects,
+            selected_project_idx: 0,
+            selected_connection_idx: 0,
+            selected_table_idx: None,
             query,
             result,
             focus: Focus::Sidebar,
             main_panel_tab: MainPanelTab::Data,
-            status_message: "Connected to Production DB".to_string(),
+            status_message: "Ready".to_string(),
             modal_state: ModalState::None,
         }
     }
@@ -440,30 +261,14 @@ impl App {
             Message::Quit => return true,
 
             Message::NavigateUp => {
-                match self.focus {
-                    Focus::Sidebar => {
-                        self.navigate_sidebar_up();
-                    }
-                    Focus::MainPanel => {
-                        // TODO: scroll main panel up
-                    }
-                    Focus::QueryEditor => {
-                        // TODO: move cursor up in query
-                    }
+                if self.focus == Focus::Sidebar {
+                    self.navigate_up();
                 }
             }
 
             Message::NavigateDown => {
-                match self.focus {
-                    Focus::Sidebar => {
-                        self.navigate_sidebar_down();
-                    }
-                    Focus::MainPanel => {
-                        // TODO: scroll main panel down
-                    }
-                    Focus::QueryEditor => {
-                        // TODO: move cursor down in query
-                    }
+                if self.focus == Focus::Sidebar {
+                    self.navigate_down();
                 }
             }
 
@@ -484,28 +289,24 @@ impl App {
             }
 
             Message::FocusLeft => {
-                // QueryEditor/MainPanel -> Sidebar
                 if self.focus == Focus::QueryEditor || self.focus == Focus::MainPanel {
                     self.focus = Focus::Sidebar;
                 }
             }
 
             Message::FocusRight => {
-                // Sidebar -> QueryEditor
                 if self.focus == Focus::Sidebar {
                     self.focus = Focus::QueryEditor;
                 }
             }
 
             Message::FocusUp => {
-                // MainPanel -> QueryEditor
                 if self.focus == Focus::MainPanel {
                     self.focus = Focus::QueryEditor;
                 }
             }
 
             Message::FocusDown => {
-                // QueryEditor -> MainPanel
                 if self.focus == Focus::QueryEditor {
                     self.focus = Focus::MainPanel;
                 }
@@ -513,7 +314,13 @@ impl App {
 
             Message::Activate => {
                 if self.focus == Focus::Sidebar {
-                    self.activate_current_item();
+                    self.activate();
+                }
+            }
+
+            Message::GoBack => {
+                if self.focus == Focus::Sidebar {
+                    self.go_back();
                 }
             }
 
@@ -536,8 +343,13 @@ impl App {
             Message::ModalConfirm => {
                 if let ModalState::AddConnection(ref modal) = self.modal_state {
                     if let Some(conn) = self.create_connection_from_modal(modal) {
-                        self.connections.push(conn);
-                        self.status_message = "Connection added".to_string();
+                        // Add connection to current project if in Connections mode
+                        if let SidebarMode::Connections(proj_idx) = self.sidebar_mode {
+                            if let Some(project) = self.projects.get_mut(proj_idx) {
+                                project.connections.push(conn);
+                                self.status_message = "Connection added".to_string();
+                            }
+                        }
                     }
                 }
                 self.modal_state = ModalState::None;
@@ -564,24 +376,12 @@ impl App {
             Message::ModalInputBackspace => {
                 if let ModalState::AddConnection(ref mut modal) = self.modal_state {
                     match modal.focused_field {
-                        ModalField::Name => {
-                            modal.name.pop();
-                        }
-                        ModalField::Host => {
-                            modal.host.pop();
-                        }
-                        ModalField::Port => {
-                            modal.port.pop();
-                        }
-                        ModalField::User => {
-                            modal.user.pop();
-                        }
-                        ModalField::Password => {
-                            modal.password.pop();
-                        }
-                        ModalField::Database => {
-                            modal.database.pop();
-                        }
+                        ModalField::Name => { modal.name.pop(); }
+                        ModalField::Host => { modal.host.pop(); }
+                        ModalField::Port => { modal.port.pop(); }
+                        ModalField::User => { modal.user.pop(); }
+                        ModalField::Password => { modal.password.pop(); }
+                        ModalField::Database => { modal.database.pop(); }
                         ModalField::ButtonOk | ModalField::ButtonCancel => {}
                     }
                 }
@@ -618,88 +418,187 @@ impl App {
         })
     }
 
-    fn navigate_sidebar_up(&mut self) {
-        if let Some(conn) = self.connections.get(self.selected_connection) {
-            if conn.expanded {
-                // If a table is selected, move up within tables or to connection
-                if let Some(table_idx) = self.selected_table {
-                    if table_idx > 0 {
-                        self.selected_table = Some(table_idx - 1);
-                    } else {
-                        self.selected_table = None;
-                    }
-                } else if self.selected_connection > 0 {
-                    // Move to previous connection's last table (if expanded)
-                    self.selected_connection -= 1;
-                    let prev_conn = &self.connections[self.selected_connection];
-                    if prev_conn.expanded && !prev_conn.tables.is_empty() {
-                        self.selected_table = Some(prev_conn.tables.len() - 1);
-                    } else {
-                        self.selected_table = None;
-                    }
+    /// Navigate up based on current sidebar mode
+    fn navigate_up(&mut self) {
+        match self.sidebar_mode {
+            SidebarMode::Projects => {
+                if self.selected_project_idx > 0 {
+                    self.selected_project_idx -= 1;
+                } else if !self.projects.is_empty() {
+                    self.selected_project_idx = self.projects.len() - 1;
                 }
-            } else if self.selected_connection > 0 {
-                self.selected_connection -= 1;
-                self.selected_table = None;
+            }
+            SidebarMode::Connections(proj_idx) => {
+                self.navigate_connections_up(proj_idx);
             }
         }
     }
 
-    fn navigate_sidebar_down(&mut self) {
-        if let Some(conn) = self.connections.get(self.selected_connection) {
-            if conn.expanded {
-                if let Some(table_idx) = self.selected_table {
-                    if table_idx + 1 < conn.tables.len() {
-                        self.selected_table = Some(table_idx + 1);
-                    } else if self.selected_connection + 1 < self.connections.len() {
-                        // Move to next connection
-                        self.selected_connection += 1;
-                        self.selected_table = None;
-                    }
+    /// Navigate down based on current sidebar mode
+    fn navigate_down(&mut self) {
+        match self.sidebar_mode {
+            SidebarMode::Projects => {
+                if self.selected_project_idx + 1 < self.projects.len() {
+                    self.selected_project_idx += 1;
                 } else {
-                    // No table selected, select first table
-                    if !conn.tables.is_empty() {
-                        self.selected_table = Some(0);
-                    } else if self.selected_connection + 1 < self.connections.len() {
-                        self.selected_connection += 1;
-                    }
+                    self.selected_project_idx = 0;
                 }
-            } else if self.selected_connection + 1 < self.connections.len() {
-                self.selected_connection += 1;
-                self.selected_table = None;
+            }
+            SidebarMode::Connections(proj_idx) => {
+                self.navigate_connections_down(proj_idx);
             }
         }
     }
 
-    fn activate_current_item(&mut self) {
-        if let Some(table_idx) = self.selected_table {
-            // Table selected: generate query for the table
-            if let Some(conn) = self.connections.get(self.selected_connection) {
-                if let Some(table) = conn.tables.get(table_idx) {
-                    self.query = format!("SELECT * FROM {} LIMIT 50;", table.name);
-                    self.status_message = format!(
-                        "Selected: {}.{} ({} rows)",
-                        conn.database, table.name, table.row_count
-                    );
+    fn navigate_connections_up(&mut self, proj_idx: usize) {
+        let Some(project) = self.projects.get(proj_idx) else { return };
+
+        // Build flat list of (conn_idx, Option<table_idx>)
+        let items: Vec<(usize, Option<usize>)> = project
+            .connections
+            .iter()
+            .enumerate()
+            .flat_map(|(conn_idx, conn)| {
+                let mut v = vec![(conn_idx, None)];
+                if conn.expanded {
+                    for table_idx in 0..conn.tables.len() {
+                        v.push((conn_idx, Some(table_idx)));
+                    }
+                }
+                v
+            })
+            .collect();
+
+        if items.is_empty() { return; }
+
+        let current = items
+            .iter()
+            .position(|(c, t)| *c == self.selected_connection_idx && *t == self.selected_table_idx)
+            .unwrap_or(0);
+
+        let new_idx = if current == 0 { items.len() - 1 } else { current - 1 };
+        let (conn_idx, table_idx) = items[new_idx];
+        self.selected_connection_idx = conn_idx;
+        self.selected_table_idx = table_idx;
+    }
+
+    fn navigate_connections_down(&mut self, proj_idx: usize) {
+        let Some(project) = self.projects.get(proj_idx) else { return };
+
+        let items: Vec<(usize, Option<usize>)> = project
+            .connections
+            .iter()
+            .enumerate()
+            .flat_map(|(conn_idx, conn)| {
+                let mut v = vec![(conn_idx, None)];
+                if conn.expanded {
+                    for table_idx in 0..conn.tables.len() {
+                        v.push((conn_idx, Some(table_idx)));
+                    }
+                }
+                v
+            })
+            .collect();
+
+        if items.is_empty() { return; }
+
+        let current = items
+            .iter()
+            .position(|(c, t)| *c == self.selected_connection_idx && *t == self.selected_table_idx)
+            .unwrap_or(0);
+
+        let new_idx = if current + 1 >= items.len() { 0 } else { current + 1 };
+        let (conn_idx, table_idx) = items[new_idx];
+        self.selected_connection_idx = conn_idx;
+        self.selected_table_idx = table_idx;
+    }
+
+    /// Activate current selection (Enter key)
+    fn activate(&mut self) {
+        match self.sidebar_mode {
+            SidebarMode::Projects => {
+                // Enter project -> show its connections
+                self.sidebar_mode = SidebarMode::Connections(self.selected_project_idx);
+                self.selected_connection_idx = 0;
+                self.selected_table_idx = None;
+                if let Some(project) = self.projects.get(self.selected_project_idx) {
+                    self.status_message = format!("Project: {}", project.name);
                 }
             }
-        } else {
-            // Connection selected: toggle expand/collapse
-            if let Some(conn) = self.connections.get_mut(self.selected_connection) {
+            SidebarMode::Connections(proj_idx) => {
+                if self.selected_table_idx.is_some() {
+                    // Table selected: generate query
+                    self.activate_table(proj_idx);
+                } else {
+                    // Connection selected: toggle expand
+                    self.toggle_connection_expand(proj_idx);
+                }
+            }
+        }
+    }
+
+    /// Go back to Projects view (Backspace key)
+    fn go_back(&mut self) {
+        if let SidebarMode::Connections(_) = self.sidebar_mode {
+            self.sidebar_mode = SidebarMode::Projects;
+            self.status_message = "Projects".to_string();
+        }
+    }
+
+    fn toggle_connection_expand(&mut self, proj_idx: usize) {
+        if let Some(project) = self.projects.get_mut(proj_idx) {
+            if let Some(conn) = project.connections.get_mut(self.selected_connection_idx) {
                 conn.expanded = !conn.expanded;
+                if !conn.expanded {
+                    self.selected_table_idx = None;
+                }
+            }
+        }
+    }
+
+    fn activate_table(&mut self, proj_idx: usize) {
+        if let Some(project) = self.projects.get(proj_idx) {
+            if let Some(conn) = project.connections.get(self.selected_connection_idx) {
+                if let Some(table_idx) = self.selected_table_idx {
+                    if let Some(table) = conn.tables.get(table_idx) {
+                        self.query = format!("SELECT * FROM {} LIMIT 50;", table.name);
+                        self.status_message = format!(
+                            "Selected: {}.{} ({} rows)",
+                            conn.database, table.name, table.row_count
+                        );
+                    }
+                }
             }
         }
     }
 
     /// Get currently selected table (if any)
     pub fn selected_table_info(&self) -> Option<&Table> {
-        let table_idx = self.selected_table?;
-        let conn = self.connections.get(self.selected_connection)?;
-        conn.tables.get(table_idx)
+        if let SidebarMode::Connections(proj_idx) = self.sidebar_mode {
+            let project = self.projects.get(proj_idx)?;
+            let conn = project.connections.get(self.selected_connection_idx)?;
+            let table_idx = self.selected_table_idx?;
+            conn.tables.get(table_idx)
+        } else {
+            None
+        }
     }
 
-    /// Get currently selected connection
+    /// Get currently selected connection (if any)
     pub fn selected_connection_info(&self) -> Option<&Connection> {
-        self.connections.get(self.selected_connection)
+        if let SidebarMode::Connections(proj_idx) = self.sidebar_mode {
+            let project = self.projects.get(proj_idx)?;
+            project.connections.get(self.selected_connection_idx)
+        } else {
+            None
+        }
+    }
+
+    /// Get currently selected project
+    pub fn selected_project_info(&self) -> Option<&Project> {
+        match self.sidebar_mode {
+            SidebarMode::Projects => self.projects.get(self.selected_project_idx),
+            SidebarMode::Connections(proj_idx) => self.projects.get(proj_idx),
+        }
     }
 }
