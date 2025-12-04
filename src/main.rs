@@ -69,6 +69,16 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut App)
                     (KeyCode::Char('q'), _) | (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
                         Some(Message::Quit)
                     }
+                    // Shift + movement keys: directional pane navigation
+                    (KeyCode::Left, KeyModifiers::SHIFT)
+                    | (KeyCode::Char('H'), KeyModifiers::SHIFT) => Some(Message::FocusLeft),
+                    (KeyCode::Right, KeyModifiers::SHIFT)
+                    | (KeyCode::Char('L'), KeyModifiers::SHIFT) => Some(Message::FocusRight),
+                    (KeyCode::Up, KeyModifiers::SHIFT)
+                    | (KeyCode::Char('K'), KeyModifiers::SHIFT) => Some(Message::FocusUp),
+                    (KeyCode::Down, KeyModifiers::SHIFT)
+                    | (KeyCode::Char('J'), KeyModifiers::SHIFT) => Some(Message::FocusDown),
+                    // Regular navigation within current pane
                     (KeyCode::Up | KeyCode::Char('k'), _) => Some(Message::NavigateUp),
                     (KeyCode::Down | KeyCode::Char('j'), _) => Some(Message::NavigateDown),
                     (KeyCode::Tab, _) => Some(Message::NextFocus),
