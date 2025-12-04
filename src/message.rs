@@ -11,7 +11,6 @@ pub enum Message {
     FocusUp,
     FocusDown,
     Activate,
-    ToggleExpandCollapse,
     SwitchToSchema,
     SwitchToData,
     // Modal messages
