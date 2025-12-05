@@ -1,6 +1,6 @@
 use crate::app::{App, Focus, SidebarMode};
 use ratatui::{
-    layout::Rect,
+    layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
@@ -10,10 +10,55 @@ use ratatui::{
 use super::utils::{format_number, format_size};
 
 pub fn draw_sidebar(frame: &mut Frame, app: &App, area: Rect) {
+    // Split area: mode indicator (top) + content (bottom)
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(1), // Mode indicator
+            Constraint::Min(1),    // Content
+        ])
+        .split(area);
+
+    draw_mode_indicator(frame, app, chunks[0]);
+
     match app.sidebar_mode {
-        SidebarMode::Projects => draw_projects_view(frame, app, area),
-        SidebarMode::Connections(proj_idx) => draw_connections_view(frame, app, area, proj_idx),
+        SidebarMode::Projects => draw_projects_view(frame, app, chunks[1]),
+        SidebarMode::Connections(proj_idx) => {
+            draw_connections_view(frame, app, chunks[1], proj_idx)
+        }
     }
+}
+
+/// Draw the mode indicator at the top of sidebar
+fn draw_mode_indicator(frame: &mut Frame, app: &App, area: Rect) {
+    let is_projects_mode = matches!(app.sidebar_mode, SidebarMode::Projects);
+
+    let projects_style = if is_projects_mode {
+        Style::default()
+            .bg(Color::Cyan)
+            .fg(Color::Black)
+            .add_modifier(Modifier::BOLD)
+    } else {
+        Style::default().fg(Color::DarkGray)
+    };
+
+    let connections_style = if !is_projects_mode {
+        Style::default()
+            .bg(Color::Cyan)
+            .fg(Color::Black)
+            .add_modifier(Modifier::BOLD)
+    } else {
+        Style::default().fg(Color::DarkGray)
+    };
+
+    let indicator = Line::from(vec![
+        Span::styled(" Projects ", projects_style),
+        Span::styled("│", Style::default().fg(Color::DarkGray)),
+        Span::styled(" Connections ", connections_style),
+    ]);
+
+    let paragraph = Paragraph::new(indicator);
+    frame.render_widget(paragraph, area);
 }
 
 /// Draw the Projects list view
@@ -98,13 +143,6 @@ fn draw_connections_view(frame: &mut Frame, app: &App, area: Rect, proj_idx: usi
     frame.render_widget(block, area);
 
     let mut lines: Vec<Line> = Vec::new();
-
-    // Back navigation hint
-    lines.push(Line::from(Span::styled(
-        "← Backspace: Projects",
-        Style::default().fg(Color::DarkGray),
-    )));
-    lines.push(Line::from(""));
 
     let connections = app
         .projects
