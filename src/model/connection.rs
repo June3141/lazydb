@@ -1,4 +1,4 @@
-use super::table::Table;
+use super::schema::Table;
 
 #[derive(Debug, Clone)]
 pub struct Connection {
