@@ -196,7 +196,7 @@ fn draw_data_content(frame: &mut Frame, app: &App, area: Rect) {
     if let Some(result) = &app.result {
         // Row number column width (calculate based on total rows)
         let row_count = result.rows.len();
-        let row_num_width = format!("{}", row_count).len().max(2) + 1; // minimum 2 digits + padding
+        let row_num_width = format!("{}", row_count).len().max(2); // minimum 2 digits
 
         // Separator style for vertical lines
         let separator = "│";
@@ -244,7 +244,7 @@ fn draw_data_content(frame: &mut Frame, app: &App, area: Rect) {
 
                 // Row number cell with separator
                 let mut cells: Vec<Cell> = vec![
-                    Cell::from(format!("{:>width$}", idx + 1, width = row_num_width - 1))
+                    Cell::from(format!("{:>width$}", idx + 1, width = row_num_width))
                         .style(Style::default().fg(Color::DarkGray)),
                     Cell::from(separator).style(separator_style),
                 ];
