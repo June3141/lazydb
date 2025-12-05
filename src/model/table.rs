@@ -3,6 +3,7 @@ pub struct Column {
     pub name: String,
     pub data_type: String,
     pub is_primary_key: bool,
+    pub comment: Option<String>,
 }
 
 #[derive(Debug, Clone)]
