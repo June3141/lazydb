@@ -297,7 +297,6 @@ $RECYCLE.BIN/
 ### Project specific ###
 # Claude Code local settings
 .mcp.json
-.claude/
 
 # Serena MCP settings
 .serena/

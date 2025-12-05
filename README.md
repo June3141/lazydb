@@ -116,3 +116,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [lazygit](https://github.com/jesseduffield/lazygit) - Inspiration for the UI/UX
 - [lazydocker](https://github.com/jesseduffield/lazydocker) - Inspiration for the UI/UX
 - [ratatui](https://github.com/ratatui-org/ratatui) - TUI framework for Rust
+- [awesome-claude-code-subagents](https://github.com/VoltAgent/awesome-claude-code-subagents) -
+  Claude Code subagents (MIT)
