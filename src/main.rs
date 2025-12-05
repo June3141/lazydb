@@ -5,7 +5,9 @@ mod model;
 mod ui;
 
 use anyhow::Result;
-use app::{App, Focus, ModalField, ModalState};
+use app::{
+    App, ConfirmModalField, ConnectionModalField, Focus, ModalState, ProjectModalField,
+};
 use clap::Parser;
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers},
@@ -87,9 +89,29 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut App)
                     (KeyCode::Enter, _) => Some(Message::Activate),
                     (KeyCode::Backspace, _) if app.focus == Focus::Sidebar => Some(Message::GoBack),
                     (KeyCode::Char('s'), _) => Some(Message::SwitchToSchema),
-                    (KeyCode::Char('d'), _) => Some(Message::SwitchToData),
+                    (KeyCode::Char('d'), _) if app.focus != Focus::Sidebar => {
+                        Some(Message::SwitchToData)
+                    }
+                    // Connection/Project add: 'a' key in sidebar
                     (KeyCode::Char('a'), _) if app.focus == Focus::Sidebar => {
-                        Some(Message::OpenAddConnectionModal)
+                        match app.sidebar_mode {
+                            app::SidebarMode::Projects => Some(Message::OpenAddProjectModal),
+                            app::SidebarMode::Connections(_) => Some(Message::OpenAddConnectionModal),
+                        }
+                    }
+                    // Project edit: 'e' key in Projects view
+                    (KeyCode::Char('e'), _)
+                        if app.focus == Focus::Sidebar
+                            && matches!(app.sidebar_mode, app::SidebarMode::Projects) =>
+                    {
+                        Some(Message::OpenEditProjectModal)
+                    }
+                    // Project delete: 'd' key in Projects view
+                    (KeyCode::Char('d'), _)
+                        if app.focus == Focus::Sidebar
+                            && matches!(app.sidebar_mode, app::SidebarMode::Projects) =>
+                    {
+                        Some(Message::DeleteProject)
                     }
                     _ => None,
                 }
@@ -110,50 +132,130 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut App)
 fn handle_modal_input(app: &App, key_code: KeyCode) -> Option<Message> {
     match &app.modal_state {
         ModalState::None => None,
-        ModalState::AddConnection(modal) => match key_code {
-            KeyCode::Esc => Some(Message::CloseModal),
-            KeyCode::Tab => Some(Message::ModalNextField),
-            KeyCode::BackTab => Some(Message::ModalPrevField),
-            KeyCode::Down | KeyCode::Char('j')
-                if matches!(
-                    modal.focused_field,
-                    ModalField::ButtonOk | ModalField::ButtonCancel
-                ) =>
-            {
-                Some(Message::ModalNextField)
-            }
-            KeyCode::Up | KeyCode::Char('k')
-                if matches!(
-                    modal.focused_field,
-                    ModalField::ButtonOk | ModalField::ButtonCancel
-                ) =>
-            {
-                Some(Message::ModalPrevField)
-            }
-            KeyCode::Left | KeyCode::Char('h')
-                if matches!(
-                    modal.focused_field,
-                    ModalField::ButtonOk | ModalField::ButtonCancel
-                ) =>
-            {
-                Some(Message::ModalPrevField)
-            }
-            KeyCode::Right | KeyCode::Char('l')
-                if matches!(
-                    modal.focused_field,
-                    ModalField::ButtonOk | ModalField::ButtonCancel
-                ) =>
-            {
-                Some(Message::ModalNextField)
-            }
-            KeyCode::Enter => match modal.focused_field {
-                ModalField::ButtonOk => Some(Message::ModalConfirm),
-                ModalField::ButtonCancel => Some(Message::CloseModal),
-                _ => Some(Message::ModalNextField),
-            },
-            KeyCode::Backspace => Some(Message::ModalInputBackspace),
-            KeyCode::Char(c) => Some(Message::ModalInputChar(c)),
-            _ => None,
+        ModalState::AddConnection(modal) => handle_connection_modal_input(key_code, modal),
+        ModalState::AddProject(modal) | ModalState::EditProject(_, modal) => {
+            handle_project_modal_input(key_code, modal)
+        }
+        ModalState::DeleteProject(modal) => handle_delete_modal_input(key_code, modal),
+    }
+}
+
+fn handle_connection_modal_input(
+    key_code: KeyCode,
+    modal: &app::AddConnectionModal,
+) -> Option<Message> {
+    match key_code {
+        KeyCode::Esc => Some(Message::CloseModal),
+        KeyCode::Tab => Some(Message::ModalNextField),
+        KeyCode::BackTab => Some(Message::ModalPrevField),
+        KeyCode::Down | KeyCode::Char('j')
+            if matches!(
+                modal.focused_field,
+                ConnectionModalField::ButtonOk | ConnectionModalField::ButtonCancel
+            ) =>
+        {
+            Some(Message::ModalNextField)
+        }
+        KeyCode::Up | KeyCode::Char('k')
+            if matches!(
+                modal.focused_field,
+                ConnectionModalField::ButtonOk | ConnectionModalField::ButtonCancel
+            ) =>
+        {
+            Some(Message::ModalPrevField)
+        }
+        KeyCode::Left | KeyCode::Char('h')
+            if matches!(
+                modal.focused_field,
+                ConnectionModalField::ButtonOk | ConnectionModalField::ButtonCancel
+            ) =>
+        {
+            Some(Message::ModalPrevField)
+        }
+        KeyCode::Right | KeyCode::Char('l')
+            if matches!(
+                modal.focused_field,
+                ConnectionModalField::ButtonOk | ConnectionModalField::ButtonCancel
+            ) =>
+        {
+            Some(Message::ModalNextField)
+        }
+        KeyCode::Enter => match modal.focused_field {
+            ConnectionModalField::ButtonOk => Some(Message::ModalConfirm),
+            ConnectionModalField::ButtonCancel => Some(Message::CloseModal),
+            _ => Some(Message::ModalNextField),
         },
+        KeyCode::Backspace => Some(Message::ModalInputBackspace),
+        KeyCode::Char(c) => Some(Message::ModalInputChar(c)),
+        _ => None,
+    }
+}
+
+fn handle_project_modal_input(
+    key_code: KeyCode,
+    modal: &app::ProjectModal,
+) -> Option<Message> {
+    match key_code {
+        KeyCode::Esc => Some(Message::CloseModal),
+        KeyCode::Tab => Some(Message::ModalNextField),
+        KeyCode::BackTab => Some(Message::ModalPrevField),
+        KeyCode::Down | KeyCode::Char('j')
+            if matches!(
+                modal.focused_field,
+                ProjectModalField::ButtonOk | ProjectModalField::ButtonCancel
+            ) =>
+        {
+            Some(Message::ModalNextField)
+        }
+        KeyCode::Up | KeyCode::Char('k')
+            if matches!(
+                modal.focused_field,
+                ProjectModalField::ButtonOk | ProjectModalField::ButtonCancel
+            ) =>
+        {
+            Some(Message::ModalPrevField)
+        }
+        KeyCode::Left | KeyCode::Char('h')
+            if matches!(
+                modal.focused_field,
+                ProjectModalField::ButtonOk | ProjectModalField::ButtonCancel
+            ) =>
+        {
+            Some(Message::ModalPrevField)
+        }
+        KeyCode::Right | KeyCode::Char('l')
+            if matches!(
+                modal.focused_field,
+                ProjectModalField::ButtonOk | ProjectModalField::ButtonCancel
+            ) =>
+        {
+            Some(Message::ModalNextField)
+        }
+        KeyCode::Enter => match modal.focused_field {
+            ProjectModalField::ButtonOk => Some(Message::ModalConfirm),
+            ProjectModalField::ButtonCancel => Some(Message::CloseModal),
+            ProjectModalField::Name => Some(Message::ModalNextField),
+        },
+        KeyCode::Backspace => Some(Message::ModalInputBackspace),
+        KeyCode::Char(c) => Some(Message::ModalInputChar(c)),
+        _ => None,
+    }
+}
+
+fn handle_delete_modal_input(
+    key_code: KeyCode,
+    modal: &app::DeleteProjectModal,
+) -> Option<Message> {
+    match key_code {
+        KeyCode::Esc => Some(Message::CloseModal),
+        KeyCode::Tab | KeyCode::Left | KeyCode::Right | KeyCode::Char('h') | KeyCode::Char('l') => {
+            Some(Message::ModalNextField)
+        }
+        KeyCode::BackTab => Some(Message::ModalPrevField),
+        KeyCode::Enter => match modal.focused_field {
+            ConfirmModalField::ButtonOk => Some(Message::ModalConfirm),
+            ConfirmModalField::ButtonCancel => Some(Message::CloseModal),
+        },
+        _ => None,
     }
 }
