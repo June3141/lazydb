@@ -2,7 +2,6 @@ use crate::app::{App, Focus, MainPanelTab};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
-    text::{Line, Span},
     widgets::{Block, Borders, Cell, Paragraph, Row, Table, Tabs, Wrap},
     Frame,
 };
@@ -79,66 +78,219 @@ pub fn draw_main_panel(frame: &mut Frame, app: &App, area: Rect) {
 }
 
 fn draw_schema_content(frame: &mut Frame, app: &App, area: Rect) {
-    let lines = if let Some(table) = app.selected_table_info() {
-        table
+    if let Some(table) = app.selected_table_info() {
+        // Separator style for vertical lines
+        let separator = "│";
+        let separator_style = Style::default().fg(Color::DarkGray);
+
+        // Create header row
+        let header_cells = vec![
+            Cell::from("#").style(
+                Style::default()
+                    .fg(Color::DarkGray)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Cell::from(separator).style(separator_style),
+            Cell::from("PK").style(
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Cell::from(separator).style(separator_style),
+            Cell::from("Column").style(
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Cell::from(separator).style(separator_style),
+            Cell::from("Type").style(
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Cell::from(separator).style(separator_style),
+            Cell::from("Comment").style(
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD),
+            ),
+        ];
+        let header = Row::new(header_cells)
+            .height(1)
+            .style(Style::default().bg(Color::Rgb(40, 40, 50)))
+            .bottom_margin(1);
+
+        // Create data rows with zebra striping
+        let row_count = table.columns.len();
+        let row_num_width = format!("{}", row_count).len().max(2);
+
+        let rows: Vec<Row> = table
             .columns
             .iter()
-            .map(|col| {
-                let pk_marker = if col.is_primary_key { "🔑 " } else { "   " };
+            .enumerate()
+            .map(|(idx, col)| {
+                // Zebra stripe: alternate background colors
+                let row_bg = if idx % 2 == 0 {
+                    Color::Reset
+                } else {
+                    Color::Rgb(45, 45, 55)
+                };
+
+                let pk_marker = if col.is_primary_key { "🔑" } else { "" };
                 let name_style = if col.is_primary_key {
                     Style::default().fg(Color::Yellow)
                 } else {
                     Style::default().fg(Color::White)
                 };
 
-                Line::from(vec![
-                    Span::styled(pk_marker, Style::default()),
-                    Span::styled(format!("{:<20}", &col.name), name_style),
-                    Span::styled(&col.data_type, Style::default().fg(Color::DarkGray)),
-                ])
-            })
-            .collect()
-    } else {
-        vec![Line::from(Span::styled(
-            "Select a table to view schema",
-            Style::default().fg(Color::DarkGray),
-        ))]
-    };
+                let comment = col.comment.as_deref().unwrap_or("");
 
-    let paragraph = Paragraph::new(lines);
-    frame.render_widget(paragraph, area);
+                let cells = vec![
+                    Cell::from(format!("{:>width$}", idx + 1, width = row_num_width))
+                        .style(Style::default().fg(Color::DarkGray)),
+                    Cell::from(separator).style(separator_style),
+                    Cell::from(pk_marker).style(Style::default().fg(Color::Yellow)),
+                    Cell::from(separator).style(separator_style),
+                    Cell::from(col.name.clone()).style(name_style),
+                    Cell::from(separator).style(separator_style),
+                    Cell::from(col.data_type.clone()).style(Style::default().fg(Color::Cyan)),
+                    Cell::from(separator).style(separator_style),
+                    Cell::from(comment).style(Style::default().fg(Color::DarkGray)),
+                ];
+
+                Row::new(cells).height(1).style(Style::default().bg(row_bg))
+            })
+            .collect();
+
+        // Column widths
+        let widths = vec![
+            Constraint::Length(3),      // Row number
+            Constraint::Length(1),      // Separator
+            Constraint::Length(2),      // PK marker
+            Constraint::Length(1),      // Separator
+            Constraint::Percentage(25), // Column name
+            Constraint::Length(1),      // Separator
+            Constraint::Percentage(20), // Type
+            Constraint::Length(1),      // Separator
+            Constraint::Percentage(45), // Comment
+        ];
+
+        let schema_table = Table::new(rows, widths)
+            .header(header)
+            .column_spacing(1)
+            .row_highlight_style(
+                Style::default()
+                    .bg(Color::Rgb(70, 70, 100))
+                    .add_modifier(Modifier::BOLD),
+            );
+
+        frame.render_widget(schema_table, area);
+    } else {
+        let empty = Paragraph::new("Select a table to view schema")
+            .style(Style::default().fg(Color::DarkGray));
+        frame.render_widget(empty, area);
+    }
 }
 
 fn draw_data_content(frame: &mut Frame, app: &App, area: Rect) {
     if let Some(result) = &app.result {
-        // Create header row
-        let header_cells = result.columns.iter().map(|col| {
-            Cell::from(col.clone()).style(
+        // Row number column width (calculate based on total rows)
+        let row_count = result.rows.len();
+        let row_num_width = format!("{}", row_count).len().max(2) + 1; // minimum 2 digits + padding
+
+        // Separator style for vertical lines
+        let separator = "│";
+        let separator_style = Style::default().fg(Color::DarkGray);
+
+        // Create header row with row number column and separators
+        let mut header_cells: Vec<Cell> = vec![
+            Cell::from("#").style(
                 Style::default()
-                    .fg(Color::Yellow)
+                    .fg(Color::DarkGray)
                     .add_modifier(Modifier::BOLD),
-            )
-        });
-        let header = Row::new(header_cells).height(1);
+            ),
+            Cell::from(separator).style(separator_style),
+        ];
+        for (i, col) in result.columns.iter().enumerate() {
+            header_cells.push(
+                Cell::from(col.clone()).style(
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
+                ),
+            );
+            // Add separator after each column except the last
+            if i < result.columns.len() - 1 {
+                header_cells.push(Cell::from(separator).style(separator_style));
+            }
+        }
+        let header = Row::new(header_cells)
+            .height(1)
+            .style(Style::default().bg(Color::Rgb(40, 40, 50)))
+            .bottom_margin(1); // Add margin for visual separation (acts as horizontal line)
 
-        // Create data rows
-        let rows = result.rows.iter().map(|row_data| {
-            let cells = row_data
-                .iter()
-                .map(|cell| Cell::from(cell.clone()).style(Style::default().fg(Color::White)));
-            Row::new(cells).height(1)
-        });
-
-        // Calculate column widths
-        let widths: Vec<Constraint> = result
-            .columns
+        // Create data rows with row numbers, separators, and zebra striping
+        let rows: Vec<Row> = result
+            .rows
             .iter()
-            .map(|_| Constraint::Percentage(100 / result.columns.len() as u16))
+            .enumerate()
+            .map(|(idx, row_data)| {
+                // Zebra stripe: alternate background colors (more visible contrast)
+                let row_bg = if idx % 2 == 0 {
+                    Color::Reset // Default background
+                } else {
+                    Color::Rgb(45, 45, 55) // More visible stripe for odd rows
+                };
+
+                // Row number cell with separator
+                let mut cells: Vec<Cell> = vec![
+                    Cell::from(format!("{:>width$}", idx + 1, width = row_num_width - 1))
+                        .style(Style::default().fg(Color::DarkGray)),
+                    Cell::from(separator).style(separator_style),
+                ];
+
+                // Data cells with separators
+                for (i, cell_data) in row_data.iter().enumerate() {
+                    cells.push(
+                        Cell::from(cell_data.clone()).style(Style::default().fg(Color::White)),
+                    );
+                    // Add separator after each column except the last
+                    if i < row_data.len() - 1 {
+                        cells.push(Cell::from(separator).style(separator_style));
+                    }
+                }
+
+                Row::new(cells).height(1).style(Style::default().bg(row_bg))
+            })
             .collect();
+
+        // Calculate column widths (row number + separator + data columns with separators)
+        let data_col_count = result.columns.len();
+        let mut widths: Vec<Constraint> = vec![
+            Constraint::Length(row_num_width as u16), // Row number
+            Constraint::Length(1),                    // Separator
+        ];
+
+        // Calculate remaining width for data columns
+        if data_col_count > 0 {
+            let per_col_percentage = 100u16.saturating_div(data_col_count as u16).max(5);
+            for i in 0..data_col_count {
+                widths.push(Constraint::Percentage(per_col_percentage));
+                // Add separator width except after the last column
+                if i < data_col_count - 1 {
+                    widths.push(Constraint::Length(1));
+                }
+            }
+        }
 
         let table = Table::new(rows, widths)
             .header(header)
-            .row_highlight_style(Style::default().bg(Color::DarkGray));
+            .column_spacing(1) // Add spacing between columns for better readability
+            .row_highlight_style(
+                Style::default()
+                    .bg(Color::Rgb(70, 70, 100))
+                    .add_modifier(Modifier::BOLD),
+            );
 
         frame.render_widget(table, area);
     } else {
