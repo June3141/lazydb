@@ -80,6 +80,13 @@ fn draw_projects_view(frame: &mut Frame, app: &App, area: Rect) {
 
     let mut lines: Vec<Line> = Vec::new();
 
+    // Help hints for project operations
+    lines.push(Line::from(Span::styled(
+        "a: add  e: edit  d: delete",
+        Style::default().fg(Color::DarkGray),
+    )));
+    lines.push(Line::from(""));
+
     for (idx, project) in app.projects.iter().enumerate() {
         let is_selected = idx == app.selected_project_idx;
 
@@ -143,6 +150,13 @@ fn draw_connections_view(frame: &mut Frame, app: &App, area: Rect, proj_idx: usi
     frame.render_widget(block, area);
 
     let mut lines: Vec<Line> = Vec::new();
+
+    // Navigation and operation hints
+    lines.push(Line::from(Span::styled(
+        "← Back  a: add connection",
+        Style::default().fg(Color::DarkGray),
+    )));
+    lines.push(Line::from(""));
 
     let connections = app
         .projects

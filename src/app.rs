@@ -21,8 +21,9 @@ pub enum SidebarMode {
     Connections(usize), // project index
 }
 
+/// Field identifiers for Connection modal
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum ModalField {
+pub enum ConnectionModalField {
     Name,
     Host,
     Port,
@@ -33,31 +34,77 @@ pub enum ModalField {
     ButtonCancel,
 }
 
-impl ModalField {
+impl ConnectionModalField {
     pub fn next(self) -> Self {
         match self {
-            ModalField::Name => ModalField::Host,
-            ModalField::Host => ModalField::Port,
-            ModalField::Port => ModalField::User,
-            ModalField::User => ModalField::Password,
-            ModalField::Password => ModalField::Database,
-            ModalField::Database => ModalField::ButtonOk,
-            ModalField::ButtonOk => ModalField::ButtonCancel,
-            ModalField::ButtonCancel => ModalField::Name,
+            ConnectionModalField::Name => ConnectionModalField::Host,
+            ConnectionModalField::Host => ConnectionModalField::Port,
+            ConnectionModalField::Port => ConnectionModalField::User,
+            ConnectionModalField::User => ConnectionModalField::Password,
+            ConnectionModalField::Password => ConnectionModalField::Database,
+            ConnectionModalField::Database => ConnectionModalField::ButtonOk,
+            ConnectionModalField::ButtonOk => ConnectionModalField::ButtonCancel,
+            ConnectionModalField::ButtonCancel => ConnectionModalField::Name,
         }
     }
 
     pub fn prev(self) -> Self {
         match self {
-            ModalField::Name => ModalField::ButtonCancel,
-            ModalField::Host => ModalField::Name,
-            ModalField::Port => ModalField::Host,
-            ModalField::User => ModalField::Port,
-            ModalField::Password => ModalField::User,
-            ModalField::Database => ModalField::Password,
-            ModalField::ButtonOk => ModalField::Database,
-            ModalField::ButtonCancel => ModalField::ButtonOk,
+            ConnectionModalField::Name => ConnectionModalField::ButtonCancel,
+            ConnectionModalField::Host => ConnectionModalField::Name,
+            ConnectionModalField::Port => ConnectionModalField::Host,
+            ConnectionModalField::User => ConnectionModalField::Port,
+            ConnectionModalField::Password => ConnectionModalField::User,
+            ConnectionModalField::Database => ConnectionModalField::Password,
+            ConnectionModalField::ButtonOk => ConnectionModalField::Database,
+            ConnectionModalField::ButtonCancel => ConnectionModalField::ButtonOk,
         }
+    }
+}
+
+/// Field identifiers for Project modal
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ProjectModalField {
+    Name,
+    ButtonOk,
+    ButtonCancel,
+}
+
+impl ProjectModalField {
+    pub fn next(self) -> Self {
+        match self {
+            ProjectModalField::Name => ProjectModalField::ButtonOk,
+            ProjectModalField::ButtonOk => ProjectModalField::ButtonCancel,
+            ProjectModalField::ButtonCancel => ProjectModalField::Name,
+        }
+    }
+
+    pub fn prev(self) -> Self {
+        match self {
+            ProjectModalField::Name => ProjectModalField::ButtonCancel,
+            ProjectModalField::ButtonOk => ProjectModalField::Name,
+            ProjectModalField::ButtonCancel => ProjectModalField::ButtonOk,
+        }
+    }
+}
+
+/// Field identifiers for delete confirmation modal
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ConfirmModalField {
+    ButtonOk,
+    ButtonCancel,
+}
+
+impl ConfirmModalField {
+    pub fn next(self) -> Self {
+        match self {
+            ConfirmModalField::ButtonOk => ConfirmModalField::ButtonCancel,
+            ConfirmModalField::ButtonCancel => ConfirmModalField::ButtonOk,
+        }
+    }
+
+    pub fn prev(self) -> Self {
+        self.next()
     }
 }
 
@@ -69,7 +116,7 @@ pub struct AddConnectionModal {
     pub user: String,
     pub password: String,
     pub database: String,
-    pub focused_field: ModalField,
+    pub focused_field: ConnectionModalField,
 }
 
 impl Default for AddConnectionModal {
@@ -81,15 +128,49 @@ impl Default for AddConnectionModal {
             user: String::new(),
             password: String::new(),
             database: String::new(),
-            focused_field: ModalField::Name,
+            focused_field: ConnectionModalField::Name,
         }
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct ProjectModal {
+    pub name: String,
+    pub focused_field: ProjectModalField,
+}
+
+impl Default for ProjectModal {
+    fn default() -> Self {
+        Self {
+            name: String::new(),
+            focused_field: ProjectModalField::Name,
+        }
+    }
+}
+
+impl ProjectModal {
+    pub fn with_name(name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            focused_field: ProjectModalField::Name,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct DeleteProjectModal {
+    pub project_idx: usize,
+    pub project_name: String,
+    pub focused_field: ConfirmModalField,
 }
 
 #[derive(Debug, Clone)]
 pub enum ModalState {
     None,
     AddConnection(AddConnectionModal),
+    AddProject(ProjectModal),
+    EditProject(usize, ProjectModal), // (project index, modal)
+    DeleteProject(DeleteProjectModal),
 }
 
 pub struct App {
@@ -453,84 +534,174 @@ impl App {
                 self.modal_state = ModalState::AddConnection(AddConnectionModal::default());
             }
 
+            Message::OpenAddProjectModal => {
+                self.modal_state = ModalState::AddProject(ProjectModal::default());
+            }
+
+            Message::OpenEditProjectModal => {
+                if let SidebarMode::Projects = self.sidebar_mode {
+                    if let Some(project) = self.projects.get(self.selected_project_idx) {
+                        self.modal_state = ModalState::EditProject(
+                            self.selected_project_idx,
+                            ProjectModal::with_name(&project.name),
+                        );
+                    }
+                }
+            }
+
+            Message::DeleteProject => {
+                if let SidebarMode::Projects = self.sidebar_mode {
+                    if let Some(project) = self.projects.get(self.selected_project_idx) {
+                        self.modal_state = ModalState::DeleteProject(DeleteProjectModal {
+                            project_idx: self.selected_project_idx,
+                            project_name: project.name.clone(),
+                            focused_field: ConfirmModalField::ButtonCancel,
+                        });
+                    }
+                }
+            }
+
             Message::CloseModal => {
                 self.modal_state = ModalState::None;
             }
 
             Message::ModalConfirm => {
-                if let ModalState::AddConnection(ref modal) = self.modal_state {
-                    if let Some(conn) = self.create_connection_from_modal(modal) {
-                        // Add connection to current project if in Connections mode
-                        if let SidebarMode::Connections(proj_idx) = self.sidebar_mode {
-                            if let Some(project) = self.projects.get_mut(proj_idx) {
-                                project.connections.push(conn);
-                                self.status_message = "Connection added".to_string();
+                match &self.modal_state {
+                    ModalState::AddConnection(modal) => {
+                        if let Some(conn) = self.create_connection_from_modal(modal) {
+                            // Add connection to current project if in Connections mode
+                            if let SidebarMode::Connections(proj_idx) = self.sidebar_mode {
+                                if let Some(project) = self.projects.get_mut(proj_idx) {
+                                    project.connections.push(conn);
+                                    self.status_message = "Connection added".to_string();
+                                }
                             }
+                            self.modal_state = ModalState::None;
+                        } else {
+                            self.status_message =
+                                "Invalid: fill name, host, database and valid port".to_string();
+                            // Keep modal open for user to correct input
+                        }
+                    }
+                    ModalState::AddProject(modal) => {
+                        if modal.name.trim().is_empty() {
+                            self.status_message = "Project name cannot be empty".to_string();
+                        } else {
+                            let new_project = Project::new(modal.name.trim());
+                            self.projects.push(new_project);
+                            self.selected_project_idx = self.projects.len() - 1;
+                            self.status_message = "Project added".to_string();
+                            self.modal_state = ModalState::None;
+                        }
+                    }
+                    ModalState::EditProject(proj_idx, modal) => {
+                        if modal.name.trim().is_empty() {
+                            self.status_message = "Project name cannot be empty".to_string();
+                        } else {
+                            let proj_idx = *proj_idx;
+                            let new_name = modal.name.trim().to_string();
+                            if let Some(project) = self.projects.get_mut(proj_idx) {
+                                project.name = new_name;
+                                self.status_message = "Project updated".to_string();
+                            }
+                            self.modal_state = ModalState::None;
+                        }
+                    }
+                    ModalState::DeleteProject(modal) => {
+                        let proj_idx = modal.project_idx;
+                        if proj_idx < self.projects.len() {
+                            self.projects.remove(proj_idx);
+                            // Adjust selection if needed
+                            if self.selected_project_idx >= self.projects.len()
+                                && !self.projects.is_empty()
+                            {
+                                self.selected_project_idx = self.projects.len() - 1;
+                            }
+                            self.status_message = "Project deleted".to_string();
                         }
                         self.modal_state = ModalState::None;
-                    } else {
-                        self.status_message =
-                            "Invalid: fill name, host, database and valid port".to_string();
-                        // Keep modal open for user to correct input
                     }
+                    ModalState::None => {}
                 }
             }
 
-            Message::ModalInputChar(c) => {
-                if let ModalState::AddConnection(ref mut modal) = self.modal_state {
-                    match modal.focused_field {
-                        ModalField::Name => modal.name.push(c),
-                        ModalField::Host => modal.host.push(c),
-                        ModalField::Port => {
-                            if c.is_ascii_digit() && modal.port.len() < 5 {
-                                modal.port.push(c);
-                            }
+            Message::ModalInputChar(c) => match &mut self.modal_state {
+                ModalState::AddConnection(modal) => match modal.focused_field {
+                    ConnectionModalField::Name => modal.name.push(c),
+                    ConnectionModalField::Host => modal.host.push(c),
+                    ConnectionModalField::Port => {
+                        if c.is_ascii_digit() && modal.port.len() < 5 {
+                            modal.port.push(c);
                         }
-                        ModalField::User => modal.user.push(c),
-                        ModalField::Password => modal.password.push(c),
-                        ModalField::Database => modal.database.push(c),
-                        ModalField::ButtonOk | ModalField::ButtonCancel => {}
+                    }
+                    ConnectionModalField::User => modal.user.push(c),
+                    ConnectionModalField::Password => modal.password.push(c),
+                    ConnectionModalField::Database => modal.database.push(c),
+                    ConnectionModalField::ButtonOk | ConnectionModalField::ButtonCancel => {}
+                },
+                ModalState::AddProject(modal) | ModalState::EditProject(_, modal) => {
+                    if modal.focused_field == ProjectModalField::Name {
+                        modal.name.push(c);
                     }
                 }
-            }
+                _ => {}
+            },
 
-            Message::ModalInputBackspace => {
-                if let ModalState::AddConnection(ref mut modal) = self.modal_state {
-                    match modal.focused_field {
-                        ModalField::Name => {
-                            modal.name.pop();
-                        }
-                        ModalField::Host => {
-                            modal.host.pop();
-                        }
-                        ModalField::Port => {
-                            modal.port.pop();
-                        }
-                        ModalField::User => {
-                            modal.user.pop();
-                        }
-                        ModalField::Password => {
-                            modal.password.pop();
-                        }
-                        ModalField::Database => {
-                            modal.database.pop();
-                        }
-                        ModalField::ButtonOk | ModalField::ButtonCancel => {}
+            Message::ModalInputBackspace => match &mut self.modal_state {
+                ModalState::AddConnection(modal) => match modal.focused_field {
+                    ConnectionModalField::Name => {
+                        modal.name.pop();
+                    }
+                    ConnectionModalField::Host => {
+                        modal.host.pop();
+                    }
+                    ConnectionModalField::Port => {
+                        modal.port.pop();
+                    }
+                    ConnectionModalField::User => {
+                        modal.user.pop();
+                    }
+                    ConnectionModalField::Password => {
+                        modal.password.pop();
+                    }
+                    ConnectionModalField::Database => {
+                        modal.database.pop();
+                    }
+                    ConnectionModalField::ButtonOk | ConnectionModalField::ButtonCancel => {}
+                },
+                ModalState::AddProject(modal) | ModalState::EditProject(_, modal) => {
+                    if modal.focused_field == ProjectModalField::Name {
+                        modal.name.pop();
                     }
                 }
-            }
+                _ => {}
+            },
 
-            Message::ModalNextField => {
-                if let ModalState::AddConnection(ref mut modal) = self.modal_state {
+            Message::ModalNextField => match &mut self.modal_state {
+                ModalState::AddConnection(modal) => {
                     modal.focused_field = modal.focused_field.next();
                 }
-            }
+                ModalState::AddProject(modal) | ModalState::EditProject(_, modal) => {
+                    modal.focused_field = modal.focused_field.next();
+                }
+                ModalState::DeleteProject(modal) => {
+                    modal.focused_field = modal.focused_field.next();
+                }
+                ModalState::None => {}
+            },
 
-            Message::ModalPrevField => {
-                if let ModalState::AddConnection(ref mut modal) = self.modal_state {
+            Message::ModalPrevField => match &mut self.modal_state {
+                ModalState::AddConnection(modal) => {
                     modal.focused_field = modal.focused_field.prev();
                 }
-            }
+                ModalState::AddProject(modal) | ModalState::EditProject(_, modal) => {
+                    modal.focused_field = modal.focused_field.prev();
+                }
+                ModalState::DeleteProject(modal) => {
+                    modal.focused_field = modal.focused_field.prev();
+                }
+                ModalState::None => {}
+            },
         }
 
         false
