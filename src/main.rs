@@ -4,9 +4,7 @@ mod model;
 mod ui;
 
 use anyhow::Result;
-use app::{
-    App, ConfirmModalField, ConnectionModalField, Focus, ModalState, ProjectModalField,
-};
+use app::{App, ConfirmModalField, ConnectionModalField, Focus, ModalState, ProjectModalField};
 use clap::Parser;
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers},
@@ -95,7 +93,9 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut App)
                     (KeyCode::Char('a'), _) if app.focus == Focus::Sidebar => {
                         match app.sidebar_mode {
                             app::SidebarMode::Projects => Some(Message::OpenAddProjectModal),
-                            app::SidebarMode::Connections(_) => Some(Message::OpenAddConnectionModal),
+                            app::SidebarMode::Connections(_) => {
+                                Some(Message::OpenAddConnectionModal)
+                            }
                         }
                     }
                     // Project edit: 'e' key in Projects view
@@ -190,10 +190,7 @@ fn handle_connection_modal_input(
     }
 }
 
-fn handle_project_modal_input(
-    key_code: KeyCode,
-    modal: &app::ProjectModal,
-) -> Option<Message> {
+fn handle_project_modal_input(key_code: KeyCode, modal: &app::ProjectModal) -> Option<Message> {
     match key_code {
         KeyCode::Esc => Some(Message::CloseModal),
         KeyCode::Tab => Some(Message::ModalNextField),

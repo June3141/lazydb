@@ -108,7 +108,6 @@ impl ConfirmModalField {
     }
 }
 
-
 #[derive(Debug, Clone)]
 pub struct AddConnectionModal {
     pub name: String,
@@ -626,91 +625,83 @@ impl App {
                 }
             }
 
-            Message::ModalInputChar(c) => {
-                match &mut self.modal_state {
-                    ModalState::AddConnection(modal) => match modal.focused_field {
-                        ConnectionModalField::Name => modal.name.push(c),
-                        ConnectionModalField::Host => modal.host.push(c),
-                        ConnectionModalField::Port => {
-                            if c.is_ascii_digit() && modal.port.len() < 5 {
-                                modal.port.push(c);
-                            }
-                        }
-                        ConnectionModalField::User => modal.user.push(c),
-                        ConnectionModalField::Password => modal.password.push(c),
-                        ConnectionModalField::Database => modal.database.push(c),
-                        ConnectionModalField::ButtonOk | ConnectionModalField::ButtonCancel => {}
-                    },
-                    ModalState::AddProject(modal) | ModalState::EditProject(_, modal) => {
-                        if modal.focused_field == ProjectModalField::Name {
-                            modal.name.push(c);
+            Message::ModalInputChar(c) => match &mut self.modal_state {
+                ModalState::AddConnection(modal) => match modal.focused_field {
+                    ConnectionModalField::Name => modal.name.push(c),
+                    ConnectionModalField::Host => modal.host.push(c),
+                    ConnectionModalField::Port => {
+                        if c.is_ascii_digit() && modal.port.len() < 5 {
+                            modal.port.push(c);
                         }
                     }
-                    _ => {}
+                    ConnectionModalField::User => modal.user.push(c),
+                    ConnectionModalField::Password => modal.password.push(c),
+                    ConnectionModalField::Database => modal.database.push(c),
+                    ConnectionModalField::ButtonOk | ConnectionModalField::ButtonCancel => {}
+                },
+                ModalState::AddProject(modal) | ModalState::EditProject(_, modal) => {
+                    if modal.focused_field == ProjectModalField::Name {
+                        modal.name.push(c);
+                    }
                 }
-            }
+                _ => {}
+            },
 
-            Message::ModalInputBackspace => {
-                match &mut self.modal_state {
-                    ModalState::AddConnection(modal) => match modal.focused_field {
-                        ConnectionModalField::Name => {
-                            modal.name.pop();
-                        }
-                        ConnectionModalField::Host => {
-                            modal.host.pop();
-                        }
-                        ConnectionModalField::Port => {
-                            modal.port.pop();
-                        }
-                        ConnectionModalField::User => {
-                            modal.user.pop();
-                        }
-                        ConnectionModalField::Password => {
-                            modal.password.pop();
-                        }
-                        ConnectionModalField::Database => {
-                            modal.database.pop();
-                        }
-                        ConnectionModalField::ButtonOk | ConnectionModalField::ButtonCancel => {}
-                    },
-                    ModalState::AddProject(modal) | ModalState::EditProject(_, modal) => {
-                        if modal.focused_field == ProjectModalField::Name {
-                            modal.name.pop();
-                        }
+            Message::ModalInputBackspace => match &mut self.modal_state {
+                ModalState::AddConnection(modal) => match modal.focused_field {
+                    ConnectionModalField::Name => {
+                        modal.name.pop();
                     }
-                    _ => {}
+                    ConnectionModalField::Host => {
+                        modal.host.pop();
+                    }
+                    ConnectionModalField::Port => {
+                        modal.port.pop();
+                    }
+                    ConnectionModalField::User => {
+                        modal.user.pop();
+                    }
+                    ConnectionModalField::Password => {
+                        modal.password.pop();
+                    }
+                    ConnectionModalField::Database => {
+                        modal.database.pop();
+                    }
+                    ConnectionModalField::ButtonOk | ConnectionModalField::ButtonCancel => {}
+                },
+                ModalState::AddProject(modal) | ModalState::EditProject(_, modal) => {
+                    if modal.focused_field == ProjectModalField::Name {
+                        modal.name.pop();
+                    }
                 }
-            }
+                _ => {}
+            },
 
-            Message::ModalNextField => {
-                match &mut self.modal_state {
-                    ModalState::AddConnection(modal) => {
-                        modal.focused_field = modal.focused_field.next();
-                    }
-                    ModalState::AddProject(modal) | ModalState::EditProject(_, modal) => {
-                        modal.focused_field = modal.focused_field.next();
-                    }
-                    ModalState::DeleteProject(modal) => {
-                        modal.focused_field = modal.focused_field.next();
-                    }
-                    ModalState::None => {}
+            Message::ModalNextField => match &mut self.modal_state {
+                ModalState::AddConnection(modal) => {
+                    modal.focused_field = modal.focused_field.next();
                 }
-            }
+                ModalState::AddProject(modal) | ModalState::EditProject(_, modal) => {
+                    modal.focused_field = modal.focused_field.next();
+                }
+                ModalState::DeleteProject(modal) => {
+                    modal.focused_field = modal.focused_field.next();
+                }
+                ModalState::None => {}
+            },
 
-            Message::ModalPrevField => {
-                match &mut self.modal_state {
-                    ModalState::AddConnection(modal) => {
-                        modal.focused_field = modal.focused_field.prev();
-                    }
-                    ModalState::AddProject(modal) | ModalState::EditProject(_, modal) => {
-                        modal.focused_field = modal.focused_field.prev();
-                    }
-                    ModalState::DeleteProject(modal) => {
-                        modal.focused_field = modal.focused_field.prev();
-                    }
-                    ModalState::None => {}
+            Message::ModalPrevField => match &mut self.modal_state {
+                ModalState::AddConnection(modal) => {
+                    modal.focused_field = modal.focused_field.prev();
                 }
-            }
+                ModalState::AddProject(modal) | ModalState::EditProject(_, modal) => {
+                    modal.focused_field = modal.focused_field.prev();
+                }
+                ModalState::DeleteProject(modal) => {
+                    modal.focused_field = modal.focused_field.prev();
+                }
+                ModalState::None => {}
+            },
         }
 
         false
