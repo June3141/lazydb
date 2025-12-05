@@ -1,4 +1,5 @@
 mod app;
+mod db;
 mod message;
 mod model;
 mod ui;
@@ -87,6 +88,12 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut App)
                     (KeyCode::Backspace, _) if app.focus == Focus::Sidebar => Some(Message::GoBack),
                     (KeyCode::Char('s'), _) => Some(Message::SwitchToSchema),
                     (KeyCode::Char('d'), _) => Some(Message::SwitchToData),
+                    (KeyCode::Char('r'), _) => Some(Message::SwitchToRelations),
+                    // Schema sub-tab shortcuts (1-4)
+                    (KeyCode::Char('1'), _) => Some(Message::SwitchToColumns),
+                    (KeyCode::Char('2'), _) => Some(Message::SwitchToIndexes),
+                    (KeyCode::Char('3'), _) => Some(Message::SwitchToForeignKeys),
+                    (KeyCode::Char('4'), _) => Some(Message::SwitchToConstraints),
                     (KeyCode::Char('a'), _) if app.focus == Focus::Sidebar => {
                         Some(Message::OpenAddConnectionModal)
                     }
