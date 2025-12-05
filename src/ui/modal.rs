@@ -403,8 +403,8 @@ fn draw_confirm_buttons(frame: &mut Frame, area: Rect, focused_field: ConfirmMod
     .alignment(Alignment::Center)
     .block(Block::default().borders(Borders::NONE));
 
-    frame.render_widget(delete_button, button_chunks[0]);
-    frame.render_widget(cancel_button, button_chunks[1]);
+    frame.render_widget(cancel_button, button_chunks[0]);
+    frame.render_widget(delete_button, button_chunks[1]);
 }
 
 /// Create a centered rectangle with given percentage of width and height

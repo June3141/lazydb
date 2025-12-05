@@ -90,7 +90,7 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut App)
                     (KeyCode::Char('d'), _) if app.focus != Focus::Sidebar => {
                         Some(Message::SwitchToData)
                     }
-                    // Connection/Project add: 'a' key in sidebar
+                    // Add operation: 'a' key in sidebar (Project or Connection depending on mode)
                     (KeyCode::Char('a'), _) if app.focus == Focus::Sidebar => {
                         match app.sidebar_mode {
                             app::SidebarMode::Projects => Some(Message::OpenAddProjectModal),
