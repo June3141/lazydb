@@ -1,5 +1,8 @@
 use crate::message::Message;
-use crate::model::{Column, Connection, Project, QueryResult, Table};
+use crate::model::{
+    Column, Connection, Constraint, ConstraintType, ForeignKey, ForeignKeyAction, Index,
+    IndexColumn, IndexType, Project, QueryResult, Table,
+};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Focus {
@@ -12,6 +15,17 @@ pub enum Focus {
 pub enum MainPanelTab {
     Schema,
     Data,
+    Relations,
+}
+
+/// Sub-tabs for the Schema tab
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub enum SchemaSubTab {
+    #[default]
+    Columns,
+    Indexes,
+    ForeignKeys,
+    Constraints,
 }
 
 /// Sidebar display mode - switches between Projects list and Connections list
@@ -183,6 +197,7 @@ pub struct App {
     pub result: Option<QueryResult>,
     pub focus: Focus,
     pub main_panel_tab: MainPanelTab,
+    pub schema_sub_tab: SchemaSubTab,
     pub status_message: String,
     pub modal_state: ModalState,
 }
@@ -198,99 +213,10 @@ impl App {
                     database: "app_production".to_string(),
                     expanded: true,
                     tables: vec![
-                        Table {
-                            name: "users".to_string(),
-                            row_count: 15420,
-                            size_bytes: 2_540_000,
-                            columns: vec![
-                                Column {
-                                    name: "id".to_string(),
-                                    data_type: "INTEGER".to_string(),
-                                    is_primary_key: true,
-                                    comment: Some("Primary key".to_string()),
-                                },
-                                Column {
-                                    name: "name".to_string(),
-                                    data_type: "VARCHAR(100)".to_string(),
-                                    is_primary_key: false,
-                                    comment: Some("User's full name".to_string()),
-                                },
-                                Column {
-                                    name: "email".to_string(),
-                                    data_type: "VARCHAR(255)".to_string(),
-                                    is_primary_key: false,
-                                    comment: Some("Email address (unique)".to_string()),
-                                },
-                                Column {
-                                    name: "created_at".to_string(),
-                                    data_type: "TIMESTAMP".to_string(),
-                                    is_primary_key: false,
-                                    comment: None,
-                                },
-                            ],
-                        },
-                        Table {
-                            name: "orders".to_string(),
-                            row_count: 89234,
-                            size_bytes: 15_200_000,
-                            columns: vec![
-                                Column {
-                                    name: "id".to_string(),
-                                    data_type: "INTEGER".to_string(),
-                                    is_primary_key: true,
-                                    comment: Some("Order ID".to_string()),
-                                },
-                                Column {
-                                    name: "user_id".to_string(),
-                                    data_type: "INTEGER".to_string(),
-                                    is_primary_key: false,
-                                    comment: Some("FK to users.id".to_string()),
-                                },
-                                Column {
-                                    name: "total".to_string(),
-                                    data_type: "DECIMAL(10,2)".to_string(),
-                                    is_primary_key: false,
-                                    comment: Some("Order total amount".to_string()),
-                                },
-                                Column {
-                                    name: "status".to_string(),
-                                    data_type: "VARCHAR(20)".to_string(),
-                                    is_primary_key: false,
-                                    comment: Some("pending/completed/cancelled".to_string()),
-                                },
-                            ],
-                        },
-                        Table {
-                            name: "customers".to_string(),
-                            row_count: 8921,
-                            size_bytes: 1_240_000,
-                            columns: vec![
-                                Column {
-                                    name: "id".to_string(),
-                                    data_type: "INTEGER".to_string(),
-                                    is_primary_key: true,
-                                    comment: Some("Customer ID".to_string()),
-                                },
-                                Column {
-                                    name: "name".to_string(),
-                                    data_type: "VARCHAR(100)".to_string(),
-                                    is_primary_key: false,
-                                    comment: Some("Customer name".to_string()),
-                                },
-                                Column {
-                                    name: "email".to_string(),
-                                    data_type: "VARCHAR(255)".to_string(),
-                                    is_primary_key: false,
-                                    comment: None,
-                                },
-                                Column {
-                                    name: "active".to_string(),
-                                    data_type: "BOOLEAN".to_string(),
-                                    is_primary_key: false,
-                                    comment: Some("Is customer active".to_string()),
-                                },
-                            ],
-                        },
+                        Self::create_users_table(15420, 2_540_000),
+                        Self::create_orders_table(89234, 15_200_000),
+                        Self::create_order_items_table(245_000, 8_500_000),
+                        Self::create_products_table(1250, 520_000),
                     ],
                 },
                 Connection {
@@ -299,25 +225,7 @@ impl App {
                     port: 5432,
                     database: "analytics".to_string(),
                     expanded: false,
-                    tables: vec![Table {
-                        name: "events".to_string(),
-                        row_count: 1_000_000,
-                        size_bytes: 50_000_000,
-                        columns: vec![
-                            Column {
-                                name: "id".to_string(),
-                                data_type: "BIGINT".to_string(),
-                                is_primary_key: true,
-                                comment: Some("Event ID".to_string()),
-                            },
-                            Column {
-                                name: "event_type".to_string(),
-                                data_type: "VARCHAR(50)".to_string(),
-                                is_primary_key: false,
-                                comment: Some("Type of event".to_string()),
-                            },
-                        ],
-                    }],
+                    tables: vec![Self::create_events_table()],
                 },
             ]),
             Project::new("Development").with_connections(vec![Connection {
@@ -327,44 +235,8 @@ impl App {
                 database: "app_development".to_string(),
                 expanded: false,
                 tables: vec![
-                    Table {
-                        name: "users".to_string(),
-                        row_count: 150,
-                        size_bytes: 24_000,
-                        columns: vec![
-                            Column {
-                                name: "id".to_string(),
-                                data_type: "INTEGER".to_string(),
-                                is_primary_key: true,
-                                comment: None,
-                            },
-                            Column {
-                                name: "name".to_string(),
-                                data_type: "VARCHAR(100)".to_string(),
-                                is_primary_key: false,
-                                comment: None,
-                            },
-                        ],
-                    },
-                    Table {
-                        name: "orders".to_string(),
-                        row_count: 500,
-                        size_bytes: 85_000,
-                        columns: vec![
-                            Column {
-                                name: "id".to_string(),
-                                data_type: "INTEGER".to_string(),
-                                is_primary_key: true,
-                                comment: None,
-                            },
-                            Column {
-                                name: "user_id".to_string(),
-                                data_type: "INTEGER".to_string(),
-                                is_primary_key: false,
-                                comment: None,
-                            },
-                        ],
-                    },
+                    Self::create_users_table(150, 24_000),
+                    Self::create_orders_table(500, 85_000),
                 ],
             }]),
             Project::new("Staging").with_connections(vec![Connection {
@@ -373,25 +245,7 @@ impl App {
                 port: 5432,
                 database: "app_staging".to_string(),
                 expanded: false,
-                tables: vec![Table {
-                    name: "users".to_string(),
-                    row_count: 1000,
-                    size_bytes: 160_000,
-                    columns: vec![
-                        Column {
-                            name: "id".to_string(),
-                            data_type: "INTEGER".to_string(),
-                            is_primary_key: true,
-                            comment: None,
-                        },
-                        Column {
-                            name: "name".to_string(),
-                            data_type: "VARCHAR(100)".to_string(),
-                            is_primary_key: false,
-                            comment: None,
-                        },
-                    ],
-                }],
+                tables: vec![Self::create_users_table(1000, 160_000)],
             }]),
         ];
 
@@ -442,7 +296,8 @@ impl App {
             query,
             result,
             focus: Focus::Sidebar,
-            main_panel_tab: MainPanelTab::Data,
+            main_panel_tab: MainPanelTab::Schema,
+            schema_sub_tab: SchemaSubTab::default(),
             status_message: "Ready".to_string(),
             modal_state: ModalState::None,
         }
@@ -528,6 +383,30 @@ impl App {
 
             Message::SwitchToData => {
                 self.main_panel_tab = MainPanelTab::Data;
+            }
+
+            Message::SwitchToRelations => {
+                self.main_panel_tab = MainPanelTab::Relations;
+            }
+
+            Message::SwitchToColumns => {
+                self.main_panel_tab = MainPanelTab::Schema;
+                self.schema_sub_tab = SchemaSubTab::Columns;
+            }
+
+            Message::SwitchToIndexes => {
+                self.main_panel_tab = MainPanelTab::Schema;
+                self.schema_sub_tab = SchemaSubTab::Indexes;
+            }
+
+            Message::SwitchToForeignKeys => {
+                self.main_panel_tab = MainPanelTab::Schema;
+                self.schema_sub_tab = SchemaSubTab::ForeignKeys;
+            }
+
+            Message::SwitchToConstraints => {
+                self.main_panel_tab = MainPanelTab::Schema;
+                self.schema_sub_tab = SchemaSubTab::Constraints;
             }
 
             Message::OpenAddConnectionModal => {
@@ -924,5 +803,235 @@ impl App {
             SidebarMode::Projects => self.projects.get(self.selected_project_idx),
             SidebarMode::Connections(proj_idx) => self.projects.get(proj_idx),
         }
+    }
+
+    /// Get all tables in current connection (for ER diagram)
+    pub fn current_connection_tables(&self) -> Option<&[Table]> {
+        if let SidebarMode::Connections(proj_idx) = self.sidebar_mode {
+            let project = self.projects.get(proj_idx)?;
+            let conn = project.connections.get(self.selected_connection_idx)?;
+            Some(&conn.tables)
+        } else {
+            None
+        }
+    }
+
+    // Sample data helper functions
+
+    fn create_users_table(row_count: usize, size_bytes: u64) -> Table {
+        Table::new("users")
+            .with_schema("public")
+            .with_columns(vec![
+                Column::new("id", "SERIAL")
+                    .primary_key()
+                    .auto_increment()
+                    .position(1),
+                Column::new("email", "VARCHAR(255)")
+                    .not_null()
+                    .unique()
+                    .position(2),
+                Column::new("name", "VARCHAR(100)").not_null().position(3),
+                Column::new("password_hash", "VARCHAR(255)")
+                    .not_null()
+                    .position(4),
+                Column::new("created_at", "TIMESTAMP")
+                    .not_null()
+                    .default("NOW()")
+                    .position(5),
+                Column::new("updated_at", "TIMESTAMP").position(6),
+                Column::new("is_active", "BOOLEAN")
+                    .not_null()
+                    .default("true")
+                    .position(7),
+            ])
+            .with_indexes(vec![
+                Index::new("users_pkey", IndexType::Primary)
+                    .with_columns(vec![IndexColumn::new("id")]),
+                Index::new("users_email_key", IndexType::Unique)
+                    .with_columns(vec![IndexColumn::new("email")]),
+                Index::new("idx_users_created_at", IndexType::Index)
+                    .with_columns(vec![IndexColumn::new("created_at").desc()]),
+            ])
+            .with_constraints(vec![
+                Constraint::new("users_pkey", ConstraintType::PrimaryKey)
+                    .with_columns(vec!["id".to_string()]),
+                Constraint::new("users_email_key", ConstraintType::Unique)
+                    .with_columns(vec!["email".to_string()]),
+                Constraint::new("users_email_check", ConstraintType::Check)
+                    .with_definition("email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z]{2,}$'"),
+            ])
+            .with_stats(row_count, size_bytes)
+    }
+
+    fn create_orders_table(row_count: usize, size_bytes: u64) -> Table {
+        Table::new("orders")
+            .with_schema("public")
+            .with_columns(vec![
+                Column::new("id", "SERIAL")
+                    .primary_key()
+                    .auto_increment()
+                    .position(1),
+                Column::new("user_id", "INTEGER").not_null().position(2),
+                Column::new("status", "VARCHAR(20)")
+                    .not_null()
+                    .default("'pending'")
+                    .position(3),
+                Column::new("total_amount", "DECIMAL(10,2)")
+                    .not_null()
+                    .position(4),
+                Column::new("created_at", "TIMESTAMP")
+                    .not_null()
+                    .default("NOW()")
+                    .position(5),
+                Column::new("shipped_at", "TIMESTAMP").position(6),
+            ])
+            .with_indexes(vec![
+                Index::new("orders_pkey", IndexType::Primary)
+                    .with_columns(vec![IndexColumn::new("id")]),
+                Index::new("idx_orders_user_id", IndexType::Index)
+                    .with_columns(vec![IndexColumn::new("user_id")]),
+                Index::new("idx_orders_status", IndexType::Index)
+                    .with_columns(vec![IndexColumn::new("status")]),
+                Index::new("idx_orders_created_at", IndexType::Index)
+                    .with_columns(vec![IndexColumn::new("created_at").desc()]),
+            ])
+            .with_foreign_keys(vec![ForeignKey::new(
+                "fk_orders_user",
+                vec!["user_id".to_string()],
+                "users",
+                vec!["id".to_string()],
+            )
+            .on_delete(ForeignKeyAction::Cascade)
+            .on_update(ForeignKeyAction::Cascade)])
+            .with_constraints(vec![
+                Constraint::new("orders_pkey", ConstraintType::PrimaryKey)
+                    .with_columns(vec!["id".to_string()]),
+                Constraint::new("orders_status_check", ConstraintType::Check).with_definition(
+                    "status IN ('pending', 'processing', 'shipped', 'delivered', 'cancelled')",
+                ),
+            ])
+            .with_stats(row_count, size_bytes)
+    }
+
+    fn create_order_items_table(row_count: usize, size_bytes: u64) -> Table {
+        Table::new("order_items")
+            .with_schema("public")
+            .with_columns(vec![
+                Column::new("id", "SERIAL")
+                    .primary_key()
+                    .auto_increment()
+                    .position(1),
+                Column::new("order_id", "INTEGER").not_null().position(2),
+                Column::new("product_id", "INTEGER").not_null().position(3),
+                Column::new("quantity", "INTEGER")
+                    .not_null()
+                    .default("1")
+                    .position(4),
+                Column::new("unit_price", "DECIMAL(10,2)")
+                    .not_null()
+                    .position(5),
+            ])
+            .with_indexes(vec![
+                Index::new("order_items_pkey", IndexType::Primary)
+                    .with_columns(vec![IndexColumn::new("id")]),
+                Index::new("idx_order_items_order_id", IndexType::Index)
+                    .with_columns(vec![IndexColumn::new("order_id")]),
+                Index::new("idx_order_items_product_id", IndexType::Index)
+                    .with_columns(vec![IndexColumn::new("product_id")]),
+            ])
+            .with_foreign_keys(vec![
+                ForeignKey::new(
+                    "fk_order_items_order",
+                    vec!["order_id".to_string()],
+                    "orders",
+                    vec!["id".to_string()],
+                )
+                .on_delete(ForeignKeyAction::Cascade),
+                ForeignKey::new(
+                    "fk_order_items_product",
+                    vec!["product_id".to_string()],
+                    "products",
+                    vec!["id".to_string()],
+                )
+                .on_delete(ForeignKeyAction::Restrict),
+            ])
+            .with_constraints(vec![
+                Constraint::new("order_items_pkey", ConstraintType::PrimaryKey)
+                    .with_columns(vec!["id".to_string()]),
+                Constraint::new("order_items_quantity_check", ConstraintType::Check)
+                    .with_definition("quantity > 0"),
+            ])
+            .with_stats(row_count, size_bytes)
+    }
+
+    fn create_products_table(row_count: usize, size_bytes: u64) -> Table {
+        Table::new("products")
+            .with_schema("public")
+            .with_columns(vec![
+                Column::new("id", "SERIAL")
+                    .primary_key()
+                    .auto_increment()
+                    .position(1),
+                Column::new("name", "VARCHAR(200)").not_null().position(2),
+                Column::new("description", "TEXT").position(3),
+                Column::new("price", "DECIMAL(10,2)").not_null().position(4),
+                Column::new("stock_quantity", "INTEGER")
+                    .not_null()
+                    .default("0")
+                    .position(5),
+                Column::new("category", "VARCHAR(50)").position(6),
+                Column::new("created_at", "TIMESTAMP")
+                    .not_null()
+                    .default("NOW()")
+                    .position(7),
+            ])
+            .with_indexes(vec![
+                Index::new("products_pkey", IndexType::Primary)
+                    .with_columns(vec![IndexColumn::new("id")]),
+                Index::new("idx_products_category", IndexType::Index)
+                    .with_columns(vec![IndexColumn::new("category")]),
+                Index::new("idx_products_name", IndexType::Index)
+                    .with_columns(vec![IndexColumn::new("name")]),
+            ])
+            .with_constraints(vec![
+                Constraint::new("products_pkey", ConstraintType::PrimaryKey)
+                    .with_columns(vec!["id".to_string()]),
+                Constraint::new("products_price_check", ConstraintType::Check)
+                    .with_definition("price >= 0"),
+                Constraint::new("products_stock_check", ConstraintType::Check)
+                    .with_definition("stock_quantity >= 0"),
+            ])
+            .with_stats(row_count, size_bytes)
+    }
+
+    fn create_events_table() -> Table {
+        Table::new("events")
+            .with_schema("analytics")
+            .with_columns(vec![
+                Column::new("id", "BIGSERIAL")
+                    .primary_key()
+                    .auto_increment()
+                    .position(1),
+                Column::new("event_type", "VARCHAR(50)")
+                    .not_null()
+                    .position(2),
+                Column::new("user_id", "INTEGER").position(3),
+                Column::new("payload", "JSONB").position(4),
+                Column::new("created_at", "TIMESTAMP")
+                    .not_null()
+                    .default("NOW()")
+                    .position(5),
+            ])
+            .with_indexes(vec![
+                Index::new("events_pkey", IndexType::Primary)
+                    .with_columns(vec![IndexColumn::new("id")]),
+                Index::new("idx_events_type", IndexType::Index)
+                    .with_columns(vec![IndexColumn::new("event_type")]),
+                Index::new("idx_events_user_id", IndexType::Index)
+                    .with_columns(vec![IndexColumn::new("user_id")]),
+                Index::new("idx_events_created_at", IndexType::Index)
+                    .with_columns(vec![IndexColumn::new("created_at").desc()]),
+            ])
+            .with_stats(1_000_000, 50_000_000)
     }
 }

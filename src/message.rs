@@ -12,8 +12,15 @@ pub enum Message {
     FocusDown,
     Activate,
     GoBack,
+    // Main panel tabs
     SwitchToSchema,
     SwitchToData,
+    SwitchToRelations,
+    // Schema sub-tabs (1-4 keys)
+    SwitchToColumns,
+    SwitchToIndexes,
+    SwitchToForeignKeys,
+    SwitchToConstraints,
     // Connection modal messages
     OpenAddConnectionModal,
     // Project modal messages
