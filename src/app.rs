@@ -350,9 +350,13 @@ impl App {
                                 self.status_message = "Connection added".to_string();
                             }
                         }
+                        self.modal_state = ModalState::None;
+                    } else {
+                        self.status_message =
+                            "Invalid: fill name, host, database and valid port".to_string();
+                        // Keep modal open for user to correct input
                     }
                 }
-                self.modal_state = ModalState::None;
             }
 
             Message::ModalInputChar(c) => {
@@ -405,6 +409,10 @@ impl App {
 
     fn create_connection_from_modal(&self, modal: &AddConnectionModal) -> Option<Connection> {
         let port: u16 = modal.port.parse().ok()?;
+        // Validate port range (1-65535)
+        if port == 0 {
+            return None;
+        }
         if modal.name.is_empty() || modal.host.is_empty() || modal.database.is_empty() {
             return None;
         }
@@ -440,7 +448,7 @@ impl App {
             SidebarMode::Projects => {
                 if self.selected_project_idx + 1 < self.projects.len() {
                     self.selected_project_idx += 1;
-                } else {
+                } else if !self.projects.is_empty() {
                     self.selected_project_idx = 0;
                 }
             }

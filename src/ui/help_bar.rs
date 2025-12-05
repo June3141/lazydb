@@ -13,9 +13,10 @@ pub fn draw_help_bar(frame: &mut Frame, area: Rect) {
         ("↓/j", "Down"),
         ("Tab", "Focus"),
         ("S-hjkl", "Pane"),
-        ("Enter", "Select/Expand"),
-        ("s", "Schema"),
-        ("d", "Data"),
+        ("Enter", "Select"),
+        ("BS", "Back"),
+        ("a", "Add"),
+        ("s/d", "Schema/Data"),
     ];
 
     let spans: Vec<Span> = help_items

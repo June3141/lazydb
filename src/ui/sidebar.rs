@@ -9,7 +9,7 @@ use ratatui::{
 
 use super::utils::{format_number, format_size};
 
-pub fn draw_connections_tree(frame: &mut Frame, app: &App, area: Rect) {
+pub fn draw_sidebar(frame: &mut Frame, app: &App, area: Rect) {
     match app.sidebar_mode {
         SidebarMode::Projects => draw_projects_view(frame, app, area),
         SidebarMode::Connections(proj_idx) => draw_connections_view(frame, app, area, proj_idx),
