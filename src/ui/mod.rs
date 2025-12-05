@@ -20,6 +20,17 @@ use status_bar::draw_status_bar;
 pub fn draw(frame: &mut Frame, app: &App) {
     let size = frame.area();
 
+    // Top-level layout: Content area | Help bar
+    let outer_chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Min(1),    // Content area
+            Constraint::Length(1), // Help bar
+        ])
+        .split(size);
+
+    let content_area = outer_chunks[0];
+
     // Main layout: Sidebar | Main area
     let main_chunks = Layout::default()
         .direction(Direction::Horizontal)
@@ -27,7 +38,7 @@ pub fn draw(frame: &mut Frame, app: &App) {
             Constraint::Length(28), // Sidebar width
             Constraint::Min(40),    // Main area
         ])
-        .split(size);
+        .split(content_area);
 
     // Sidebar layout: Connections tree | Table info summary
     let sidebar_chunks = Layout::default()
@@ -48,21 +59,12 @@ pub fn draw(frame: &mut Frame, app: &App) {
         ])
         .split(main_chunks[1]);
 
-    // Bottom layout: Help bar
-    let bottom_chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Min(0),
-            Constraint::Length(1), // Help bar
-        ])
-        .split(size);
-
     draw_sidebar(frame, app, sidebar_chunks[0]);
     draw_table_summary(frame, app, sidebar_chunks[1]);
     draw_query_editor(frame, app, right_chunks[0]);
     draw_main_panel(frame, app, right_chunks[1]);
     draw_status_bar(frame, app, right_chunks[2]);
-    draw_help_bar(frame, bottom_chunks[1]);
+    draw_help_bar(frame, outer_chunks[1]);
 
     // Draw modal on top if open
     draw_modal(frame, &app.modal_state);
