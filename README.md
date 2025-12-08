@@ -63,7 +63,77 @@ lazydb provides an interactive connection manager where you can:
 - **Delete** connections you no longer need
 - **Test** connections before saving
 
-Connections are stored locally in `~/.config/lazydb/connections.toml`.
+## Configuration
+
+### Config Directory Location
+
+Configuration files are stored in the OS-specific config directory:
+
+| OS      | Path                                      |
+| ------- | ----------------------------------------- |
+| Linux   | `~/.config/lazydb/`                       |
+| macOS   | `~/.config/lazydb/`                       |
+| Windows | `C:\Users\<User>\AppData\Roaming\lazydb\` |
+
+### Directory Structure
+
+```text
+<config_dir>/
+├── config.yaml              # Main configuration file
+└── projects/
+    ├── my-project.yaml      # Project configuration files
+    └── another-project.yaml
+```
+
+### Main Configuration (`config.yaml`)
+
+```yaml
+settings:
+  default_project: my-project
+  theme: dark
+  show_row_count: true
+
+projects:
+  # Relative paths (from config directory)
+  - projects/my-project.yaml
+  - projects/another-project.yaml
+
+  # Absolute paths
+  - /shared/team/shared-project.yaml
+
+  # Home directory expansion
+  - ~/work/client-a/.lazydb-project.yaml
+```
+
+### Project Configuration (`projects/*.yaml`)
+
+```yaml
+project:
+  name: My Project
+  description: Project description
+
+connections:
+  - name: Production
+    host: prod.example.com
+    port: 5432
+    database: app_production
+    username: dbuser
+    password_env: LAZYDB_PROD_PASSWORD  # Read from environment variable
+
+  - name: Development
+    host: localhost
+    port: 5432
+    database: app_dev
+    username: dev
+    password: dev123  # Direct password (for local development only)
+```
+
+### Password Management
+
+Passwords can be configured in two ways:
+
+- `password`: Direct password string (not recommended for production)
+- `password_env`: Environment variable name containing the password (recommended)
 
 ## Keybindings
 

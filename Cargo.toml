@@ -9,3 +9,11 @@ crossterm = "0.28"
 anyhow = "1.0"
 itertools = "0.13"
 clap = { version = "4", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_yml = "0.0"
+dirs = "5.0"
+shellexpand = "3.1"
+chrono = { version = "0.4", features = ["serde"] }
+
+[dev-dependencies]
+tempfile = "3.15"
