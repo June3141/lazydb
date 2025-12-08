@@ -66,7 +66,7 @@
 		},
 		{
 			"emoji": "💄",
-			"entity": "&#ff99cc;",
+			"entity": "&#x1f484;",
 			"code": ":lipstick:",
 			"description": "Add or update the UI and style files.",
 			"name": "lipstick",
@@ -410,7 +410,7 @@
 		},
 		{
 			"emoji": "🙈",
-			"entity": "&#8bdfe7;",
+			"entity": "&#128584;",
 			"code": ":see_no_evil:",
 			"description": "Add or update a .gitignore file.",
 			"name": "see-no-evil",

@@ -14,7 +14,7 @@
 - PR のタイトルと説明を適切に記載する
   - タイトルには prefix と github emoji をつける
   - 例 `feat: ✨ 実装内容`
-- 使用する emoji は `.claude/commands/gitemoji.json` を参照する
+- 使用する emoji は `.claude/commands/git_emoji.json` を参照する
 - テストプランを記載する
 - 実装内容の概要を簡潔に説明する
 - 必要に応じて、PR にラベルを付与する。
