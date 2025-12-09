@@ -14,8 +14,13 @@ pub enum Message {
     GoBack,
     SwitchToSchema,
     SwitchToData,
-    // Modal messages
+    // Connection modal messages
     OpenAddConnectionModal,
+    // Project modal messages
+    OpenAddProjectModal,
+    OpenEditProjectModal,
+    DeleteProject,
+    // Common modal messages
     CloseModal,
     ModalConfirm,
     ModalInputChar(char),
