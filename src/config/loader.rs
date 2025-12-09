@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
 
-use super::models::{Config, ProjectFile};
+use super::models::{Config, ConnectionConfig, ProjectConfig, ProjectFile, Settings};
 
 /// 設定ファイルの読み込みを担当
 pub struct ConfigLoader {
@@ -169,7 +169,11 @@ impl ConfigLoader {
     }
 
     /// 設定ディレクトリと初期設定ファイルを作成
-    pub fn init_config_dir(&self) -> Result<()> {
+    ///
+    /// 初回起動時（設定ファイルが存在しない場合）は、サンプルプロジェクトも作成する
+    pub fn init_config_dir(&self) -> Result<bool> {
+        let is_first_run = !self.config_file_path().exists();
+
         // ディレクトリ作成
         if !self.config_dir.exists() {
             fs::create_dir_all(&self.config_dir).with_context(|| {
@@ -191,12 +195,58 @@ impl ConfigLoader {
             })?;
         }
 
-        // config.yaml が存在しない場合は作成
-        let config_path = self.config_file_path();
-        if !config_path.exists() {
-            let default_config = Config::default();
-            self.save_config(&default_config)?;
+        // 初回起動時はサンプルデータを作成
+        if is_first_run {
+            self.create_sample_data()?;
         }
+
+        Ok(is_first_run)
+    }
+
+    /// サンプルデータを作成（初回起動用）
+    fn create_sample_data(&self) -> Result<()> {
+        // サンプルプロジェクトファイルを作成
+        let sample_project = ProjectFile {
+            project: ProjectConfig {
+                name: "Sample Project".to_string(),
+                description: Some("This is a sample project to get you started.".to_string()),
+                created_at: Some(chrono::Utc::now()),
+            },
+            connections: vec![
+                ConnectionConfig {
+                    name: "Local PostgreSQL".to_string(),
+                    host: "localhost".to_string(),
+                    port: 5432,
+                    database: "postgres".to_string(),
+                    username: Some("postgres".to_string()),
+                    password: None,
+                    password_env: Some("POSTGRES_PASSWORD".to_string()),
+                },
+                ConnectionConfig {
+                    name: "Example MySQL".to_string(),
+                    host: "localhost".to_string(),
+                    port: 3306,
+                    database: "example_db".to_string(),
+                    username: Some("root".to_string()),
+                    password: None,
+                    password_env: Some("MYSQL_PASSWORD".to_string()),
+                },
+            ],
+        };
+
+        let sample_project_path = "projects/sample-project.yaml";
+        self.save_project_file(sample_project_path, &sample_project)?;
+
+        // メイン設定ファイルを作成（サンプルプロジェクトを参照）
+        let config = Config {
+            settings: Settings {
+                default_project: Some("Sample Project".to_string()),
+                theme: "dark".to_string(),
+                show_row_count: true,
+            },
+            projects: vec![sample_project_path.to_string()],
+        };
+        self.save_config(&config)?;
 
         Ok(())
     }
@@ -261,11 +311,74 @@ mod tests {
     }
 
     #[test]
-    fn test_init_config_dir() {
+    fn test_init_config_dir_first_run() {
         let (loader, temp_dir) = create_test_loader();
-        loader.init_config_dir().unwrap();
+        let is_first_run = loader.init_config_dir().unwrap();
 
+        // 初回起動時は true を返す
+        assert!(is_first_run);
+
+        // ディレクトリとファイルが作成されている
         assert!(temp_dir.path().join("projects").exists());
         assert!(temp_dir.path().join("config.yaml").exists());
+
+        // サンプルプロジェクトが作成されている
+        assert!(temp_dir
+            .path()
+            .join("projects/sample-project.yaml")
+            .exists());
+
+        // 設定ファイルにサンプルプロジェクトが登録されている
+        let config = loader.load_config().unwrap();
+        assert_eq!(config.projects.len(), 1);
+        assert_eq!(config.projects[0], "projects/sample-project.yaml");
+        assert_eq!(
+            config.settings.default_project,
+            Some("Sample Project".to_string())
+        );
+    }
+
+    #[test]
+    fn test_init_config_dir_second_run() {
+        let (loader, _temp_dir) = create_test_loader();
+
+        // 初回起動
+        let is_first_run = loader.init_config_dir().unwrap();
+        assert!(is_first_run);
+
+        // 2回目の起動
+        let is_first_run = loader.init_config_dir().unwrap();
+        assert!(!is_first_run);
+
+        // ファイルは上書きされていない（サンプルプロジェクトはそのまま）
+        let config = loader.load_config().unwrap();
+        assert_eq!(config.projects.len(), 1);
+    }
+
+    #[test]
+    fn test_sample_project_content() {
+        let (loader, _temp_dir) = create_test_loader();
+        loader.init_config_dir().unwrap();
+
+        // サンプルプロジェクトの内容を確認
+        let project = loader
+            .load_project_file("projects/sample-project.yaml")
+            .unwrap();
+
+        assert_eq!(project.project.name, "Sample Project");
+        assert!(project.project.description.is_some());
+        assert_eq!(project.connections.len(), 2);
+
+        // PostgreSQL 接続
+        let pg_conn = &project.connections[0];
+        assert_eq!(pg_conn.name, "Local PostgreSQL");
+        assert_eq!(pg_conn.host, "localhost");
+        assert_eq!(pg_conn.port, 5432);
+
+        // MySQL 接続
+        let mysql_conn = &project.connections[1];
+        assert_eq!(mysql_conn.name, "Example MySQL");
+        assert_eq!(mysql_conn.host, "localhost");
+        assert_eq!(mysql_conn.port, 3306);
     }
 }
