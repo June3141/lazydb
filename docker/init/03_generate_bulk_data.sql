@@ -16,7 +16,7 @@ INSERT INTO categories (name, description, parent_id)
 SELECT
     'Category ' || i,
     'Description for category ' || i || '. This is a test category with some additional text to make it more realistic.',
-    CASE WHEN random() > 0.7 THEN (SELECT id FROM categories ORDER BY random() LIMIT 1) ELSE NULL END
+    CASE WHEN random() > 0.7 THEN (SELECT id FROM categories WHERE id < 10 ORDER BY random() LIMIT 1) ELSE NULL END
 FROM generate_series(10, 59) AS i;
 
 -- Generate products (10000 products)
@@ -67,7 +67,7 @@ SELECT
     CURRENT_TIMESTAMP - (random() * 365 || ' days')::INTERVAL
 FROM generate_series(1, 5000) AS i;
 
--- Generate order items (average 3 items per order = ~15000 items)
+-- Generate order items (3 slots per order, ~80% filled = ~12,000 items)
 INSERT INTO order_items (order_id, product_id, quantity, unit_price, created_at)
 SELECT
     o.id,
