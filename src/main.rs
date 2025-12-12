@@ -8,12 +8,14 @@ mod ui;
 use anyhow::Result;
 use app::{App, ConfirmModalField, ConnectionModalField, Focus, ModalState, ProjectModalField};
 use clap::Parser;
+use config::ConfigLoader;
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use message::Message;
+use model::Project;
 use ratatui::{backend::CrosstermBackend, Terminal};
 use std::io;
 
@@ -26,6 +28,13 @@ struct Args {}
 fn main() -> Result<()> {
     let _args = Args::parse();
 
+    // Initialize config directory and load projects
+    let config_loader = ConfigLoader::new()?;
+    config_loader.init_config_dir()?;
+    let config = config_loader.load_config()?;
+    let (project_files, _warnings) = config_loader.load_all_projects(&config);
+    let projects: Vec<Project> = project_files.into_iter().map(Project::from).collect();
+
     // Setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -33,8 +42,8 @@ fn main() -> Result<()> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    // Create app with sample data
-    let mut app = App::new_with_sample_data();
+    // Create app with loaded projects
+    let mut app = App::new(projects);
 
     // Main loop
     let res = run_app(&mut terminal, &mut app);
