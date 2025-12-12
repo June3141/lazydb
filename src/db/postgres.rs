@@ -72,10 +72,9 @@ impl DatabaseProvider for PostgresProvider {
             ORDER BY schema_name
         "#;
 
-        let mut client = self
-            .client
-            .lock()
-            .map_err(|e| ProviderError::ConnectionFailed(e.to_string()))?;
+        let mut client = self.client.lock().map_err(|e| {
+            ProviderError::InternalError(format!("Failed to acquire client lock: {}", e))
+        })?;
 
         let rows = client
             .query(query, &[])
@@ -98,10 +97,9 @@ impl DatabaseProvider for PostgresProvider {
             ORDER BY t.table_name
         "#;
 
-        let mut client = self
-            .client
-            .lock()
-            .map_err(|e| ProviderError::ConnectionFailed(e.to_string()))?;
+        let mut client = self.client.lock().map_err(|e| {
+            ProviderError::InternalError(format!("Failed to acquire client lock: {}", e))
+        })?;
 
         let rows = client
             .query(query, &[&schema])
@@ -145,10 +143,9 @@ impl DatabaseProvider for PostgresProvider {
             WHERE t.table_schema = $1 AND t.table_name = $2
         "#;
 
-        let mut client = self
-            .client
-            .lock()
-            .map_err(|e| ProviderError::ConnectionFailed(e.to_string()))?;
+        let mut client = self.client.lock().map_err(|e| {
+            ProviderError::InternalError(format!("Failed to acquire client lock: {}", e))
+        })?;
 
         // Create owned Strings for proper serialization
         let schema_owned = schema_str.to_string();
@@ -205,10 +202,9 @@ impl DatabaseProvider for PostgresProvider {
     fn execute_query(&self, query: &str) -> Result<QueryResult, ProviderError> {
         let start = Instant::now();
 
-        let mut client = self
-            .client
-            .lock()
-            .map_err(|e| ProviderError::ConnectionFailed(e.to_string()))?;
+        let mut client = self.client.lock().map_err(|e| {
+            ProviderError::InternalError(format!("Failed to acquire client lock: {}", e))
+        })?;
 
         let rows = client
             .query(query, &[])
@@ -224,38 +220,23 @@ impl DatabaseProvider for PostgresProvider {
             });
         }
 
-        // Get column names
-        let columns: Vec<String> = rows[0]
+        // Get column names and types once, not per row
+        let col_info: Vec<(String, &postgres::types::Type)> = rows[0]
             .columns()
             .iter()
-            .map(|c| c.name().to_string())
+            .map(|c| (c.name().to_string(), c.type_()))
             .collect();
 
-        // Convert rows to strings
+        let columns: Vec<String> = col_info.iter().map(|(name, _)| name.clone()).collect();
+
+        // Convert rows to strings using pre-fetched type information
         let result_rows: Vec<Vec<String>> = rows
             .iter()
             .map(|row| {
-                (0..row.len())
-                    .map(|i| {
-                        // Try to get as various types and convert to string
-                        if let Ok(v) = row.try_get::<_, Option<String>>(i) {
-                            v.unwrap_or_else(|| "NULL".to_string())
-                        } else if let Ok(v) = row.try_get::<_, Option<i32>>(i) {
-                            v.map(|n| n.to_string())
-                                .unwrap_or_else(|| "NULL".to_string())
-                        } else if let Ok(v) = row.try_get::<_, Option<i64>>(i) {
-                            v.map(|n| n.to_string())
-                                .unwrap_or_else(|| "NULL".to_string())
-                        } else if let Ok(v) = row.try_get::<_, Option<f64>>(i) {
-                            v.map(|n| n.to_string())
-                                .unwrap_or_else(|| "NULL".to_string())
-                        } else if let Ok(v) = row.try_get::<_, Option<bool>>(i) {
-                            v.map(|b| b.to_string())
-                                .unwrap_or_else(|| "NULL".to_string())
-                        } else {
-                            "<unknown>".to_string()
-                        }
-                    })
+                col_info
+                    .iter()
+                    .enumerate()
+                    .map(|(i, (_, col_type))| convert_value_to_string(row, i, col_type))
                     .collect()
             })
             .collect();
@@ -273,16 +254,24 @@ impl DatabaseProvider for PostgresProvider {
         schema: Option<&str>,
     ) -> Result<usize, ProviderError> {
         let schema = schema.unwrap_or("public");
+
+        // Validate identifiers to prevent SQL injection
+        // Only allow alphanumeric characters, underscores, and dollar signs (PostgreSQL identifier rules)
+        if !is_valid_identifier(schema) || !is_valid_identifier(table_name) {
+            return Err(ProviderError::InvalidConfiguration(
+                "Invalid schema or table name".to_string(),
+            ));
+        }
+
         let query = format!(
             "SELECT COUNT(*) FROM {}.{}",
             quote_identifier(schema),
             quote_identifier(table_name)
         );
 
-        let mut client = self
-            .client
-            .lock()
-            .map_err(|e| ProviderError::ConnectionFailed(e.to_string()))?;
+        let mut client = self.client.lock().map_err(|e| {
+            ProviderError::InternalError(format!("Failed to acquire client lock: {}", e))
+        })?;
 
         let rows = client
             .query(&query, &[])
@@ -302,10 +291,9 @@ impl DatabaseProvider for PostgresProvider {
             )
         "#;
 
-        let mut client = self
-            .client
-            .lock()
-            .map_err(|e| ProviderError::ConnectionFailed(e.to_string()))?;
+        let mut client = self.client.lock().map_err(|e| {
+            ProviderError::InternalError(format!("Failed to acquire client lock: {}", e))
+        })?;
 
         let schema_owned = schema.to_string();
         let table_owned = table_name.to_string();
@@ -319,10 +307,9 @@ impl DatabaseProvider for PostgresProvider {
     }
 
     fn test_connection(&self) -> Result<(), ProviderError> {
-        let mut client = self
-            .client
-            .lock()
-            .map_err(|e| ProviderError::ConnectionFailed(e.to_string()))?;
+        let mut client = self.client.lock().map_err(|e| {
+            ProviderError::InternalError(format!("Failed to acquire client lock: {}", e))
+        })?;
 
         client
             .query("SELECT 1", &[])
@@ -331,10 +318,9 @@ impl DatabaseProvider for PostgresProvider {
     }
 
     fn get_version(&self) -> Result<String, ProviderError> {
-        let mut client = self
-            .client
-            .lock()
-            .map_err(|e| ProviderError::ConnectionFailed(e.to_string()))?;
+        let mut client = self.client.lock().map_err(|e| {
+            ProviderError::InternalError(format!("Failed to acquire client lock: {}", e))
+        })?;
 
         let rows = client
             .query("SELECT version()", &[])
@@ -470,6 +456,7 @@ impl PostgresProvider {
                 let is_unique: bool = row.get(2);
                 let is_primary: bool = row.get(3);
                 let column_names: Vec<String> = row.get(4);
+                let index_def: String = row.get(5);
 
                 let index_type = if is_primary {
                     IndexType::Primary
@@ -490,9 +477,14 @@ impl PostgresProvider {
 
                 let columns: Vec<IndexColumn> = column_names
                     .into_iter()
-                    .map(|name| IndexColumn {
-                        name,
-                        order: SortOrder::Asc, // Default, could be parsed from index_def
+                    .map(|col_name| {
+                        // Parse sort order from index definition
+                        // Example index_def: "CREATE INDEX idx ON schema.table USING btree (col1, col2 DESC, col3 ASC)"
+                        let order = parse_column_sort_order(&index_def, &col_name);
+                        IndexColumn {
+                            name: col_name,
+                            order,
+                        }
                     })
                     .collect();
 
@@ -648,6 +640,21 @@ impl PostgresProvider {
         Ok(constraints)
     }
 
+    /// Retrieves table statistics including row count and size.
+    ///
+    /// # Returns
+    /// A tuple of `(row_count, size_in_bytes)`.
+    ///
+    /// # Important: Row Count is an Estimate
+    /// The row count returned is an **estimate** from `pg_stat_user_tables.n_live_tup`,
+    /// not an exact count from `COUNT(*)`. This provides significantly better performance
+    /// for large tables but may be inaccurate if:
+    /// - The table was recently created or heavily modified
+    /// - `ANALYZE` has not been run recently
+    /// - Autovacuum is disabled or hasn't processed the table
+    ///
+    /// For exact row counts, use [`get_row_count`](Self::get_row_count) instead
+    /// (with the caveat that it performs a full table scan).
     fn get_table_stats(
         client: &mut Client,
         table_name: &str,
@@ -707,6 +714,164 @@ fn parse_fk_action(action: &str) -> ForeignKeyAction {
 
 fn quote_identifier(identifier: &str) -> String {
     format!("\"{}\"", identifier.replace('"', "\"\""))
+}
+
+/// Validates that an identifier only contains safe characters for PostgreSQL identifiers.
+/// Prevents SQL injection by rejecting identifiers with potentially dangerous characters.
+fn is_valid_identifier(identifier: &str) -> bool {
+    if identifier.is_empty() || identifier.len() > 63 {
+        return false;
+    }
+
+    // PostgreSQL identifiers must start with a letter or underscore
+    let first_char = identifier.chars().next().unwrap();
+    if !first_char.is_ascii_alphabetic() && first_char != '_' {
+        return false;
+    }
+
+    // Remaining characters can be letters, digits, underscores, or dollar signs
+    identifier
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '$')
+}
+
+/// Parses the sort order for a column from a PostgreSQL index definition.
+///
+/// The index definition from `pg_get_indexdef()` has the format:
+/// `CREATE INDEX idx_name ON schema.table USING btree (col1, col2 DESC, col3 ASC)`
+///
+/// This function looks for the column name followed by optional sort order keywords.
+/// If DESC is found after the column name, returns `SortOrder::Desc`.
+/// Otherwise, returns `SortOrder::Asc` (PostgreSQL default).
+fn parse_column_sort_order(index_def: &str, column_name: &str) -> SortOrder {
+    // Find the columns part within parentheses
+    let columns_part = match (index_def.rfind('('), index_def.rfind(')')) {
+        (Some(start), Some(end)) if start < end => &index_def[start + 1..end],
+        _ => return SortOrder::Asc,
+    };
+
+    // Split by comma and find the column
+    for col_spec in columns_part.split(',') {
+        let col_spec = col_spec.trim();
+        if col_spec.is_empty() {
+            continue;
+        }
+
+        // Parse the column specification, handling quoted identifiers
+        // Column spec could be: "col_name", "col_name DESC", '"Column Name" DESC', etc.
+        let (spec_col_name, remainder) = if let Some(stripped) = col_spec.strip_prefix('"') {
+            // Quoted identifier - find the closing quote
+            if let Some(end_quote) = stripped.find('"') {
+                let col_name = &stripped[..end_quote];
+                let rest = stripped[end_quote + 1..].trim();
+                (col_name, rest)
+            } else {
+                // Malformed, skip
+                continue;
+            }
+        } else {
+            // Unquoted identifier - take until whitespace
+            let parts: Vec<&str> = col_spec.splitn(2, char::is_whitespace).collect();
+            let col_name = parts[0];
+            let rest = parts.get(1).map(|s| s.trim()).unwrap_or("");
+            (col_name, rest)
+        };
+
+        if spec_col_name == column_name {
+            // Check if DESC appears in the remainder
+            let upper = remainder.to_uppercase();
+            if upper.contains("DESC") {
+                return SortOrder::Desc;
+            }
+            return SortOrder::Asc;
+        }
+    }
+
+    // Column not found in definition, default to Asc
+    SortOrder::Asc
+}
+
+/// Converts a PostgreSQL row value to a string based on the column type.
+///
+/// Uses the pre-fetched column type information to efficiently convert values
+/// without trial-and-error type checking on each row.
+fn convert_value_to_string(
+    row: &postgres::Row,
+    index: usize,
+    col_type: &postgres::types::Type,
+) -> String {
+    use postgres::types::Type;
+
+    // Match on PostgreSQL type and use the appropriate Rust type for extraction
+    match *col_type {
+        Type::BOOL => row
+            .try_get::<_, Option<bool>>(index)
+            .ok()
+            .flatten()
+            .map(|v| v.to_string())
+            .unwrap_or_else(|| "NULL".to_string()),
+        Type::INT2 => row
+            .try_get::<_, Option<i16>>(index)
+            .ok()
+            .flatten()
+            .map(|v| v.to_string())
+            .unwrap_or_else(|| "NULL".to_string()),
+        Type::INT4 => row
+            .try_get::<_, Option<i32>>(index)
+            .ok()
+            .flatten()
+            .map(|v| v.to_string())
+            .unwrap_or_else(|| "NULL".to_string()),
+        Type::INT8 => row
+            .try_get::<_, Option<i64>>(index)
+            .ok()
+            .flatten()
+            .map(|v| v.to_string())
+            .unwrap_or_else(|| "NULL".to_string()),
+        Type::FLOAT4 => row
+            .try_get::<_, Option<f32>>(index)
+            .ok()
+            .flatten()
+            .map(|v| v.to_string())
+            .unwrap_or_else(|| "NULL".to_string()),
+        Type::FLOAT8 | Type::NUMERIC => row
+            .try_get::<_, Option<f64>>(index)
+            .ok()
+            .flatten()
+            .map(|v| v.to_string())
+            .unwrap_or_else(|| "NULL".to_string()),
+        Type::TEXT | Type::VARCHAR | Type::CHAR | Type::BPCHAR | Type::NAME => row
+            .try_get::<_, Option<String>>(index)
+            .ok()
+            .flatten()
+            .unwrap_or_else(|| "NULL".to_string()),
+        _ => {
+            // Fallback: try common types in order of likelihood
+            if let Ok(Some(v)) = row.try_get::<_, Option<String>>(index) {
+                v
+            } else if let Ok(Some(v)) = row.try_get::<_, Option<i64>>(index) {
+                v.to_string()
+            } else if let Ok(Some(v)) = row.try_get::<_, Option<f64>>(index) {
+                v.to_string()
+            } else if let Ok(Some(v)) = row.try_get::<_, Option<bool>>(index) {
+                v.to_string()
+            } else if row
+                .try_get::<_, Option<String>>(index)
+                .ok()
+                .flatten()
+                .is_none()
+                && row
+                    .try_get::<_, Option<i64>>(index)
+                    .ok()
+                    .flatten()
+                    .is_none()
+            {
+                "NULL".to_string()
+            } else {
+                "<unknown>".to_string()
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -882,5 +1047,181 @@ mod tests {
 
         println!("Row count for users: {}", count);
         assert!(count > 0);
+    }
+
+    // ==================== Error Case Tests ====================
+    // These tests verify proper error handling for various failure scenarios
+
+    #[test]
+    fn test_connection_failure_invalid_host() {
+        let result = PostgresProvider::connect(
+            "nonexistent.invalid.host.example.com",
+            5432,
+            "testdb",
+            "user",
+            "pass",
+        );
+
+        assert!(result.is_err());
+        match result {
+            Err(ProviderError::ConnectionFailed(msg)) => {
+                println!("Expected connection failure: {}", msg);
+            }
+            Err(other) => panic!("Expected ConnectionFailed, got: {:?}", other),
+            Ok(_) => panic!("Expected connection to fail"),
+        }
+    }
+
+    #[test]
+    fn test_connection_failure_invalid_port() {
+        // Port 1 is unlikely to have a PostgreSQL server
+        let result = PostgresProvider::connect("localhost", 1, "testdb", "user", "pass");
+
+        assert!(result.is_err());
+        match result {
+            Err(ProviderError::ConnectionFailed(msg)) => {
+                println!("Expected connection failure: {}", msg);
+            }
+            Err(other) => panic!("Expected ConnectionFailed, got: {:?}", other),
+            Ok(_) => panic!("Expected connection to fail"),
+        }
+    }
+
+    #[test]
+    fn test_is_valid_identifier() {
+        // Valid identifiers
+        assert!(is_valid_identifier("users"));
+        assert!(is_valid_identifier("my_table"));
+        assert!(is_valid_identifier("_private"));
+        assert!(is_valid_identifier("Table123"));
+        assert!(is_valid_identifier("user$data"));
+
+        // Invalid identifiers - empty or too long
+        assert!(!is_valid_identifier(""));
+        assert!(!is_valid_identifier(&"a".repeat(64))); // > 63 chars
+
+        // Invalid identifiers - starts with invalid character
+        assert!(!is_valid_identifier("123table")); // starts with digit
+        assert!(!is_valid_identifier("$money")); // starts with $
+        assert!(!is_valid_identifier("-dashed")); // starts with dash
+
+        // Invalid identifiers - SQL injection attempts
+        assert!(!is_valid_identifier("users; DROP TABLE users;--"));
+        assert!(!is_valid_identifier("users' OR '1'='1"));
+        assert!(!is_valid_identifier("table\nname"));
+        assert!(!is_valid_identifier("schema.table"));
+        assert!(!is_valid_identifier("table("));
+        assert!(!is_valid_identifier("table)"));
+    }
+
+    #[test]
+    fn test_quote_identifier() {
+        assert_eq!(quote_identifier("users"), "\"users\"");
+        assert_eq!(quote_identifier("my_table"), "\"my_table\"");
+        assert_eq!(quote_identifier("Table Name"), "\"Table Name\"");
+        // Double quotes are escaped by doubling them
+        assert_eq!(quote_identifier("table\"name"), "\"table\"\"name\"");
+    }
+
+    #[test]
+    #[ignore] // Requires database connection
+    fn test_invalid_table_name_get_row_count() {
+        let provider = create_test_provider();
+
+        // Test with SQL injection attempt
+        let result = provider.get_row_count("users; DROP TABLE users;--", Some("public"));
+        assert!(result.is_err());
+        match result {
+            Err(ProviderError::InvalidConfiguration(msg)) => {
+                assert!(msg.contains("Invalid"));
+                println!("Correctly rejected invalid table name: {}", msg);
+            }
+            Err(other) => panic!("Expected InvalidConfiguration, got: {:?}", other),
+            Ok(_) => panic!("Should have rejected invalid table name"),
+        }
+
+        // Test with invalid schema
+        let result = provider.get_row_count("users", Some("public' OR '1'='1"));
+        assert!(result.is_err());
+        match result {
+            Err(ProviderError::InvalidConfiguration(_)) => {
+                println!("Correctly rejected invalid schema name");
+            }
+            Err(other) => panic!("Expected InvalidConfiguration, got: {:?}", other),
+            Ok(_) => panic!("Should have rejected invalid schema name"),
+        }
+    }
+
+    #[test]
+    #[ignore] // Requires database connection
+    fn test_nonexistent_table() {
+        let provider = create_test_provider();
+
+        let result = provider.get_table_details("this_table_does_not_exist_12345", Some("public"));
+        assert!(result.is_err());
+        match result {
+            Err(ProviderError::NotFound(msg)) => {
+                println!("Correctly reported not found: {}", msg);
+            }
+            Err(other) => panic!("Expected NotFound, got: {:?}", other),
+            Ok(_) => panic!("Should have returned NotFound for nonexistent table"),
+        }
+    }
+
+    #[test]
+    #[ignore] // Requires database connection
+    fn test_nonexistent_schema() {
+        let provider = create_test_provider();
+
+        let result = provider.get_tables(Some("nonexistent_schema_12345"));
+        // This should succeed but return empty
+        match result {
+            Ok(tables) => {
+                assert!(
+                    tables.is_empty(),
+                    "Should return empty for nonexistent schema"
+                );
+            }
+            Err(e) => panic!("Unexpected error: {:?}", e),
+        }
+    }
+
+    #[test]
+    fn test_parse_column_sort_order() {
+        // Test ASC (default)
+        let index_def = "CREATE INDEX idx ON schema.table USING btree (col1)";
+        assert_eq!(parse_column_sort_order(index_def, "col1"), SortOrder::Asc);
+
+        // Test explicit ASC
+        let index_def = "CREATE INDEX idx ON schema.table USING btree (col1 ASC)";
+        assert_eq!(parse_column_sort_order(index_def, "col1"), SortOrder::Asc);
+
+        // Test DESC
+        let index_def = "CREATE INDEX idx ON schema.table USING btree (col1 DESC)";
+        assert_eq!(parse_column_sort_order(index_def, "col1"), SortOrder::Desc);
+
+        // Test multiple columns with mixed order
+        let index_def = "CREATE INDEX idx ON schema.table USING btree (col1, col2 DESC, col3 ASC)";
+        assert_eq!(parse_column_sort_order(index_def, "col1"), SortOrder::Asc);
+        assert_eq!(parse_column_sort_order(index_def, "col2"), SortOrder::Desc);
+        assert_eq!(parse_column_sort_order(index_def, "col3"), SortOrder::Asc);
+
+        // Test quoted identifiers
+        let index_def = "CREATE INDEX idx ON schema.table USING btree (\"Column Name\" DESC)";
+        assert_eq!(
+            parse_column_sort_order(index_def, "Column Name"),
+            SortOrder::Desc
+        );
+
+        // Test column not in index (fallback to Asc)
+        let index_def = "CREATE INDEX idx ON schema.table USING btree (col1)";
+        assert_eq!(
+            parse_column_sort_order(index_def, "nonexistent"),
+            SortOrder::Asc
+        );
+
+        // Test malformed index definition (no parentheses)
+        let index_def = "CREATE INDEX idx ON schema.table";
+        assert_eq!(parse_column_sort_order(index_def, "col1"), SortOrder::Asc);
     }
 }
