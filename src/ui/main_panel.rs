@@ -7,6 +7,7 @@ use ratatui::{
     widgets::{Block, Borders, Cell, Paragraph, Row, Table as RatatuiTable, Tabs, Wrap},
     Frame,
 };
+use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 pub fn draw_query_editor(frame: &mut Frame, app: &App, area: Rect) {
     let is_focused = app.focus == Focus::QueryEditor;
@@ -458,9 +459,9 @@ fn draw_relations_content(frame: &mut Frame, app: &App, area: Rect) {
     }
 }
 
-/// Calculate display width of a string (ASCII chars = 1, others = 2)
+/// Calculate display width of a string using Unicode Standard Annex #11
 fn display_width(s: &str) -> usize {
-    s.chars().map(|c| if c.is_ascii() { 1 } else { 2 }).sum()
+    s.width()
 }
 
 /// Truncate string to fit within max display width
@@ -468,7 +469,7 @@ fn truncate_to_width(s: &str, max_width: usize) -> String {
     let mut result = String::new();
     let mut width = 0;
     for c in s.chars() {
-        let char_width = if c.is_ascii() { 1 } else { 2 };
+        let char_width = c.width().unwrap_or(0);
         if width + char_width > max_width {
             break;
         }
