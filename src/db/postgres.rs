@@ -295,20 +295,23 @@ impl DatabaseProvider for PostgresProvider {
     fn get_table_size(&self, table_name: &str, schema: Option<&str>) -> Result<u64, ProviderError> {
         let schema = schema.unwrap_or("public");
 
-        // Use format string directly since regclass needs special handling
-        let query = format!(
-            "SELECT pg_total_relation_size('{}.{}'::regclass)",
-            schema.replace('\'', "''"),
-            table_name.replace('\'', "''")
-        );
+        // Use quote_ident to safely handle identifiers and prevent SQL injection
+        let query = r#"
+            SELECT pg_total_relation_size(
+                (quote_ident($1) || '.' || quote_ident($2))::regclass
+            )
+        "#;
 
         let mut client = self
             .client
             .lock()
             .map_err(|e| ProviderError::ConnectionFailed(e.to_string()))?;
 
+        let schema_owned = schema.to_string();
+        let table_owned = table_name.to_string();
+
         let rows = client
-            .query(&query, &[])
+            .query(query, &[&schema_owned, &table_owned])
             .map_err(|e| ProviderError::QueryFailed(e.to_string()))?;
 
         let size: i64 = rows[0].get(0);
@@ -671,15 +674,15 @@ impl PostgresProvider {
             count_rows[0].get(0)
         };
 
-        // Get table size - use format string directly since regclass needs special handling
-        let size_query = format!(
-            "SELECT pg_total_relation_size('{}.{}'::regclass)",
-            schema.replace('\'', "''"),
-            table_name.replace('\'', "''")
-        );
+        // Get table size - use quote_ident to safely handle identifiers and prevent SQL injection
+        let size_query = r#"
+            SELECT pg_total_relation_size(
+                (quote_ident($1) || '.' || quote_ident($2))::regclass
+            )
+        "#;
 
         let size_rows = client
-            .query(&size_query, &[])
+            .query(size_query, &[&schema_owned, &table_owned])
             .map_err(|e| ProviderError::QueryFailed(e.to_string()))?;
 
         let size: i64 = if size_rows.is_empty() {
