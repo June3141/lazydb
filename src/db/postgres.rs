@@ -37,7 +37,10 @@ impl PostgresProvider {
         })
     }
 
-    /// Create a new PostgresProvider from connection parameters
+    /// Create a new PostgresProvider from connection parameters.
+    ///
+    /// Uses the `postgres::Config` builder API to safely handle passwords
+    /// containing special characters (like `@`, `#`, spaces, or quotes).
     pub fn connect(
         host: &str,
         port: u16,
@@ -45,12 +48,16 @@ impl PostgresProvider {
         username: &str,
         password: &str,
     ) -> Result<Self, ProviderError> {
-        let connection_string = format!(
-            "host={} port={} dbname={} user={} password={}",
-            host, port, database, username, password
-        );
+        let mut config = postgres::Config::new();
+        config
+            .host(host)
+            .port(port)
+            .dbname(database)
+            .user(username)
+            .password(password);
 
-        let client = Client::connect(&connection_string, NoTls)
+        let client = config
+            .connect(NoTls)
             .map_err(|e| ProviderError::ConnectionFailed(e.to_string()))?;
 
         Ok(Self {
@@ -147,17 +154,13 @@ impl DatabaseProvider for PostgresProvider {
             ProviderError::InternalError(format!("Failed to acquire client lock: {}", e))
         })?;
 
-        // Create owned Strings for proper serialization
-        let schema_owned = schema_str.to_string();
-        let table_owned = table_name.to_string();
-
         let table_rows = client
-            .query(table_query, &[&schema_owned, &table_owned])
+            .query(table_query, &[&schema_str, &table_name])
             .map_err(|e| ProviderError::QueryFailed(e.to_string()))?;
 
         if table_rows.is_empty() {
             return Err(ProviderError::NotFound(format!(
-                "Table {}.{} not found",
+                "Table {}.{} not found. Verify the table name and schema, and ensure you have the necessary permissions.",
                 schema_str, table_name
             )));
         }
@@ -295,11 +298,8 @@ impl DatabaseProvider for PostgresProvider {
             ProviderError::InternalError(format!("Failed to acquire client lock: {}", e))
         })?;
 
-        let schema_owned = schema.to_string();
-        let table_owned = table_name.to_string();
-
         let rows = client
-            .query(query, &[&schema_owned, &table_owned])
+            .query(query, &[&schema, &table_name])
             .map_err(|e| ProviderError::QueryFailed(e.to_string()))?;
 
         let size: i64 = rows[0].get(0);
@@ -373,12 +373,8 @@ impl PostgresProvider {
             ORDER BY c.ordinal_position
         "#;
 
-        // Explicitly create owned Strings to ensure proper serialization
-        let schema_owned = schema.to_string();
-        let table_owned = table_name.to_string();
-
         let rows = client
-            .query(query, &[&schema_owned, &table_owned])
+            .query(query, &[&schema, &table_name])
             .map_err(|e| ProviderError::QueryFailed(e.to_string()))?;
 
         let columns = rows
@@ -440,12 +436,8 @@ impl PostgresProvider {
             ORDER BY i.relname
         "#;
 
-        // Explicitly create owned Strings to ensure proper serialization
-        let schema_owned = schema.to_string();
-        let table_owned = table_name.to_string();
-
         let rows = client
-            .query(query, &[&schema_owned, &table_owned])
+            .query(query, &[&schema, &table_name])
             .map_err(|e| ProviderError::QueryFailed(e.to_string()))?;
 
         let indexes = rows
@@ -531,17 +523,13 @@ impl PostgresProvider {
             ORDER BY tc.constraint_name, kcu.ordinal_position
         "#;
 
-        // Explicitly create owned Strings to ensure proper serialization
-        let schema_owned = schema.to_string();
-        let table_owned = table_name.to_string();
-
         let rows = client
-            .query(query, &[&schema_owned, &table_owned])
+            .query(query, &[&schema, &table_name])
             .map_err(|e| ProviderError::QueryFailed(e.to_string()))?;
 
-        // Group by constraint name
-        let mut fk_map: std::collections::HashMap<String, ForeignKey> =
-            std::collections::HashMap::new();
+        // Group by constraint name (using BTreeMap for deterministic ordering)
+        let mut fk_map: std::collections::BTreeMap<String, ForeignKey> =
+            std::collections::BTreeMap::new();
 
         for row in rows {
             let constraint_name: String = row.get(0);
@@ -603,12 +591,8 @@ impl PostgresProvider {
             ORDER BY tc.constraint_name
         "#;
 
-        // Explicitly create owned Strings to ensure proper serialization
-        let schema_owned = schema.to_string();
-        let table_owned = table_name.to_string();
-
         let rows = client
-            .query(query, &[&schema_owned, &table_owned])
+            .query(query, &[&schema, &table_name])
             .map_err(|e| ProviderError::QueryFailed(e.to_string()))?;
 
         let constraints = rows
@@ -667,12 +651,8 @@ impl PostgresProvider {
             WHERE schemaname = $1 AND relname = $2
         "#;
 
-        // Explicitly create owned Strings to ensure proper serialization
-        let schema_owned = schema.to_string();
-        let table_owned = table_name.to_string();
-
         let count_rows = client
-            .query(count_query, &[&schema_owned, &table_owned])
+            .query(count_query, &[&schema, &table_name])
             .map_err(|e| ProviderError::QueryFailed(e.to_string()))?;
 
         let row_count: i64 = if count_rows.is_empty() {
@@ -689,7 +669,7 @@ impl PostgresProvider {
         "#;
 
         let size_rows = client
-            .query(size_query, &[&schema_owned, &table_owned])
+            .query(size_query, &[&schema, &table_name])
             .map_err(|e| ProviderError::QueryFailed(e.to_string()))?;
 
         let size: i64 = if size_rows.is_empty() {
@@ -712,6 +692,23 @@ fn parse_fk_action(action: &str) -> ForeignKeyAction {
     }
 }
 
+/// Quotes a PostgreSQL identifier by wrapping it in double quotes and escaping internal quotes.
+///
+/// # Security Warning
+/// This function provides basic identifier quoting but is **not sufficient for untrusted input**.
+/// It only escapes double quotes by doubling them, and does not:
+/// - Validate identifier length (PostgreSQL has a 63-byte limit)
+/// - Check for reserved keywords
+/// - Validate character encoding
+///
+/// For user-provided identifiers, always use [`is_valid_identifier`] to validate first,
+/// or use PostgreSQL's built-in `quote_ident()` function via parameterized queries.
+///
+/// # Example
+/// ```ignore
+/// assert_eq!(quote_identifier("my_table"), "\"my_table\"");
+/// assert_eq!(quote_identifier("table\"name"), "\"table\"\"name\"");
+/// ```
 fn quote_identifier(identifier: &str) -> String {
     format!("\"{}\"", identifier.replace('"', "\"\""))
 }
