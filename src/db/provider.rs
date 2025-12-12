@@ -27,13 +27,31 @@ impl std::fmt::Display for DatabaseType {
 /// This trait defines the interface for database metadata retrieval.
 /// Implement this trait to add support for new database types.
 ///
+/// # Responsibility Design
+///
+/// ## Required Methods (implementors must provide)
+/// - `get_table_details`: The **canonical source** for complete table metadata.
+///   Returns a fully populated `Table` including columns, indexes, foreign keys,
+///   and constraints. Implementors should optimize this for single-query retrieval.
+///
+/// ## Convenience Methods (have default implementations)
+/// - `get_columns`, `get_indexes`, `get_foreign_keys`, `get_constraints`:
+///   These delegate to `get_table_details` by default. Override only if you need
+///   optimized partial queries for specific use cases.
+///
 /// # Example
 /// ```ignore
 /// struct PostgresProvider { /* connection details */ }
 ///
 /// impl DatabaseProvider for PostgresProvider {
 ///     fn database_type(&self) -> DatabaseType { DatabaseType::PostgreSQL }
-///     // ... implement other methods
+///
+///     fn get_table_details(&self, table_name: &str, schema: Option<&str>)
+///         -> Result<Table, ProviderError> {
+///         // Single optimized query to fetch all table metadata
+///     }
+///
+///     // get_columns, get_indexes, etc. automatically work via defaults
 /// }
 /// ```
 pub trait DatabaseProvider: Send + Sync {
@@ -46,40 +64,64 @@ pub trait DatabaseProvider: Send + Sync {
     /// Get list of tables in a schema
     fn get_tables(&self, schema: Option<&str>) -> Result<Vec<Table>, ProviderError>;
 
-    /// Get detailed table information including columns, indexes, etc.
+    /// Get detailed table information including columns, indexes, foreign keys, and constraints.
+    ///
+    /// This is the **canonical source** for table metadata. Implementors should provide
+    /// a complete `Table` struct with all fields populated. The individual accessor methods
+    /// (`get_columns`, `get_indexes`, etc.) delegate to this method by default.
     fn get_table_details(
         &self,
         table_name: &str,
         schema: Option<&str>,
     ) -> Result<Table, ProviderError>;
 
-    /// Get columns for a table
+    /// Get columns for a table.
+    ///
+    /// Default implementation delegates to `get_table_details`.
+    /// Override only if you need an optimized partial query.
     fn get_columns(
         &self,
         table_name: &str,
         schema: Option<&str>,
-    ) -> Result<Vec<Column>, ProviderError>;
+    ) -> Result<Vec<Column>, ProviderError> {
+        Ok(self.get_table_details(table_name, schema)?.columns)
+    }
 
-    /// Get indexes for a table
+    /// Get indexes for a table.
+    ///
+    /// Default implementation delegates to `get_table_details`.
+    /// Override only if you need an optimized partial query.
     fn get_indexes(
         &self,
         table_name: &str,
         schema: Option<&str>,
-    ) -> Result<Vec<Index>, ProviderError>;
+    ) -> Result<Vec<Index>, ProviderError> {
+        Ok(self.get_table_details(table_name, schema)?.indexes)
+    }
 
-    /// Get foreign keys for a table
+    /// Get foreign keys for a table.
+    ///
+    /// Default implementation delegates to `get_table_details`.
+    /// Override only if you need an optimized partial query.
     fn get_foreign_keys(
         &self,
         table_name: &str,
         schema: Option<&str>,
-    ) -> Result<Vec<ForeignKey>, ProviderError>;
+    ) -> Result<Vec<ForeignKey>, ProviderError> {
+        Ok(self.get_table_details(table_name, schema)?.foreign_keys)
+    }
 
-    /// Get constraints for a table
+    /// Get constraints for a table.
+    ///
+    /// Default implementation delegates to `get_table_details`.
+    /// Override only if you need an optimized partial query.
     fn get_constraints(
         &self,
         table_name: &str,
         schema: Option<&str>,
-    ) -> Result<Vec<Constraint>, ProviderError>;
+    ) -> Result<Vec<Constraint>, ProviderError> {
+        Ok(self.get_table_details(table_name, schema)?.constraints)
+    }
 
     /// Execute a query and return results
     fn execute_query(&self, query: &str) -> Result<QueryResult, ProviderError>;
