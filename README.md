@@ -156,9 +156,59 @@ Passwords can be configured in two ways:
 
 - [Architecture](docs/architecture.md) - TEA パターンとディレクトリ構成
 
+## Development Environment
+
+### Docker (PostgreSQL)
+
+A Docker Compose configuration is provided for running a local PostgreSQL database with sample data.
+
+```bash
+# Copy environment file
+cp .env.sample .env
+
+# Start PostgreSQL
+task docker:up
+
+# Connect with psql
+task docker:psql
+
+# View logs
+task docker:logs
+
+# Stop PostgreSQL
+task docker:down
+
+# Reset database (destroy and recreate)
+task docker:reset
+```
+
+#### Connection Details
+
+| Parameter | Default Value     |
+| --------- | ----------------- |
+| Host      | localhost         |
+| Port      | 5432              |
+| Database  | lazydb_dev        |
+| Username  | lazydb            |
+| Password  | lazydb            |
+
+Connection string: `postgres://lazydb:lazydb@localhost:5432/lazydb_dev`
+
+#### Sample Schema
+
+The database is initialized with sample tables:
+
+- `users` - User accounts
+- `categories` - Product categories (hierarchical)
+- `products` - Product catalog with JSONB metadata
+- `orders` - Customer orders
+- `order_items` - Order line items
+- `order_summary` - View for order summaries
+
 ## Requirements
 
 - Rust 1.75+ (for building from source)
+- Docker and Docker Compose (for development database)
 
 ### Development Tools
 
