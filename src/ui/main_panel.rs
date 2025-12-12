@@ -1,6 +1,5 @@
 use crate::app::{App, Focus, MainPanelTab, SchemaSubTab};
 use crate::model::{ForeignKey, Table};
-use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
@@ -8,6 +7,7 @@ use ratatui::{
     widgets::{Block, Borders, Cell, Paragraph, Row, Table as RatatuiTable, Tabs, Wrap},
     Frame,
 };
+use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 pub fn draw_query_editor(frame: &mut Frame, app: &App, area: Rect) {
     let is_focused = app.focus == Focus::QueryEditor;
