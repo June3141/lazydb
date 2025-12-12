@@ -1,4 +1,5 @@
 use super::connection::Connection;
+use crate::config::ProjectFile;
 
 #[derive(Debug, Clone)]
 pub struct Project {
@@ -13,9 +14,13 @@ impl Project {
             connections: Vec::new(),
         }
     }
+}
 
-    pub fn with_connections(mut self, connections: Vec<Connection>) -> Self {
-        self.connections = connections;
-        self
+impl From<ProjectFile> for Project {
+    fn from(file: ProjectFile) -> Self {
+        Self {
+            name: file.project.name,
+            connections: file.connections.into_iter().map(Connection::from).collect(),
+        }
     }
 }
