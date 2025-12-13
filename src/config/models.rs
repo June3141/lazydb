@@ -109,13 +109,19 @@ fn default_port() -> u16 {
 impl ConnectionConfig {
     /// パスワードを取得（password_env が設定されていれば環境変数から取得）
     ///
-    /// Note: If both `password_env` and `password` are set, `password_env` takes precedence.
+    /// Priority:
+    /// 1. If `password_env` is set and the environment variable exists, use that value
+    /// 2. Otherwise, use the `password` field if set
+    /// 3. Otherwise, return None
     pub fn get_password(&self) -> Option<String> {
+        // Try environment variable first if specified
         if let Some(env_name) = &self.password_env {
-            std::env::var(env_name).ok()
-        } else {
-            self.password.clone()
+            if let Ok(value) = std::env::var(env_name) {
+                return Some(value);
+            }
         }
+        // Fall back to direct password
+        self.password.clone()
     }
 }
 

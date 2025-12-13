@@ -150,6 +150,8 @@ pub enum ProviderError {
     Timeout(String),
     InvalidConfiguration(String),
     NotImplemented(String),
+    /// Internal errors such as mutex poisoning or other synchronization issues
+    InternalError(String),
 }
 
 impl std::fmt::Display for ProviderError {
@@ -162,6 +164,7 @@ impl std::fmt::Display for ProviderError {
             ProviderError::Timeout(msg) => write!(f, "Timeout: {}", msg),
             ProviderError::InvalidConfiguration(msg) => write!(f, "Invalid configuration: {}", msg),
             ProviderError::NotImplemented(msg) => write!(f, "Not implemented: {}", msg),
+            ProviderError::InternalError(msg) => write!(f, "Internal error: {}", msg),
         }
     }
 }
