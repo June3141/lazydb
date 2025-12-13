@@ -93,12 +93,17 @@ impl DatabaseProvider for PostgresProvider {
     fn get_tables(&self, schema: Option<&str>) -> Result<Vec<Table>, ProviderError> {
         let schema = schema.unwrap_or("public");
 
+        // Query to get tables with estimated row count and size
         let query = r#"
             SELECT
                 t.table_name,
                 t.table_type,
-                obj_description((quote_ident(t.table_schema) || '.' || quote_ident(t.table_name))::regclass, 'pg_class') as comment
+                obj_description((quote_ident(t.table_schema) || '.' || quote_ident(t.table_name))::regclass, 'pg_class') as comment,
+                COALESCE(s.n_live_tup, 0)::bigint as row_count,
+                COALESCE(pg_total_relation_size((quote_ident(t.table_schema) || '.' || quote_ident(t.table_name))::regclass), 0)::bigint as size_bytes
             FROM information_schema.tables t
+            LEFT JOIN pg_stat_user_tables s
+                ON s.schemaname = t.table_schema AND s.relname = t.table_name
             WHERE t.table_schema = $1
             AND t.table_type IN ('BASE TABLE', 'VIEW')
             ORDER BY t.table_name
@@ -118,13 +123,17 @@ impl DatabaseProvider for PostgresProvider {
                 let name: String = row.get(0);
                 let table_type_str: String = row.get(1);
                 let comment: Option<String> = row.get(2);
+                let row_count: i64 = row.get(3);
+                let size_bytes: i64 = row.get(4);
 
                 let table_type = match table_type_str.as_str() {
                     "VIEW" => TableType::View,
                     _ => TableType::BaseTable,
                 };
 
-                let mut table = Table::new(&name).with_schema(schema);
+                let mut table = Table::new(&name)
+                    .with_schema(schema)
+                    .with_stats(row_count as usize, size_bytes as u64);
                 table.table_type = table_type;
                 table.comment = comment;
                 table
