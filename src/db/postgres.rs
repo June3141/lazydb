@@ -311,6 +311,12 @@ impl DatabaseProvider for PostgresProvider {
             .query(query, &[&schema, &table_name])
             .map_err(|e| ProviderError::QueryFailed(e.to_string()))?;
 
+        if rows.is_empty() {
+            return Err(ProviderError::QueryFailed(format!(
+                "No rows returned when querying size for table '{}.{}'",
+                schema, table_name
+            )));
+        }
         let size: i64 = rows[0].get(0);
         Ok(size as u64)
     }
@@ -335,6 +341,11 @@ impl DatabaseProvider for PostgresProvider {
             .query("SELECT version()", &[])
             .map_err(|e| ProviderError::QueryFailed(e.to_string()))?;
 
+        if rows.is_empty() {
+            return Err(ProviderError::QueryFailed(
+                "No rows returned from SELECT version()".to_string(),
+            ));
+        }
         let version: String = rows[0].get(0);
         Ok(version)
     }
@@ -840,6 +851,9 @@ fn convert_value_to_string(
             .flatten()
             .map(|v| v.to_string())
             .unwrap_or_else(|| "NULL".to_string()),
+        // Note: NUMERIC is converted to f64 which may lose precision for high-precision
+        // decimal values. PostgreSQL NUMERIC can have up to 131072 digits before the decimal
+        // and 16383 after, while f64 has only ~15-17 significant digits.
         Type::FLOAT8 | Type::NUMERIC => row
             .try_get::<_, Option<f64>>(index)
             .ok()
@@ -853,6 +867,7 @@ fn convert_value_to_string(
             .unwrap_or_else(|| "NULL".to_string()),
         _ => {
             // Fallback: try common types in order of likelihood
+            // If all attempts fail, assume NULL (or unsupported type)
             if let Ok(Some(v)) = row.try_get::<_, Option<String>>(index) {
                 v
             } else if let Ok(Some(v)) = row.try_get::<_, Option<i64>>(index) {
@@ -861,20 +876,8 @@ fn convert_value_to_string(
                 v.to_string()
             } else if let Ok(Some(v)) = row.try_get::<_, Option<bool>>(index) {
                 v.to_string()
-            } else if row
-                .try_get::<_, Option<String>>(index)
-                .ok()
-                .flatten()
-                .is_none()
-                && row
-                    .try_get::<_, Option<i64>>(index)
-                    .ok()
-                    .flatten()
-                    .is_none()
-            {
-                "NULL".to_string()
             } else {
-                "<unknown>".to_string()
+                "NULL".to_string()
             }
         }
     }
