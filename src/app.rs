@@ -706,11 +706,36 @@ impl App {
             if let Some(conn) = project.connections.get(self.selected_connection_idx) {
                 if let Some(table_idx) = self.selected_table_idx {
                     if let Some(table) = conn.tables.get(table_idx) {
-                        self.query = format!("SELECT * FROM {} LIMIT 50;", table.name);
-                        self.status_message = format!(
-                            "Selected: {}.{} ({} rows)",
-                            conn.database, table.name, table.row_count
-                        );
+                        let query = format!("SELECT * FROM {} LIMIT 50", table.name);
+                        self.query = format!("{};", query);
+
+                        // Execute query to fetch data
+                        match PostgresProvider::connect(
+                            &conn.host,
+                            conn.port,
+                            &conn.database,
+                            &conn.username,
+                            &conn.password,
+                        ) {
+                            Ok(provider) => match provider.execute_query(&query) {
+                                Ok(result) => {
+                                    let row_count = result.rows.len();
+                                    self.result = Some(result);
+                                    self.status_message = format!(
+                                        "Fetched {} rows from {}.{}",
+                                        row_count, conn.database, table.name
+                                    );
+                                }
+                                Err(e) => {
+                                    self.result = None;
+                                    self.status_message = format!("Query failed: {}", e);
+                                }
+                            },
+                            Err(e) => {
+                                self.result = None;
+                                self.status_message = format!("Connection failed: {}", e);
+                            }
+                        }
                     }
                 }
             }
