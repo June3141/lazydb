@@ -91,13 +91,27 @@ impl std::fmt::Display for IndexType {
 }
 
 /// Index method (B-tree, Hash, etc.)
+///
+/// Note: Some variants are database-specific:
+/// - `BTree`: Supported by all databases (PostgreSQL, MySQL, SQLite)
+/// - `Hash`: Supported by PostgreSQL and MySQL
+/// - `Gist`: PostgreSQL only (Generalized Search Tree)
+/// - `Gin`: PostgreSQL only (Generalized Inverted Index)
+/// - `Brin`: PostgreSQL only (Block Range Index)
+/// - `Other`: For database-specific methods not listed above
 #[derive(Debug, Clone, PartialEq)]
 pub enum IndexMethod {
+    /// B-tree index - supported by all databases
     BTree,
+    /// Hash index - supported by PostgreSQL and MySQL
     Hash,
+    /// GiST (Generalized Search Tree) - PostgreSQL only
     Gist,
+    /// GIN (Generalized Inverted Index) - PostgreSQL only
     Gin,
+    /// BRIN (Block Range Index) - PostgreSQL only
     Brin,
+    /// Other database-specific index methods
     Other(String),
 }
 
