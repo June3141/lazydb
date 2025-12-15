@@ -450,7 +450,8 @@ impl App {
                             self.modal_state = ModalState::None;
                         } else {
                             self.status_message =
-                                "Invalid: fill name, host, database and valid port".to_string();
+                                "Invalid: fill name, host, user, database and valid port (1-65535)"
+                                    .to_string();
                             // Keep modal open for user to correct input
                         }
                     }
@@ -597,11 +598,16 @@ impl App {
 
     fn create_connection_from_modal(&self, modal: &AddConnectionModal) -> Option<Connection> {
         let port: u16 = modal.port.parse().ok()?;
-        // Validate port range (1-65535)
+        // Validate port range (1-65535, port 0 is invalid)
         if port == 0 {
             return None;
         }
-        if modal.name.is_empty() || modal.host.is_empty() || modal.database.is_empty() {
+        // Validate required fields: name, host, database, and user
+        if modal.name.is_empty()
+            || modal.host.is_empty()
+            || modal.database.is_empty()
+            || modal.user.is_empty()
+        {
             return None;
         }
         Some(Connection {
