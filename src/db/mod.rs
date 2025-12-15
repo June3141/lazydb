@@ -3,6 +3,8 @@
 #![allow(dead_code)]
 #![allow(unused_imports)]
 
+mod postgres;
 mod provider;
 
-pub use provider::{DatabaseProvider, DatabaseType};
+pub use postgres::PostgresProvider;
+pub use provider::{DatabaseProvider, DatabaseType, ProviderError};
