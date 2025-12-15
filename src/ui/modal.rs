@@ -43,7 +43,7 @@ fn draw_add_connection_modal(frame: &mut Frame, modal: &AddConnectionModal) {
         .title(" Add Connection ")
         .title_alignment(Alignment::Center)
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Cyan));
+        .border_style(Style::default().fg(Color::Green));
 
     frame.render_widget(block, area);
 
@@ -227,7 +227,7 @@ fn draw_project_modal(frame: &mut Frame, modal: &ProjectModal, title: &str) {
         .title(title)
         .title_alignment(Alignment::Center)
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Magenta));
+        .border_style(Style::default().fg(Color::Green));
 
     frame.render_widget(block, area);
 
@@ -320,7 +320,7 @@ fn draw_delete_project_modal(frame: &mut Frame, modal: &DeleteProjectModal) {
         .title(" Delete Project ")
         .title_alignment(Alignment::Center)
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Red));
+        .border_style(Style::default().fg(Color::Green));
 
     frame.render_widget(block, area);
 
@@ -422,7 +422,7 @@ fn draw_search_project_modal(frame: &mut Frame, modal: &SearchProjectModal, proj
         .title(" Search Projects ")
         .title_alignment(Alignment::Center)
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Blue));
+        .border_style(Style::default().fg(Color::Green));
 
     frame.render_widget(block, area);
 
