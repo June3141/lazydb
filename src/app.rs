@@ -1,6 +1,6 @@
 use crate::db::{DatabaseProvider, PostgresProvider};
 use crate::message::Message;
-use crate::model::{Connection, Project, QueryResult, Table};
+use crate::model::{Connection, HistoryEntry, Project, QueryHistory, QueryResult, Table};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Focus {
@@ -233,6 +233,19 @@ impl SearchProjectModal {
     }
 }
 
+/// Query history modal state
+#[derive(Debug, Clone)]
+pub struct HistoryModal {
+    /// Currently selected index in the history list
+    pub selected_idx: usize,
+}
+
+impl Default for HistoryModal {
+    fn default() -> Self {
+        Self { selected_idx: 0 }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum ModalState {
     None,
@@ -241,6 +254,7 @@ pub enum ModalState {
     EditProject(usize, ProjectModal), // (project index, modal)
     DeleteProject(DeleteProjectModal),
     SearchProject(SearchProjectModal),
+    History(HistoryModal),
 }
 
 pub struct App {
@@ -256,6 +270,10 @@ pub struct App {
     pub schema_sub_tab: SchemaSubTab,
     pub status_message: String,
     pub modal_state: ModalState,
+    /// Query execution history
+    pub query_history: QueryHistory,
+    /// Flag indicating that history has been modified and should be saved
+    pub history_dirty: bool,
 }
 
 impl App {
@@ -274,6 +292,28 @@ impl App {
             schema_sub_tab: SchemaSubTab::default(),
             status_message: "Ready".to_string(),
             modal_state: ModalState::None,
+            query_history: QueryHistory::new(),
+            history_dirty: false,
+        }
+    }
+
+    /// Create a new App with the given projects and history
+    pub fn with_history(projects: Vec<Project>, history: QueryHistory) -> Self {
+        App {
+            projects,
+            sidebar_mode: SidebarMode::Projects,
+            selected_project_idx: 0,
+            selected_connection_idx: 0,
+            selected_table_idx: None,
+            query: String::new(),
+            result: None,
+            focus: Focus::Sidebar,
+            main_panel_tab: MainPanelTab::Schema,
+            schema_sub_tab: SchemaSubTab::default(),
+            status_message: "Ready".to_string(),
+            modal_state: ModalState::None,
+            query_history: history,
+            history_dirty: false,
         }
     }
 
@@ -496,7 +536,7 @@ impl App {
                     ModalState::SearchProject(_) => {
                         // SearchProject uses SearchConfirm instead of ModalConfirm
                     }
-                    ModalState::None => {}
+                    ModalState::None | ModalState::History(_) => {}
                 }
             }
 
@@ -573,7 +613,7 @@ impl App {
                 ModalState::SearchProject(modal) => {
                     modal.navigate_down();
                 }
-                ModalState::None => {}
+                ModalState::None | ModalState::History(_) => {}
             },
 
             Message::ModalPrevField => match &mut self.modal_state {
@@ -589,8 +629,55 @@ impl App {
                 ModalState::SearchProject(modal) => {
                     modal.navigate_up();
                 }
-                ModalState::None => {}
+                ModalState::None | ModalState::History(_) => {}
             },
+
+            // Query history messages
+            Message::OpenHistoryModal => {
+                if !self.query_history.is_empty() {
+                    self.modal_state = ModalState::History(HistoryModal::default());
+                } else {
+                    self.status_message = "No query history".to_string();
+                }
+            }
+
+            Message::HistoryNavigateUp => {
+                if let ModalState::History(modal) = &mut self.modal_state {
+                    if modal.selected_idx > 0 {
+                        modal.selected_idx -= 1;
+                    } else if !self.query_history.is_empty() {
+                        modal.selected_idx = self.query_history.len() - 1;
+                    }
+                }
+            }
+
+            Message::HistoryNavigateDown => {
+                if let ModalState::History(modal) = &mut self.modal_state {
+                    if modal.selected_idx + 1 < self.query_history.len() {
+                        modal.selected_idx += 1;
+                    } else {
+                        modal.selected_idx = 0;
+                    }
+                }
+            }
+
+            Message::HistorySelectEntry => {
+                if let ModalState::History(modal) = &self.modal_state {
+                    if let Some(entry) = self.query_history.get(modal.selected_idx) {
+                        self.query = entry.query.clone();
+                        self.status_message =
+                            format!("Loaded query from history ({})", entry.connection_name);
+                    }
+                    self.modal_state = ModalState::None;
+                }
+            }
+
+            Message::ClearHistory => {
+                self.query_history.clear();
+                self.history_dirty = true;
+                self.modal_state = ModalState::None;
+                self.status_message = "Query history cleared".to_string();
+            }
         }
 
         false
@@ -809,6 +896,9 @@ impl App {
                         let query = format!("SELECT * FROM {} LIMIT 50", table.name);
                         self.query = format!("{};", query);
 
+                        let conn_name = conn.name.clone();
+                        let database = conn.database.clone();
+
                         // Execute query to fetch data
                         match PostgresProvider::connect(
                             &conn.host,
@@ -820,13 +910,34 @@ impl App {
                             Ok(provider) => match provider.execute_query(&query) {
                                 Ok(result) => {
                                     let row_count = result.rows.len();
+                                    let execution_time_ms = result.execution_time_ms;
+
+                                    // Add to history
+                                    self.query_history.add(HistoryEntry::success(
+                                        &query,
+                                        &conn_name,
+                                        &database,
+                                        execution_time_ms,
+                                        row_count,
+                                    ));
+                                    self.history_dirty = true;
+
                                     self.result = Some(result);
                                     self.status_message = format!(
                                         "Fetched {} rows from {}.{}",
-                                        row_count, conn.database, table.name
+                                        row_count, database, table.name
                                     );
                                 }
                                 Err(e) => {
+                                    // Add error to history
+                                    self.query_history.add(HistoryEntry::error(
+                                        &query,
+                                        &conn_name,
+                                        &database,
+                                        e.to_string(),
+                                    ));
+                                    self.history_dirty = true;
+
                                     self.result = None;
                                     self.status_message = format!("Query failed: {}", e);
                                 }
