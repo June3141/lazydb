@@ -6,7 +6,10 @@ mod model;
 mod ui;
 
 use anyhow::Result;
-use app::{App, ConfirmModalField, ConnectionModalField, Focus, ModalState, ProjectModalField};
+use app::{
+    App, ConfirmModalField, ConnectionModalField, Focus, ModalState, ProjectModalField,
+    SearchProjectModal,
+};
 use clap::Parser;
 use config::ConfigLoader;
 use crossterm::{
@@ -129,6 +132,13 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut App)
                     {
                         Some(Message::DeleteProject)
                     }
+                    // Project search: '/' key in Projects view
+                    (KeyCode::Char('/'), _)
+                        if app.focus == Focus::Sidebar
+                            && matches!(app.sidebar_mode, app::SidebarMode::Projects) =>
+                    {
+                        Some(Message::OpenSearchProjectModal)
+                    }
                     _ => None,
                 }
             };
@@ -153,6 +163,7 @@ fn handle_modal_input(app: &App, key_code: KeyCode) -> Option<Message> {
             handle_project_modal_input(key_code, modal)
         }
         ModalState::DeleteProject(modal) => handle_delete_modal_input(key_code, modal),
+        ModalState::SearchProject(modal) => handle_search_modal_input(key_code, modal),
     }
 }
 
@@ -269,6 +280,20 @@ fn handle_delete_modal_input(
             ConfirmModalField::ButtonOk => Some(Message::ModalConfirm),
             ConfirmModalField::ButtonCancel => Some(Message::CloseModal),
         },
+        _ => None,
+    }
+}
+
+fn handle_search_modal_input(key_code: KeyCode, _modal: &SearchProjectModal) -> Option<Message> {
+    match key_code {
+        KeyCode::Esc => Some(Message::CloseModal),
+        KeyCode::Enter => Some(Message::SearchConfirm),
+        KeyCode::Up | KeyCode::Char('k') => Some(Message::ModalPrevField),
+        KeyCode::Down | KeyCode::Char('j') => Some(Message::ModalNextField),
+        KeyCode::Tab => Some(Message::ModalNextField),
+        KeyCode::BackTab => Some(Message::ModalPrevField),
+        KeyCode::Backspace => Some(Message::ModalInputBackspace),
+        KeyCode::Char(c) => Some(Message::ModalInputChar(c)),
         _ => None,
     }
 }

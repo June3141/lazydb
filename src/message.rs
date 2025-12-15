@@ -27,6 +27,9 @@ pub enum Message {
     OpenAddProjectModal,
     OpenEditProjectModal,
     DeleteProject,
+    // Search modal messages
+    OpenSearchProjectModal,
+    SearchConfirm,
     // Common modal messages
     CloseModal,
     ModalConfirm,

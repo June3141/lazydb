@@ -176,6 +176,63 @@ pub struct DeleteProjectModal {
     pub focused_field: ConfirmModalField,
 }
 
+/// Search modal for filtering projects
+#[derive(Debug, Clone, Default)]
+pub struct SearchProjectModal {
+    pub query: String,
+    pub filtered_indices: Vec<usize>,
+    pub selected_idx: usize,
+}
+
+impl SearchProjectModal {
+    pub fn with_all_projects(project_count: usize) -> Self {
+        Self {
+            query: String::new(),
+            filtered_indices: (0..project_count).collect(),
+            selected_idx: 0,
+        }
+    }
+
+    pub fn update_filter(&mut self, projects: &[Project]) {
+        let query_lower = self.query.to_lowercase();
+        self.filtered_indices = projects
+            .iter()
+            .enumerate()
+            .filter(|(_, p)| self.query.is_empty() || p.name.to_lowercase().contains(&query_lower))
+            .map(|(idx, _)| idx)
+            .collect();
+
+        // Adjust selected index if needed
+        if self.selected_idx >= self.filtered_indices.len() {
+            self.selected_idx = self.filtered_indices.len().saturating_sub(1);
+        }
+    }
+
+    pub fn selected_project_idx(&self) -> Option<usize> {
+        self.filtered_indices.get(self.selected_idx).copied()
+    }
+
+    pub fn navigate_up(&mut self) {
+        if !self.filtered_indices.is_empty() {
+            if self.selected_idx > 0 {
+                self.selected_idx -= 1;
+            } else {
+                self.selected_idx = self.filtered_indices.len() - 1;
+            }
+        }
+    }
+
+    pub fn navigate_down(&mut self) {
+        if !self.filtered_indices.is_empty() {
+            if self.selected_idx + 1 < self.filtered_indices.len() {
+                self.selected_idx += 1;
+            } else {
+                self.selected_idx = 0;
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum ModalState {
     None,
@@ -183,6 +240,7 @@ pub enum ModalState {
     AddProject(ProjectModal),
     EditProject(usize, ProjectModal), // (project index, modal)
     DeleteProject(DeleteProjectModal),
+    SearchProject(SearchProjectModal),
 }
 
 pub struct App {
@@ -356,6 +414,24 @@ impl App {
                 }
             }
 
+            Message::OpenSearchProjectModal => {
+                if let SidebarMode::Projects = self.sidebar_mode {
+                    self.modal_state = ModalState::SearchProject(
+                        SearchProjectModal::with_all_projects(self.projects.len()),
+                    );
+                }
+            }
+
+            Message::SearchConfirm => {
+                if let ModalState::SearchProject(modal) = &self.modal_state {
+                    if let Some(proj_idx) = modal.selected_project_idx() {
+                        self.selected_project_idx = proj_idx;
+                        self.status_message = format!("Selected: {}", self.projects[proj_idx].name);
+                    }
+                }
+                self.modal_state = ModalState::None;
+            }
+
             Message::CloseModal => {
                 self.modal_state = ModalState::None;
             }
@@ -416,6 +492,9 @@ impl App {
                         }
                         self.modal_state = ModalState::None;
                     }
+                    ModalState::SearchProject(_) => {
+                        // SearchProject uses SearchConfirm instead of ModalConfirm
+                    }
                     ModalState::None => {}
                 }
             }
@@ -438,6 +517,10 @@ impl App {
                     if modal.focused_field == ProjectModalField::Name {
                         modal.name.push(c);
                     }
+                }
+                ModalState::SearchProject(modal) => {
+                    modal.query.push(c);
+                    modal.update_filter(&self.projects);
                 }
                 _ => {}
             },
@@ -469,6 +552,10 @@ impl App {
                         modal.name.pop();
                     }
                 }
+                ModalState::SearchProject(modal) => {
+                    modal.query.pop();
+                    modal.update_filter(&self.projects);
+                }
                 _ => {}
             },
 
@@ -482,6 +569,9 @@ impl App {
                 ModalState::DeleteProject(modal) => {
                     modal.focused_field = modal.focused_field.next();
                 }
+                ModalState::SearchProject(modal) => {
+                    modal.navigate_down();
+                }
                 ModalState::None => {}
             },
 
@@ -494,6 +584,9 @@ impl App {
                 }
                 ModalState::DeleteProject(modal) => {
                     modal.focused_field = modal.focused_field.prev();
+                }
+                ModalState::SearchProject(modal) => {
+                    modal.navigate_up();
                 }
                 ModalState::None => {}
             },

@@ -67,5 +67,5 @@ pub fn draw(frame: &mut Frame, app: &App) {
     draw_help_bar(frame, outer_chunks[1]);
 
     // Draw modal on top if open
-    draw_modal(frame, &app.modal_state);
+    draw_modal(frame, &app.modal_state, &app.projects);
 }
