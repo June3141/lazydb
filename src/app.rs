@@ -597,8 +597,9 @@ impl App {
     }
 
     fn create_connection_from_modal(&self, modal: &AddConnectionModal) -> Option<Connection> {
+        // Parse port as u16, which constrains the upper bound to 65535
         let port: u16 = modal.port.parse().ok()?;
-        // Validate port range (1-65535, port 0 is invalid)
+        // Validate port range: reject port 0 (u16 already ensures <= 65535)
         if port == 0 {
             return None;
         }
