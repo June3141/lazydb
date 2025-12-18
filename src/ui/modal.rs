@@ -628,10 +628,17 @@ fn draw_history_modal(frame: &mut Frame, modal: &HistoryModal, history: &QueryHi
             let status_icon = if entry.is_success() { "+" } else { "x" };
             let time_str = entry.executed_at.format("%m/%d %H:%M").to_string();
 
-            // Truncate query if too long
-            let max_query_len = (chunks[0].width as usize).saturating_sub(30);
-            let query_display = if entry.query.len() > max_query_len {
-                format!("{}...", &entry.query[..max_query_len.saturating_sub(3)])
+            // Truncate query if too long (use chars for UTF-8 safety)
+            let min_query_len = 10;
+            let max_query_len =
+                std::cmp::max((chunks[0].width as usize).saturating_sub(30), min_query_len);
+            let query_display = if entry.query.chars().count() > max_query_len {
+                let safe_trunc: String = entry
+                    .query
+                    .chars()
+                    .take(max_query_len.saturating_sub(3))
+                    .collect();
+                format!("{}...", safe_trunc)
             } else {
                 entry.query.clone()
             };

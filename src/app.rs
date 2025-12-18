@@ -670,6 +670,10 @@ impl App {
             Message::ClearHistory => {
                 self.query_history.clear();
                 self.history_dirty = true;
+                // Reset selected_idx before closing modal
+                if let ModalState::History(modal) = &mut self.modal_state {
+                    modal.selected_idx = 0;
+                }
                 self.modal_state = ModalState::None;
                 self.status_message = "Query history cleared".to_string();
             }

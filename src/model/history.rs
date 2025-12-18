@@ -1,44 +1,44 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-/// クエリ実行結果のステータス
+/// Query execution status
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum QueryStatus {
-    /// 実行成功
+    /// Execution succeeded
     Success,
-    /// 実行失敗
+    /// Execution failed
     Error(String),
 }
 
-/// クエリ履歴エントリ
+/// Query history entry
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HistoryEntry {
-    /// 実行したクエリ文字列
+    /// Executed query string
     pub query: String,
 
-    /// 実行日時
+    /// Execution timestamp
     pub executed_at: DateTime<Utc>,
 
-    /// 実行時間（ミリ秒）
+    /// Execution time in milliseconds
     #[serde(default)]
     pub execution_time_ms: Option<u64>,
 
-    /// 取得した行数（成功時のみ）
+    /// Number of rows returned (only on success)
     #[serde(default)]
     pub row_count: Option<usize>,
 
-    /// 接続名
+    /// Connection name
     pub connection_name: String,
 
-    /// データベース名
+    /// Database name
     pub database: String,
 
-    /// 実行ステータス
+    /// Execution status
     pub status: QueryStatus,
 }
 
 impl HistoryEntry {
-    /// 成功した実行から履歴エントリを作成
+    /// Create a history entry from a successful execution
     pub fn success(
         query: impl Into<String>,
         connection_name: impl Into<String>,
@@ -57,7 +57,7 @@ impl HistoryEntry {
         }
     }
 
-    /// 失敗した実行から履歴エントリを作成
+    /// Create a history entry from a failed execution
     pub fn error(
         query: impl Into<String>,
         connection_name: impl Into<String>,
@@ -75,20 +75,20 @@ impl HistoryEntry {
         }
     }
 
-    /// クエリが成功したかどうか
+    /// Check if the query succeeded
     pub fn is_success(&self) -> bool {
         matches!(self.status, QueryStatus::Success)
     }
 }
 
-/// クエリ履歴の管理
+/// Query history manager
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct QueryHistory {
-    /// 履歴エントリのリスト（新しいものが先頭）
+    /// List of history entries (newest first)
     #[serde(default)]
     pub entries: Vec<HistoryEntry>,
 
-    /// 最大履歴数
+    /// Maximum number of entries
     #[serde(default = "default_max_entries")]
     pub max_entries: usize,
 }
@@ -98,7 +98,7 @@ fn default_max_entries() -> usize {
 }
 
 impl QueryHistory {
-    /// 新しい空の履歴を作成
+    /// Create a new empty history
     pub fn new() -> Self {
         Self {
             entries: Vec::new(),
@@ -106,7 +106,7 @@ impl QueryHistory {
         }
     }
 
-    /// 最大履歴数を指定して作成
+    /// Create with a specified maximum number of entries
     #[allow(dead_code)]
     pub fn with_max_entries(max_entries: usize) -> Self {
         Self {
@@ -115,50 +115,50 @@ impl QueryHistory {
         }
     }
 
-    /// 履歴エントリを追加
+    /// Add a history entry
     pub fn add(&mut self, entry: HistoryEntry) {
-        // 重複する最後のエントリを避ける（同じクエリが連続で実行された場合）
+        // Avoid duplicate of the most recent entry (when the same query is executed consecutively)
         if let Some(last) = self.entries.first() {
             if last.query == entry.query
                 && last.connection_name == entry.connection_name
                 && last.database == entry.database
             {
-                // 同じクエリの場合は最新のものに更新
+                // Update with the latest execution for the same query
                 self.entries[0] = entry;
                 return;
             }
         }
 
-        // 先頭に追加
+        // Insert at the beginning
         self.entries.insert(0, entry);
 
-        // 最大数を超えた場合は古いものを削除
+        // Remove old entries if exceeding max
         if self.entries.len() > self.max_entries {
             self.entries.truncate(self.max_entries);
         }
     }
 
-    /// 履歴をクリア
+    /// Clear all history
     pub fn clear(&mut self) {
         self.entries.clear();
     }
 
-    /// 履歴が空かどうか
+    /// Check if history is empty
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
 
-    /// 履歴の数を取得
+    /// Get the number of entries
     pub fn len(&self) -> usize {
         self.entries.len()
     }
 
-    /// 指定インデックスのエントリを取得
+    /// Get entry at the specified index
     pub fn get(&self, index: usize) -> Option<&HistoryEntry> {
         self.entries.get(index)
     }
 
-    /// 成功したクエリのみをフィルタして取得
+    /// Get only successful queries
     #[allow(dead_code)]
     pub fn successful_queries(&self) -> impl Iterator<Item = &HistoryEntry> {
         self.entries.iter().filter(|e| e.is_success())
@@ -216,7 +216,7 @@ mod tests {
         }
 
         assert_eq!(history.len(), 3);
-        // 最新の3つが残っている
+        // Only the latest 3 entries remain
         assert_eq!(history.get(0).unwrap().query, "SELECT 4");
         assert_eq!(history.get(2).unwrap().query, "SELECT 2");
     }
@@ -240,9 +240,9 @@ mod tests {
             10,
         ));
 
-        // 同じクエリは重複しない
+        // Same query should not be duplicated
         assert_eq!(history.len(), 1);
-        // 最新の実行情報で更新されている
+        // Should be updated with the latest execution info
         assert_eq!(history.get(0).unwrap().row_count, Some(10));
     }
 
