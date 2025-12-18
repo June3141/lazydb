@@ -779,6 +779,11 @@ impl App {
         let (conn_idx, table_idx) = items[new_idx];
         self.selected_connection_idx = conn_idx;
         self.selected_table_idx = table_idx;
+
+        // Fetch table details if a table is selected
+        if table_idx.is_some() {
+            self.fetch_table_details_if_needed(proj_idx);
+        }
     }
 
     fn navigate_connections_down(&mut self, proj_idx: usize) {
@@ -818,6 +823,70 @@ impl App {
         let (conn_idx, table_idx) = items[new_idx];
         self.selected_connection_idx = conn_idx;
         self.selected_table_idx = table_idx;
+
+        // Fetch table details if a table is selected
+        if table_idx.is_some() {
+            self.fetch_table_details_if_needed(proj_idx);
+        }
+    }
+
+    /// Fetch table details (columns, indexes, foreign keys, constraints) if not already loaded
+    fn fetch_table_details_if_needed(&mut self, proj_idx: usize) {
+        let Some(project) = self.projects.get(proj_idx) else {
+            return;
+        };
+        let Some(conn) = project.connections.get(self.selected_connection_idx) else {
+            return;
+        };
+        let Some(table_idx) = self.selected_table_idx else {
+            return;
+        };
+        let Some(table) = conn.tables.get(table_idx) else {
+            return;
+        };
+
+        // Skip if columns are already loaded
+        if !table.columns.is_empty() {
+            return;
+        }
+
+        let table_name = table.name.clone();
+        let schema = table.schema.clone();
+        let host = conn.host.clone();
+        let port = conn.port;
+        let database = conn.database.clone();
+        let username = conn.username.clone();
+        let password = conn.password.clone();
+
+        // Fetch table details
+        match PostgresProvider::connect(&host, port, &database, &username, &password) {
+            Ok(provider) => {
+                match provider.get_table_details(&table_name, schema.as_deref()) {
+                    Ok(detailed_table) => {
+                        // Update the table with full details
+                        if let Some(project) = self.projects.get_mut(proj_idx) {
+                            if let Some(conn) =
+                                project.connections.get_mut(self.selected_connection_idx)
+                            {
+                                if let Some(table) = conn.tables.get_mut(table_idx) {
+                                    table.columns = detailed_table.columns;
+                                    table.indexes = detailed_table.indexes;
+                                    table.foreign_keys = detailed_table.foreign_keys;
+                                    table.constraints = detailed_table.constraints;
+                                }
+                            }
+                        }
+                        self.status_message = format!("Loaded schema for {}", table_name);
+                    }
+                    Err(e) => {
+                        self.status_message = format!("Failed to get table details: {}", e);
+                    }
+                }
+            }
+            Err(e) => {
+                self.status_message = format!("Connection failed: {}", e);
+            }
+        }
     }
 
     /// Activate current selection (Enter key)
