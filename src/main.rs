@@ -7,8 +7,8 @@ mod ui;
 
 use anyhow::Result;
 use app::{
-    App, ConfirmModalField, ConnectionModalField, Focus, HistoryModal, ModalState, ProjectModalField,
-    SearchProjectModal,
+    App, ConfirmModalField, ConnectionModalField, Focus, HistoryModal, ModalState,
+    ProjectModalField, SearchProjectModal,
 };
 use clap::Parser;
 use config::ConfigLoader;

@@ -107,6 +107,7 @@ impl QueryHistory {
     }
 
     /// 最大履歴数を指定して作成
+    #[allow(dead_code)]
     pub fn with_max_entries(max_entries: usize) -> Self {
         Self {
             entries: Vec::new(),
@@ -158,6 +159,7 @@ impl QueryHistory {
     }
 
     /// 成功したクエリのみをフィルタして取得
+    #[allow(dead_code)]
     pub fn successful_queries(&self) -> impl Iterator<Item = &HistoryEntry> {
         self.entries.iter().filter(|e| e.is_success())
     }
@@ -191,20 +193,8 @@ mod tests {
     fn test_query_history_add() {
         let mut history = QueryHistory::new();
 
-        history.add(HistoryEntry::success(
-            "SELECT 1",
-            "conn1",
-            "db1",
-            10,
-            1,
-        ));
-        history.add(HistoryEntry::success(
-            "SELECT 2",
-            "conn1",
-            "db1",
-            20,
-            1,
-        ));
+        history.add(HistoryEntry::success("SELECT 1", "conn1", "db1", 10, 1));
+        history.add(HistoryEntry::success("SELECT 2", "conn1", "db1", 20, 1));
 
         assert_eq!(history.len(), 2);
         assert_eq!(history.get(0).unwrap().query, "SELECT 2");

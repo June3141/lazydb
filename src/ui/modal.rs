@@ -11,7 +11,12 @@ use ratatui::{
     Frame,
 };
 
-pub fn draw_modal(frame: &mut Frame, modal_state: &ModalState, projects: &[Project], history: &QueryHistory) {
+pub fn draw_modal(
+    frame: &mut Frame,
+    modal_state: &ModalState,
+    projects: &[Project],
+    history: &QueryHistory,
+) {
     match modal_state {
         ModalState::None => {}
         ModalState::AddConnection(modal) => {

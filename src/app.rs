@@ -234,16 +234,10 @@ impl SearchProjectModal {
 }
 
 /// Query history modal state
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct HistoryModal {
     /// Currently selected index in the history list
     pub selected_idx: usize,
-}
-
-impl Default for HistoryModal {
-    fn default() -> Self {
-        Self { selected_idx: 0 }
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -278,6 +272,7 @@ pub struct App {
 
 impl App {
     /// Create a new App with the given projects
+    #[allow(dead_code)]
     pub fn new(projects: Vec<Project>) -> Self {
         App {
             projects,

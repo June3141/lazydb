@@ -290,9 +290,8 @@ impl ConfigLoader {
         let history_path = self.history_file_path();
         let content = serde_yml::to_string(history).context("Failed to serialize history")?;
 
-        fs::write(&history_path, content).with_context(|| {
-            format!("Failed to write history file: {}", history_path.display())
-        })?;
+        fs::write(&history_path, content)
+            .with_context(|| format!("Failed to write history file: {}", history_path.display()))?;
 
         Ok(())
     }
