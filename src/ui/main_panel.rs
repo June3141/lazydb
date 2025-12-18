@@ -365,7 +365,9 @@ fn draw_constraints_content(frame: &mut Frame, app: &App, area: Rect) {
                 crate::model::ConstraintType::Unique => Style::default().fg(Color::Magenta),
                 crate::model::ConstraintType::ForeignKey => Style::default().fg(Color::Cyan),
                 crate::model::ConstraintType::Check => Style::default().fg(Color::Green),
-                _ => Style::default().fg(Color::White),
+                crate::model::ConstraintType::NotNull => Style::default().fg(Color::White),
+                crate::model::ConstraintType::Default => Style::default().fg(Color::White),
+                crate::model::ConstraintType::Exclusion => Style::default().fg(Color::White),
             };
 
             Row::new(vec![
