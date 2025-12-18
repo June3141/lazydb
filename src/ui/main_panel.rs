@@ -430,14 +430,15 @@ fn draw_data_content(frame: &mut Frame, app: &App, area: Rect) {
             Row::new(cells).height(1)
         });
 
-        // Calculate column widths (guard against empty columns to prevent division by zero)
+        // Calculate column widths using Ratio for accurate distribution
+        // (Percentage would result in 0% width when columns > 100)
         let widths: Vec<Constraint> = if result.columns.is_empty() {
             vec![]
         } else {
             result
                 .columns
                 .iter()
-                .map(|_| Constraint::Percentage(100 / result.columns.len() as u16))
+                .map(|_| Constraint::Ratio(1, result.columns.len() as u32))
                 .collect()
         };
 

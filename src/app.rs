@@ -1,6 +1,8 @@
 use crate::db::{DatabaseProvider, PostgresProvider};
 use crate::message::Message;
-use crate::model::{Connection, HistoryEntry, Pagination, Project, QueryHistory, QueryResult, Table};
+use crate::model::{
+    Connection, HistoryEntry, Pagination, Project, QueryHistory, QueryResult, Table,
+};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Focus {
