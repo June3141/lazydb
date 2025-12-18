@@ -37,4 +37,10 @@ pub enum Message {
     ModalInputBackspace,
     ModalNextField,
     ModalPrevField,
+    // Query history messages
+    OpenHistoryModal,
+    HistoryNavigateUp,
+    HistoryNavigateDown,
+    HistorySelectEntry,
+    ClearHistory,
 }

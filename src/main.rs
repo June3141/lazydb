@@ -7,8 +7,8 @@ mod ui;
 
 use anyhow::Result;
 use app::{
-    App, ConfirmModalField, ConnectionModalField, Focus, ModalState, ProjectModalField,
-    SearchProjectModal,
+    App, ConfirmModalField, ConnectionModalField, Focus, HistoryModal, ModalState,
+    ProjectModalField, SearchProjectModal,
 };
 use clap::Parser;
 use config::ConfigLoader;
@@ -38,6 +38,9 @@ fn main() -> Result<()> {
     let (project_files, _warnings) = config_loader.load_all_projects(&config);
     let projects: Vec<Project> = project_files.into_iter().map(Project::from).collect();
 
+    // Load query history (ignore errors - start with empty history if load fails)
+    let history = config_loader.load_history().unwrap_or_default();
+
     // Setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -45,11 +48,11 @@ fn main() -> Result<()> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    // Create app with loaded projects
-    let mut app = App::new(projects);
+    // Create app with loaded projects and history
+    let mut app = App::with_history(projects, history);
 
     // Main loop
-    let res = run_app(&mut terminal, &mut app);
+    let res = run_app(&mut terminal, &mut app, &config_loader);
 
     // Restore terminal
     disable_raw_mode()?;
@@ -67,7 +70,11 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut App) -> Result<()> {
+fn run_app(
+    terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
+    app: &mut App,
+    config_loader: &ConfigLoader,
+) -> Result<()> {
     loop {
         // View: render UI
         terminal.draw(|frame| ui::draw(frame, app))?;
@@ -139,13 +146,25 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut App)
                     {
                         Some(Message::OpenSearchProjectModal)
                     }
+                    // Query history: 'h' key to open history modal
+                    (KeyCode::Char('h'), _) => Some(Message::OpenHistoryModal),
                     _ => None,
                 }
             };
 
             if let Some(msg) = message {
                 // Update: process message
-                if app.update(msg) {
+                let should_quit = app.update(msg);
+
+                // Save history if dirty
+                if app.history_dirty {
+                    if let Err(e) = config_loader.save_history(&app.query_history) {
+                        app.status_message = format!("Failed to save history: {}", e);
+                    }
+                    app.history_dirty = false;
+                }
+
+                if should_quit {
                     break;
                 }
             }
@@ -164,6 +183,7 @@ fn handle_modal_input(app: &App, key_code: KeyCode) -> Option<Message> {
         }
         ModalState::DeleteProject(modal) => handle_delete_modal_input(key_code, modal),
         ModalState::SearchProject(modal) => handle_search_modal_input(key_code, modal),
+        ModalState::History(modal) => handle_history_modal_input(key_code, modal),
     }
 }
 
@@ -294,6 +314,18 @@ fn handle_search_modal_input(key_code: KeyCode, _modal: &SearchProjectModal) -> 
         KeyCode::BackTab => Some(Message::ModalPrevField),
         KeyCode::Backspace => Some(Message::ModalInputBackspace),
         KeyCode::Char(c) => Some(Message::ModalInputChar(c)),
+        _ => None,
+    }
+}
+
+fn handle_history_modal_input(key_code: KeyCode, _modal: &HistoryModal) -> Option<Message> {
+    match key_code {
+        KeyCode::Esc | KeyCode::Char('q') => Some(Message::CloseModal),
+        KeyCode::Up | KeyCode::Char('k') => Some(Message::HistoryNavigateUp),
+        KeyCode::Down | KeyCode::Char('j') => Some(Message::HistoryNavigateDown),
+        KeyCode::Enter => Some(Message::HistorySelectEntry),
+        // 'c' to clear history
+        KeyCode::Char('c') => Some(Message::ClearHistory),
         _ => None,
     }
 }

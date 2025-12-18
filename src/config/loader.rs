@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 
 use super::models::{Config, ConnectionConfig, ProjectConfig, ProjectFile, Settings};
+use crate::model::QueryHistory;
 
 /// 設定ファイルの読み込みを担当
 pub struct ConfigLoader {
@@ -247,6 +248,50 @@ impl ConfigLoader {
             projects: vec![sample_project_path.to_string()],
         };
         self.save_config(&config)?;
+
+        Ok(())
+    }
+
+    /// 履歴ファイルのパスを返す
+    pub fn history_file_path(&self) -> PathBuf {
+        self.config_dir.join("history.yaml")
+    }
+
+    /// クエリ履歴を読み込む
+    pub fn load_history(&self) -> Result<QueryHistory> {
+        let history_path = self.history_file_path();
+
+        if !history_path.exists() {
+            // 履歴ファイルが存在しない場合は空の履歴を返す
+            return Ok(QueryHistory::new());
+        }
+
+        let content = fs::read_to_string(&history_path)
+            .with_context(|| format!("Failed to read history file: {}", history_path.display()))?;
+
+        let history: QueryHistory = serde_yml::from_str(&content)
+            .with_context(|| format!("Failed to parse history file: {}", history_path.display()))?;
+
+        Ok(history)
+    }
+
+    /// クエリ履歴を保存
+    pub fn save_history(&self, history: &QueryHistory) -> Result<()> {
+        // ディレクトリが存在しない場合は作成
+        if !self.config_dir.exists() {
+            fs::create_dir_all(&self.config_dir).with_context(|| {
+                format!(
+                    "Failed to create config directory: {}",
+                    self.config_dir.display()
+                )
+            })?;
+        }
+
+        let history_path = self.history_file_path();
+        let content = serde_yml::to_string(history).context("Failed to serialize history")?;
+
+        fs::write(&history_path, content)
+            .with_context(|| format!("Failed to write history file: {}", history_path.display()))?;
 
         Ok(())
     }
