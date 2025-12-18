@@ -1,6 +1,6 @@
 use crate::db::{DatabaseProvider, PostgresProvider};
 use crate::message::Message;
-use crate::model::{Connection, HistoryEntry, Project, QueryHistory, QueryResult, Table};
+use crate::model::{Connection, HistoryEntry, Pagination, Project, QueryHistory, QueryResult, Table};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Focus {
@@ -259,6 +259,7 @@ pub struct App {
     pub selected_table_idx: Option<usize>,
     pub query: String,
     pub result: Option<QueryResult>,
+    pub pagination: Pagination,
     pub focus: Focus,
     pub main_panel_tab: MainPanelTab,
     pub schema_sub_tab: SchemaSubTab,
@@ -282,6 +283,7 @@ impl App {
             selected_table_idx: None,
             query: String::new(),
             result: None,
+            pagination: Pagination::default(),
             focus: Focus::Sidebar,
             main_panel_tab: MainPanelTab::Schema,
             schema_sub_tab: SchemaSubTab::default(),
@@ -302,6 +304,7 @@ impl App {
             selected_table_idx: None,
             query: String::new(),
             result: None,
+            pagination: Pagination::default(),
             focus: Focus::Sidebar,
             main_panel_tab: MainPanelTab::Schema,
             schema_sub_tab: SchemaSubTab::default(),
@@ -677,6 +680,27 @@ impl App {
                 self.modal_state = ModalState::None;
                 self.status_message = "Query history cleared".to_string();
             }
+
+            // Pagination messages
+            Message::PageNext => {
+                self.pagination.next_page();
+            }
+
+            Message::PagePrev => {
+                self.pagination.prev_page();
+            }
+
+            Message::PageFirst => {
+                self.pagination.first_page();
+            }
+
+            Message::PageLast => {
+                self.pagination.last_page();
+            }
+
+            Message::PageSizeCycle => {
+                self.pagination.cycle_page_size();
+            }
         }
 
         false
@@ -892,7 +916,7 @@ impl App {
             if let Some(conn) = project.connections.get(self.selected_connection_idx) {
                 if let Some(table_idx) = self.selected_table_idx {
                     if let Some(table) = conn.tables.get(table_idx) {
-                        let query = format!("SELECT * FROM {} LIMIT 50", table.name);
+                        let query = format!("SELECT * FROM {}", table.name);
                         self.query = format!("{};", query);
 
                         let conn_name = conn.name.clone();
@@ -921,6 +945,8 @@ impl App {
                                     ));
                                     self.history_dirty = true;
 
+                                    // Reset pagination with new total rows
+                                    self.pagination = Pagination::new(row_count);
                                     self.result = Some(result);
                                     self.status_message = format!(
                                         "Fetched {} rows from {}.{}",
@@ -938,11 +964,13 @@ impl App {
                                     self.history_dirty = true;
 
                                     self.result = None;
+                                    self.pagination = Pagination::default();
                                     self.status_message = format!("Query failed: {}", e);
                                 }
                             },
                             Err(e) => {
                                 self.result = None;
+                                self.pagination = Pagination::default();
                                 self.status_message = format!("Connection failed: {}", e);
                             }
                         }
