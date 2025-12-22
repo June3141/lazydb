@@ -49,4 +49,11 @@ pub enum Message {
     PageFirst,
     PageLast,
     PageSizeCycle,
+    // Data table navigation messages
+    DataTableUp,
+    DataTableDown,
+    DataTablePageUp,
+    DataTablePageDown,
+    DataTableFirst,
+    DataTableLast,
 }

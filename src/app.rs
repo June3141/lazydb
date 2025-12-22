@@ -3,6 +3,7 @@ use crate::message::Message;
 use crate::model::{
     Connection, HistoryEntry, Pagination, Project, QueryHistory, QueryResult, Table,
 };
+use ratatui::widgets::TableState;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Focus {
@@ -271,6 +272,8 @@ pub struct App {
     pub query_history: QueryHistory,
     /// Flag indicating that history has been modified and should be saved
     pub history_dirty: bool,
+    /// Data table scroll state for navigation
+    pub data_table_state: TableState,
 }
 
 impl App {
@@ -293,6 +296,7 @@ impl App {
             modal_state: ModalState::None,
             query_history: QueryHistory::new(),
             history_dirty: false,
+            data_table_state: TableState::default(),
         }
     }
 
@@ -314,6 +318,7 @@ impl App {
             modal_state: ModalState::None,
             query_history: history,
             history_dirty: false,
+            data_table_state: TableState::default(),
         }
     }
 
@@ -703,9 +708,57 @@ impl App {
             Message::PageSizeCycle => {
                 self.pagination.cycle_page_size();
             }
+
+            // Data table navigation
+            Message::DataTableUp => {
+                self.navigate_data_table(-1);
+            }
+
+            Message::DataTableDown => {
+                self.navigate_data_table(1);
+            }
+
+            Message::DataTablePageUp => {
+                self.navigate_data_table(-10);
+            }
+
+            Message::DataTablePageDown => {
+                self.navigate_data_table(10);
+            }
+
+            Message::DataTableFirst => {
+                if self.result.is_some() {
+                    self.data_table_state.select(Some(0));
+                }
+            }
+
+            Message::DataTableLast => {
+                if let Some(result) = &self.result {
+                    if !result.rows.is_empty() {
+                        self.data_table_state.select(Some(result.rows.len() - 1));
+                    }
+                }
+            }
         }
 
         false
+    }
+
+    /// Navigate data table by the given delta (positive = down, negative = up)
+    fn navigate_data_table(&mut self, delta: i32) {
+        if let Some(result) = &self.result {
+            if result.rows.is_empty() {
+                return;
+            }
+            let row_count = result.rows.len();
+            let current = self.data_table_state.selected().unwrap_or(0);
+            let new_idx = if delta < 0 {
+                current.saturating_sub((-delta) as usize)
+            } else {
+                (current + delta as usize).min(row_count - 1)
+            };
+            self.data_table_state.select(Some(new_idx));
+        }
     }
 
     fn create_connection_from_modal(&self, modal: &AddConnectionModal) -> Option<Connection> {
