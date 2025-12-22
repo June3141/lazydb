@@ -351,6 +351,8 @@ pub struct Table {
     pub row_count: usize,
     pub size_bytes: u64,
     pub comment: Option<String>,
+    /// Whether detailed schema information has been loaded
+    pub details_loaded: bool,
 }
 
 impl Table {
@@ -366,6 +368,7 @@ impl Table {
             row_count: 0,
             size_bytes: 0,
             comment: None,
+            details_loaded: false,
         }
     }
 
