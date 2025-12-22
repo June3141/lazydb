@@ -832,47 +832,44 @@ impl App {
 
     /// Fetch table details (columns, indexes, foreign keys, constraints) if not already loaded
     fn fetch_table_details_if_needed(&mut self, proj_idx: usize) {
+        // Capture indices at the start to avoid race conditions
+        let conn_idx = self.selected_connection_idx;
+        let Some(table_idx) = self.selected_table_idx else {
+            return;
+        };
+
         let Some(project) = self.projects.get(proj_idx) else {
             return;
         };
-        let Some(conn) = project.connections.get(self.selected_connection_idx) else {
-            return;
-        };
-        let Some(table_idx) = self.selected_table_idx else {
+        let Some(conn) = project.connections.get(conn_idx) else {
             return;
         };
         let Some(table) = conn.tables.get(table_idx) else {
             return;
         };
 
-        // Skip if columns are already loaded
-        if !table.columns.is_empty() {
+        // Skip if details are already loaded
+        if table.details_loaded {
             return;
         }
 
         let table_name = table.name.clone();
         let schema = table.schema.clone();
-        let host = conn.host.clone();
-        let port = conn.port;
-        let database = conn.database.clone();
-        let username = conn.username.clone();
-        let password = conn.password.clone();
 
-        // Fetch table details
-        match PostgresProvider::connect(&host, port, &database, &username, &password) {
+        // Fetch table details using helper
+        match Self::create_provider(conn) {
             Ok(provider) => {
                 match provider.get_table_details(&table_name, schema.as_deref()) {
                     Ok(detailed_table) => {
-                        // Update the table with full details
+                        // Update the table with full details using captured indices
                         if let Some(project) = self.projects.get_mut(proj_idx) {
-                            if let Some(conn) =
-                                project.connections.get_mut(self.selected_connection_idx)
-                            {
+                            if let Some(conn) = project.connections.get_mut(conn_idx) {
                                 if let Some(table) = conn.tables.get_mut(table_idx) {
                                     table.columns = detailed_table.columns;
                                     table.indexes = detailed_table.indexes;
                                     table.foreign_keys = detailed_table.foreign_keys;
                                     table.constraints = detailed_table.constraints;
+                                    table.details_loaded = true;
                                 }
                             }
                         }
@@ -887,6 +884,17 @@ impl App {
                 self.status_message = format!("Connection failed: {}", e);
             }
         }
+    }
+
+    /// Create a PostgresProvider from a Connection
+    fn create_provider(conn: &Connection) -> Result<PostgresProvider, crate::db::ProviderError> {
+        PostgresProvider::connect(
+            &conn.host,
+            conn.port,
+            &conn.database,
+            &conn.username,
+            &conn.password,
+        )
     }
 
     /// Activate current selection (Enter key)
@@ -929,13 +937,7 @@ impl App {
                     self.selected_table_idx = None;
                 } else if conn.tables.is_empty() {
                     // Fetch tables when expanding for the first time
-                    match PostgresProvider::connect(
-                        &conn.host,
-                        conn.port,
-                        &conn.database,
-                        &conn.username,
-                        &conn.password,
-                    ) {
+                    match Self::create_provider(conn) {
                         Ok(provider) => match provider.get_tables(Some("public")) {
                             Ok(tables) => {
                                 conn.tables = tables;
@@ -968,13 +970,7 @@ impl App {
                         let database = conn.database.clone();
 
                         // Execute query to fetch data
-                        match PostgresProvider::connect(
-                            &conn.host,
-                            conn.port,
-                            &conn.database,
-                            &conn.username,
-                            &conn.password,
-                        ) {
+                        match Self::create_provider(conn) {
                             Ok(provider) => match provider.execute_query(&query) {
                                 Ok(result) => {
                                     let row_count = result.rows.len();
