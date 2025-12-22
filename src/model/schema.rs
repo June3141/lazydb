@@ -436,10 +436,9 @@ impl Table {
             return true;
         }
         // Reference is qualified but self has no schema - extract table name from reference
-        if let Some(ref_table) = reference.rsplit('.').next() {
-            if self.schema.is_none() && ref_table == self.name {
-                return true;
-            }
+        let ref_table = reference.rsplit('.').next().unwrap_or(reference);
+        if self.schema.is_none() && ref_table == self.name {
+            return true;
         }
         false
     }
@@ -450,5 +449,122 @@ impl Table {
             Some(schema) => format!("{}.{}", schema, self.name),
             None => self.name.clone(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn create_test_table(name: &str, schema: Option<&str>) -> Table {
+        let mut table = Table::new(name);
+        if let Some(s) = schema {
+            table = table.with_schema(s);
+        }
+        table
+    }
+
+    fn create_table_with_fk(name: &str, fk_referenced_table: &str) -> Table {
+        Table::new(name).with_foreign_keys(vec![ForeignKey {
+            name: "fk_test".to_string(),
+            columns: vec!["id".to_string()],
+            referenced_table: fk_referenced_table.to_string(),
+            referenced_columns: vec!["id".to_string()],
+            on_update: ForeignKeyAction::NoAction,
+            on_delete: ForeignKeyAction::NoAction,
+        }])
+    }
+
+    #[test]
+    fn test_matches_reference_exact_name_match() {
+        let table = create_test_table("users", None);
+        let full_name = table.full_name();
+        assert!(table.matches_reference("users", &full_name));
+    }
+
+    #[test]
+    fn test_matches_reference_qualified_table_exact_match() {
+        let table = create_test_table("users", Some("public"));
+        let full_name = table.full_name();
+        assert!(table.matches_reference("public.users", &full_name));
+    }
+
+    #[test]
+    fn test_matches_reference_unqualified_ref_to_qualified_table() {
+        let table = create_test_table("users", Some("public"));
+        let full_name = table.full_name();
+        assert!(table.matches_reference("users", &full_name));
+    }
+
+    #[test]
+    fn test_matches_reference_qualified_ref_to_unqualified_table() {
+        let table = create_test_table("users", None);
+        let full_name = table.full_name();
+        assert!(table.matches_reference("public.users", &full_name));
+    }
+
+    #[test]
+    fn test_matches_reference_different_schema() {
+        let table = create_test_table("users", Some("public"));
+        let full_name = table.full_name();
+        assert!(!table.matches_reference("other.users", &full_name));
+    }
+
+    #[test]
+    fn test_matches_reference_different_table() {
+        let table = create_test_table("users", Some("public"));
+        let full_name = table.full_name();
+        assert!(!table.matches_reference("public.orders", &full_name));
+    }
+
+    #[test]
+    fn test_matches_reference_multiple_dots() {
+        let table = create_test_table("users", None);
+        let full_name = table.full_name();
+        // "catalog.schema.users" should match "users" when table has no schema
+        assert!(table.matches_reference("catalog.schema.users", &full_name));
+    }
+
+    #[test]
+    fn test_incoming_references_unqualified() {
+        let users = create_test_table("users", None);
+        let orders = create_table_with_fk("orders", "users");
+        let all_tables = vec![users.clone(), orders];
+
+        let refs = users.incoming_references(&all_tables);
+        assert_eq!(refs.len(), 1);
+        assert_eq!(refs[0].0.name, "orders");
+    }
+
+    #[test]
+    fn test_incoming_references_qualified_ref_to_unqualified_table() {
+        let users = create_test_table("users", None);
+        let orders = create_table_with_fk("orders", "public.users");
+        let all_tables = vec![users.clone(), orders];
+
+        let refs = users.incoming_references(&all_tables);
+        assert_eq!(refs.len(), 1);
+        assert_eq!(refs[0].0.name, "orders");
+    }
+
+    #[test]
+    fn test_incoming_references_qualified_table_with_matching_ref() {
+        let users = create_test_table("users", Some("public"));
+        let orders = create_table_with_fk("orders", "public.users");
+        let all_tables = vec![users.clone(), orders];
+
+        let refs = users.incoming_references(&all_tables);
+        assert_eq!(refs.len(), 1);
+        assert_eq!(refs[0].0.name, "orders");
+    }
+
+    #[test]
+    fn test_incoming_references_no_match_different_schema() {
+        let users = create_test_table("users", Some("public"));
+        let orders = create_table_with_fk("orders", "other.users");
+        let all_tables = vec![users.clone(), orders];
+
+        let refs = users.incoming_references(&all_tables);
+        assert_eq!(refs.len(), 0);
     }
 }
