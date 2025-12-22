@@ -110,6 +110,8 @@ fn run_app(
                     (KeyCode::Char('d'), _) if app.focus != Focus::Sidebar => {
                         Some(Message::SwitchToData)
                     }
+                    // Query history: Ctrl+r to open history modal (like shell reverse-search)
+                    (KeyCode::Char('r'), KeyModifiers::CONTROL) => Some(Message::OpenHistoryModal),
                     (KeyCode::Char('r'), _) => Some(Message::SwitchToRelations),
                     // Schema sub-tab shortcuts (1-4)
                     (KeyCode::Char('1'), _) => Some(Message::SwitchToColumns),
@@ -146,8 +148,6 @@ fn run_app(
                     {
                         Some(Message::OpenSearchProjectModal)
                     }
-                    // Query history: 'h' key to open history modal
-                    (KeyCode::Char('h'), _) => Some(Message::OpenHistoryModal),
                     _ => None,
                 }
             };
