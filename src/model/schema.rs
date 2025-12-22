@@ -413,15 +413,35 @@ impl Table {
         &self,
         all_tables: &'a [Table],
     ) -> Vec<(&'a Table, &'a ForeignKey)> {
+        let full_name = self.full_name();
         all_tables
             .iter()
             .flat_map(|t| {
                 t.foreign_keys
                     .iter()
-                    .filter(|fk| fk.referenced_table == self.name)
+                    .filter(|fk| self.matches_reference(&fk.referenced_table, &full_name))
                     .map(move |fk| (t, fk))
             })
             .collect()
+    }
+
+    /// Check if a reference matches this table (handles both qualified and unqualified names)
+    fn matches_reference(&self, reference: &str, full_name: &str) -> bool {
+        // Exact match with full qualified name (schema.table)
+        if reference == full_name {
+            return true;
+        }
+        // Exact match with table name only
+        if reference == self.name {
+            return true;
+        }
+        // Reference is qualified but self has no schema - extract table name from reference
+        if let Some(ref_table) = reference.rsplit('.').next() {
+            if self.schema.is_none() && ref_table == self.name {
+                return true;
+            }
+        }
+        false
     }
 
     /// Get full qualified name
