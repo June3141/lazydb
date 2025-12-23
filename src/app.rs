@@ -1141,3 +1141,117 @@ impl App {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn create_test_app_with_result(row_count: usize) -> App {
+        let mut app = App::new(vec![]);
+        if row_count > 0 {
+            app.result = Some(QueryResult {
+                columns: vec!["id".to_string(), "name".to_string()],
+                rows: (0..row_count)
+                    .map(|i| vec![i.to_string(), format!("row_{}", i)])
+                    .collect(),
+                total_rows: row_count,
+                execution_time_ms: 0,
+            });
+        }
+        app
+    }
+
+    #[test]
+    fn test_navigate_data_table_down() {
+        let mut app = create_test_app_with_result(10);
+        app.data_table_state.select(Some(0));
+
+        app.navigate_data_table(1);
+        assert_eq!(app.data_table_state.selected(), Some(1));
+
+        app.navigate_data_table(3);
+        assert_eq!(app.data_table_state.selected(), Some(4));
+    }
+
+    #[test]
+    fn test_navigate_data_table_up() {
+        let mut app = create_test_app_with_result(10);
+        app.data_table_state.select(Some(5));
+
+        app.navigate_data_table(-1);
+        assert_eq!(app.data_table_state.selected(), Some(4));
+
+        app.navigate_data_table(-2);
+        assert_eq!(app.data_table_state.selected(), Some(2));
+    }
+
+    #[test]
+    fn test_navigate_data_table_boundary_first_row() {
+        let mut app = create_test_app_with_result(10);
+        app.data_table_state.select(Some(0));
+
+        // Should not go below 0
+        app.navigate_data_table(-1);
+        assert_eq!(app.data_table_state.selected(), Some(0));
+
+        app.navigate_data_table(-10);
+        assert_eq!(app.data_table_state.selected(), Some(0));
+    }
+
+    #[test]
+    fn test_navigate_data_table_boundary_last_row() {
+        let mut app = create_test_app_with_result(10);
+        app.data_table_state.select(Some(9));
+
+        // Should not exceed row_count - 1
+        app.navigate_data_table(1);
+        assert_eq!(app.data_table_state.selected(), Some(9));
+
+        app.navigate_data_table(100);
+        assert_eq!(app.data_table_state.selected(), Some(9));
+    }
+
+    #[test]
+    fn test_navigate_data_table_empty_result() {
+        let mut app = create_test_app_with_result(0);
+        app.data_table_state.select(Some(0));
+
+        // Should do nothing with empty result
+        app.navigate_data_table(1);
+        assert_eq!(app.data_table_state.selected(), Some(0));
+    }
+
+    #[test]
+    fn test_navigate_data_table_no_result() {
+        let mut app = App::new(vec![]);
+        app.data_table_state.select(Some(0));
+
+        // Should do nothing when result is None
+        app.navigate_data_table(1);
+        assert_eq!(app.data_table_state.selected(), Some(0));
+    }
+
+    #[test]
+    fn test_navigate_data_table_no_selection() {
+        let mut app = create_test_app_with_result(10);
+        // No selection initially
+
+        app.navigate_data_table(3);
+        // Should start from 0 and move to 3
+        assert_eq!(app.data_table_state.selected(), Some(3));
+    }
+
+    #[test]
+    fn test_navigate_data_table_page_navigation() {
+        let mut app = create_test_app_with_result(100);
+        app.data_table_state.select(Some(50));
+
+        // Page down (10 rows)
+        app.navigate_data_table(10);
+        assert_eq!(app.data_table_state.selected(), Some(60));
+
+        // Page up (10 rows)
+        app.navigate_data_table(-10);
+        assert_eq!(app.data_table_state.selected(), Some(50));
+    }
+}
