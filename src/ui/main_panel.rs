@@ -398,6 +398,15 @@ fn draw_constraints_content(frame: &mut Frame, app: &App, area: Rect) {
 
 fn draw_data_content(frame: &mut Frame, app: &App, area: Rect) {
     if let Some(result) = &app.result {
+        // Split area for data table and pagination bar
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Min(1),    // Data table
+                Constraint::Length(2), // Pagination bar
+            ])
+            .split(area);
+
         // Create header row
         let header_cells = result.columns.iter().map(|col| {
             Cell::from(col.clone()).style(
@@ -408,22 +417,28 @@ fn draw_data_content(frame: &mut Frame, app: &App, area: Rect) {
         });
         let header = Row::new(header_cells).height(1);
 
-        // Create data rows
-        let rows = result.rows.iter().map(|row_data| {
+        // Get paginated data
+        let start = app.pagination.start_index();
+        let end = app.pagination.end_index();
+        let page_rows = &result.rows[start..end.min(result.rows.len())];
+
+        // Create data rows (paginated)
+        let rows = page_rows.iter().map(|row_data| {
             let cells = row_data
                 .iter()
                 .map(|cell| Cell::from(cell.clone()).style(Style::default().fg(Color::White)));
             Row::new(cells).height(1)
         });
 
-        // Calculate column widths (guard against empty columns to prevent division by zero)
+        // Calculate column widths using Ratio for accurate distribution
+        // (Percentage would result in 0% width when columns > 100)
         let widths: Vec<Constraint> = if result.columns.is_empty() {
             vec![]
         } else {
             result
                 .columns
                 .iter()
-                .map(|_| Constraint::Percentage(100 / result.columns.len() as u16))
+                .map(|_| Constraint::Ratio(1, result.columns.len() as u32))
                 .collect()
         };
 
@@ -431,12 +446,84 @@ fn draw_data_content(frame: &mut Frame, app: &App, area: Rect) {
             .header(header)
             .row_highlight_style(Style::default().bg(Color::DarkGray));
 
-        frame.render_widget(table, area);
+        frame.render_widget(table, chunks[0]);
+
+        // Draw pagination bar
+        draw_pagination_bar(frame, app, chunks[1]);
     } else {
         let empty =
             Paragraph::new("No data to display").style(Style::default().fg(Color::DarkGray));
         frame.render_widget(empty, area);
     }
+}
+
+fn draw_pagination_bar(frame: &mut Frame, app: &App, area: Rect) {
+    let pagination = &app.pagination;
+
+    // Format: "< [p] Prev | Page 1/10 | Next [n] > | 50 rows | Total: 500 | Size: 50 [z]"
+    let prev_style = if pagination.has_prev() {
+        Style::default().fg(Color::Cyan)
+    } else {
+        Style::default().fg(Color::DarkGray)
+    };
+
+    let next_style = if pagination.has_next() {
+        Style::default().fg(Color::Cyan)
+    } else {
+        Style::default().fg(Color::DarkGray)
+    };
+
+    let current_page = pagination.current_page + 1;
+    let total_pages = pagination.total_pages();
+    let start_row = pagination.start_index() + 1;
+    let end_row = pagination.end_index();
+
+    let spans = vec![
+        Span::styled(" ◀ ", prev_style),
+        Span::styled("[p]", Style::default().fg(Color::DarkGray)),
+        Span::styled(" Prev ", prev_style),
+        Span::styled("│", Style::default().fg(Color::DarkGray)),
+        Span::styled(
+            format!(" Page {}/{} ", current_page, total_pages),
+            Style::default()
+                .fg(Color::White)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::styled("│", Style::default().fg(Color::DarkGray)),
+        Span::styled(" Next ", next_style),
+        Span::styled("[n]", Style::default().fg(Color::DarkGray)),
+        Span::styled(" ▶ ", next_style),
+        Span::styled("│", Style::default().fg(Color::DarkGray)),
+        Span::styled(
+            format!(" Rows {}-{} ", start_row, end_row),
+            Style::default().fg(Color::Green),
+        ),
+        Span::styled("│", Style::default().fg(Color::DarkGray)),
+        Span::styled(
+            format!(" Total: {} ", pagination.total_rows),
+            Style::default().fg(Color::Yellow),
+        ),
+        Span::styled("│", Style::default().fg(Color::DarkGray)),
+        Span::styled(
+            format!(" Size: {} ", pagination.page_size),
+            Style::default().fg(Color::Magenta),
+        ),
+        Span::styled("[z]", Style::default().fg(Color::DarkGray)),
+        Span::styled("│", Style::default().fg(Color::DarkGray)),
+        Span::styled(" [g]", Style::default().fg(Color::DarkGray)),
+        Span::styled(" First ", Style::default().fg(Color::Cyan)),
+        Span::styled("[G]", Style::default().fg(Color::DarkGray)),
+        Span::styled(" Last ", Style::default().fg(Color::Cyan)),
+    ];
+
+    let line = Line::from(spans);
+    let paragraph = Paragraph::new(line).block(
+        Block::default()
+            .borders(Borders::TOP)
+            .border_style(Style::default().fg(Color::DarkGray)),
+    );
+
+    frame.render_widget(paragraph, area);
 }
 
 fn draw_relations_content(frame: &mut Frame, app: &App, area: Rect) {

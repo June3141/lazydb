@@ -118,6 +118,24 @@ fn run_app(
                     (KeyCode::Char('2'), _) => Some(Message::SwitchToIndexes),
                     (KeyCode::Char('3'), _) => Some(Message::SwitchToForeignKeys),
                     (KeyCode::Char('4'), _) => Some(Message::SwitchToConstraints),
+                    // Pagination shortcuts (Data tab)
+                    (KeyCode::Char('n'), _) if app.main_panel_tab == app::MainPanelTab::Data => {
+                        Some(Message::PageNext)
+                    }
+                    (KeyCode::Char('p'), _) if app.main_panel_tab == app::MainPanelTab::Data => {
+                        Some(Message::PagePrev)
+                    }
+                    (KeyCode::Char('g'), _) if app.main_panel_tab == app::MainPanelTab::Data => {
+                        Some(Message::PageFirst)
+                    }
+                    (KeyCode::Char('G'), KeyModifiers::SHIFT)
+                        if app.main_panel_tab == app::MainPanelTab::Data =>
+                    {
+                        Some(Message::PageLast)
+                    }
+                    (KeyCode::Char('z'), _) if app.main_panel_tab == app::MainPanelTab::Data => {
+                        Some(Message::PageSizeCycle)
+                    }
                     // Add operation: 'a' key in sidebar (Project or Connection depending on mode)
                     (KeyCode::Char('a'), _) if app.focus == Focus::Sidebar => {
                         match app.sidebar_mode {

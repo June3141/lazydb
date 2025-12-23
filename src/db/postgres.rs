@@ -229,6 +229,7 @@ impl DatabaseProvider for PostgresProvider {
                 columns: Vec::new(),
                 rows: Vec::new(),
                 execution_time_ms,
+                total_rows: 0,
             });
         }
 
@@ -253,10 +254,12 @@ impl DatabaseProvider for PostgresProvider {
             })
             .collect();
 
+        let total_rows = result_rows.len();
         Ok(QueryResult {
             columns,
             rows: result_rows,
             execution_time_ms,
+            total_rows,
         })
     }
 

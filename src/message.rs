@@ -43,4 +43,10 @@ pub enum Message {
     HistoryNavigateDown,
     HistorySelectEntry,
     ClearHistory,
+    // Pagination messages
+    PageNext,
+    PagePrev,
+    PageFirst,
+    PageLast,
+    PageSizeCycle,
 }
