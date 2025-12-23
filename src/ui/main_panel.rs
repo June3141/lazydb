@@ -4,7 +4,10 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Cell, Paragraph, Row, Table as RatatuiTable, Tabs, Wrap},
+    widgets::{
+        Block, Borders, Cell, Paragraph, Row, Scrollbar, ScrollbarOrientation, ScrollbarState,
+        Table as RatatuiTable, Tabs, Wrap,
+    },
     Frame,
 };
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
@@ -30,7 +33,7 @@ pub fn draw_query_editor(frame: &mut Frame, app: &App, area: Rect) {
     frame.render_widget(query_text, area);
 }
 
-pub fn draw_main_panel(frame: &mut Frame, app: &App, area: Rect) {
+pub fn draw_main_panel(frame: &mut Frame, app: &mut App, area: Rect) {
     let is_focused = app.focus == Focus::MainPanel;
     let border_style = if is_focused {
         Style::default().fg(Color::Cyan)
@@ -396,16 +399,46 @@ fn draw_constraints_content(frame: &mut Frame, app: &App, area: Rect) {
     }
 }
 
-fn draw_data_content(frame: &mut Frame, app: &App, area: Rect) {
+fn draw_data_content(frame: &mut Frame, app: &mut App, area: Rect) {
     if let Some(result) = &app.result {
-        // Split area for data table and pagination bar
+        if result.rows.is_empty() {
+            let empty = Paragraph::new("Query returned no rows")
+                .style(Style::default().fg(Color::DarkGray));
+            frame.render_widget(empty, area);
+            return;
+        }
+
+        // Initialize selection if not set
+        if app.data_table_state.selected().is_none() {
+            app.data_table_state.select(Some(0));
+        }
+
+        let selected_idx = app.data_table_state.selected().unwrap_or(0);
+
+        // Get paginated data
+        let start = app.pagination.start_index();
+        let end = app.pagination.end_index();
+        let page_rows = &result.rows[start..end.min(result.rows.len())];
+        let page_row_count = page_rows.len();
+
+        // Split area for data table, info bar, and pagination bar
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
                 Constraint::Min(1),    // Data table
+                Constraint::Length(1), // Info bar
                 Constraint::Length(2), // Pagination bar
             ])
             .split(area);
+
+        // Create horizontal layout for table and scrollbar
+        let table_chunks = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([
+                Constraint::Min(1),    // Table
+                Constraint::Length(1), // Scrollbar
+            ])
+            .split(chunks[0]);
 
         // Create header row
         let header_cells = result.columns.iter().map(|col| {
@@ -417,18 +450,16 @@ fn draw_data_content(frame: &mut Frame, app: &App, area: Rect) {
         });
         let header = Row::new(header_cells).height(1);
 
-        // Get paginated data
-        let start = app.pagination.start_index();
-        let end = app.pagination.end_index();
-        let page_rows = &result.rows[start..end.min(result.rows.len())];
-
         // Create data rows (paginated)
-        let rows = page_rows.iter().map(|row_data| {
-            let cells = row_data
-                .iter()
-                .map(|cell| Cell::from(cell.clone()).style(Style::default().fg(Color::White)));
-            Row::new(cells).height(1)
-        });
+        let rows: Vec<Row> = page_rows
+            .iter()
+            .map(|row_data| {
+                let cells = row_data
+                    .iter()
+                    .map(|cell| Cell::from(cell.clone()).style(Style::default().fg(Color::White)));
+                Row::new(cells).height(1)
+            })
+            .collect();
 
         // Calculate column widths using Ratio for accurate distribution
         // (Percentage would result in 0% width when columns > 100)
@@ -444,12 +475,36 @@ fn draw_data_content(frame: &mut Frame, app: &App, area: Rect) {
 
         let table = RatatuiTable::new(rows, widths)
             .header(header)
-            .row_highlight_style(Style::default().bg(Color::DarkGray));
+            .row_highlight_style(
+                Style::default()
+                    .bg(Color::DarkGray)
+                    .add_modifier(Modifier::BOLD),
+            )
+            .highlight_symbol("▶ ");
 
-        frame.render_widget(table, chunks[0]);
+        // Render table with state for scrolling
+        frame.render_stateful_widget(table, table_chunks[0], &mut app.data_table_state);
+
+        // Render scrollbar
+        let mut scrollbar_state = ScrollbarState::new(page_row_count).position(selected_idx);
+        let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
+            .begin_symbol(Some("▲"))
+            .end_symbol(Some("▼"))
+            .track_symbol(Some("│"))
+            .thumb_symbol("█");
+        frame.render_stateful_widget(scrollbar, table_chunks[1], &mut scrollbar_state);
+
+        // Render info bar showing row position
+        let info_text = format!(
+            " Row {}/{} │ ↑↓/jk: navigate │ PgUp/PgDn: page │ g/G: first/last ",
+            selected_idx + 1,
+            page_row_count
+        );
+        let info_bar = Paragraph::new(info_text).style(Style::default().fg(Color::DarkGray));
+        frame.render_widget(info_bar, chunks[1]);
 
         // Draw pagination bar
-        draw_pagination_bar(frame, app, chunks[1]);
+        draw_pagination_bar(frame, app, chunks[2]);
     } else {
         let empty =
             Paragraph::new("No data to display").style(Style::default().fg(Color::DarkGray));

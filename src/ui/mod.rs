@@ -17,7 +17,7 @@ use modal::draw_modal;
 use sidebar::{draw_sidebar, draw_table_summary};
 use status_bar::draw_status_bar;
 
-pub fn draw(frame: &mut Frame, app: &App) {
+pub fn draw(frame: &mut Frame, app: &mut App) {
     let size = frame.area();
 
     // Top-level layout: Content area | Help bar

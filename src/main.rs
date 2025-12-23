@@ -7,7 +7,7 @@ mod ui;
 
 use anyhow::Result;
 use app::{
-    App, ConfirmModalField, ConnectionModalField, Focus, HistoryModal, ModalState,
+    App, ConfirmModalField, ConnectionModalField, Focus, HistoryModal, MainPanelTab, ModalState,
     ProjectModalField, SearchProjectModal,
 };
 use clap::Parser;
@@ -85,6 +85,11 @@ fn run_app(
                 // Modal is open - handle modal-specific keys
                 handle_modal_input(app, key.code)
             } else {
+                // Check if we're in data table navigation mode
+                let in_data_table = app.focus == Focus::MainPanel
+                    && app.main_panel_tab == MainPanelTab::Data
+                    && app.result.is_some();
+
                 // Normal mode
                 match (key.code, key.modifiers) {
                     (KeyCode::Char('q'), _) | (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
@@ -99,7 +104,20 @@ fn run_app(
                     | (KeyCode::Char('K'), KeyModifiers::SHIFT) => Some(Message::FocusUp),
                     (KeyCode::Down, KeyModifiers::SHIFT)
                     | (KeyCode::Char('J'), KeyModifiers::SHIFT) => Some(Message::FocusDown),
-                    // Regular navigation within current pane
+                    // Data table navigation (when in MainPanel with Data tab)
+                    (KeyCode::Up | KeyCode::Char('k'), _) if in_data_table => {
+                        Some(Message::DataTableUp)
+                    }
+                    (KeyCode::Down | KeyCode::Char('j'), _) if in_data_table => {
+                        Some(Message::DataTableDown)
+                    }
+                    (KeyCode::PageUp, _) if in_data_table => Some(Message::DataTablePageUp),
+                    (KeyCode::PageDown, _) if in_data_table => Some(Message::DataTablePageDown),
+                    (KeyCode::Char('g'), _) if in_data_table => Some(Message::DataTableFirst),
+                    (KeyCode::Char('G'), KeyModifiers::SHIFT) if in_data_table => {
+                        Some(Message::DataTableLast)
+                    }
+                    // Regular navigation within current pane (Sidebar)
                     (KeyCode::Up | KeyCode::Char('k'), _) => Some(Message::NavigateUp),
                     (KeyCode::Down | KeyCode::Char('j'), _) => Some(Message::NavigateDown),
                     (KeyCode::Tab, _) => Some(Message::NextFocus),
