@@ -30,8 +30,10 @@ pub enum Message {
     // Search modal messages
     OpenSearchProjectModal,
     OpenSearchConnectionModal,
+    OpenSearchTableModal,
     SearchConfirm,
     SearchConnectionConfirm,
+    TableSearchConfirm,
     // Column visibility modal messages
     OpenColumnVisibilityModal,
     ToggleColumnVisibility,

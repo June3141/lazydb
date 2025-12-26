@@ -251,6 +251,14 @@ pub struct SearchConnectionModal {
     pub selected_idx: usize,
 }
 
+/// Search modal for filtering tables within a connection
+#[derive(Debug, Clone, Default)]
+pub struct SearchTableModal {
+    pub query: String,
+    pub filtered_indices: Vec<usize>,
+    pub selected_idx: usize,
+}
+
 /// Column visibility settings for Columns tab
 #[derive(Debug, Clone)]
 pub struct ColumnsVisibility {
@@ -552,6 +560,55 @@ impl SearchConnectionModal {
     }
 }
 
+impl SearchTableModal {
+    pub fn with_all_tables(table_count: usize) -> Self {
+        Self {
+            query: String::new(),
+            filtered_indices: (0..table_count).collect(),
+            selected_idx: 0,
+        }
+    }
+
+    pub fn update_filter(&mut self, tables: &[Table]) {
+        let query_lower = self.query.to_lowercase();
+        self.filtered_indices = tables
+            .iter()
+            .enumerate()
+            .filter(|(_, t)| self.query.is_empty() || t.name.to_lowercase().contains(&query_lower))
+            .map(|(idx, _)| idx)
+            .collect();
+
+        // Adjust selected index if needed
+        if self.selected_idx >= self.filtered_indices.len() {
+            self.selected_idx = self.filtered_indices.len().saturating_sub(1);
+        }
+    }
+
+    pub fn selected_table_idx(&self) -> Option<usize> {
+        self.filtered_indices.get(self.selected_idx).copied()
+    }
+
+    pub fn navigate_up(&mut self) {
+        if !self.filtered_indices.is_empty() {
+            if self.selected_idx > 0 {
+                self.selected_idx -= 1;
+            } else {
+                self.selected_idx = self.filtered_indices.len() - 1;
+            }
+        }
+    }
+
+    pub fn navigate_down(&mut self) {
+        if !self.filtered_indices.is_empty() {
+            if self.selected_idx + 1 < self.filtered_indices.len() {
+                self.selected_idx += 1;
+            } else {
+                self.selected_idx = 0;
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum ModalState {
     None,
@@ -561,6 +618,7 @@ pub enum ModalState {
     DeleteProject(DeleteProjectModal),
     SearchProject(SearchProjectModal),
     SearchConnection(SearchConnectionModal),
+    SearchTable(SearchTableModal),
     History(HistoryModal),
     ColumnVisibility(ColumnVisibilityModal),
 }
@@ -792,6 +850,20 @@ impl App {
                 }
             }
 
+            Message::OpenSearchTableModal => {
+                if let SidebarMode::Connections(proj_idx) = self.sidebar_mode {
+                    if let Some(project) = self.projects.get(proj_idx) {
+                        if let Some(conn) = project.connections.get(self.selected_connection_idx) {
+                            if conn.expanded && !conn.tables.is_empty() {
+                                self.modal_state = ModalState::SearchTable(
+                                    SearchTableModal::with_all_tables(conn.tables.len()),
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+
             Message::SearchConfirm => {
                 if let ModalState::SearchProject(modal) = &self.modal_state {
                     if let Some(proj_idx) = modal.selected_project_idx() {
@@ -811,6 +883,24 @@ impl App {
                             if let Some(project) = self.projects.get(proj_idx) {
                                 if let Some(conn) = project.connections.get(conn_idx) {
                                     self.status_message = format!("Selected: {}", conn.name);
+                                }
+                            }
+                        }
+                    }
+                }
+                self.modal_state = ModalState::None;
+            }
+
+            Message::TableSearchConfirm => {
+                if let ModalState::SearchTable(modal) = &self.modal_state {
+                    if let Some(table_idx) = modal.selected_table_idx() {
+                        self.selected_table_idx = Some(table_idx);
+                        if let SidebarMode::Connections(proj_idx) = self.sidebar_mode {
+                            if let Some(project) = self.projects.get(proj_idx) {
+                                if let Some(conn) = project.connections.get(self.selected_connection_idx) {
+                                    if let Some(table) = conn.tables.get(table_idx) {
+                                        self.status_message = format!("Selected: {}", table.name);
+                                    }
                                 }
                             }
                         }
@@ -916,6 +1006,9 @@ impl App {
                     ModalState::SearchConnection(_) => {
                         // SearchConnection uses SearchConnectionConfirm instead of ModalConfirm
                     }
+                    ModalState::SearchTable(_) => {
+                        // SearchTable uses TableSearchConfirm instead of ModalConfirm
+                    }
                     ModalState::ColumnVisibility(_) => {
                         // ColumnVisibility uses ToggleColumnVisibility, just close on confirm
                         self.modal_state = ModalState::None;
@@ -952,6 +1045,16 @@ impl App {
                     if let SidebarMode::Connections(proj_idx) = self.sidebar_mode {
                         if let Some(project) = self.projects.get(proj_idx) {
                             modal.update_filter(&project.connections);
+                        }
+                    }
+                }
+                ModalState::SearchTable(modal) => {
+                    modal.query.push(c);
+                    if let SidebarMode::Connections(proj_idx) = self.sidebar_mode {
+                        if let Some(project) = self.projects.get(proj_idx) {
+                            if let Some(conn) = project.connections.get(self.selected_connection_idx) {
+                                modal.update_filter(&conn.tables);
+                            }
                         }
                     }
                 }
@@ -997,6 +1100,16 @@ impl App {
                         }
                     }
                 }
+                ModalState::SearchTable(modal) => {
+                    modal.query.pop();
+                    if let SidebarMode::Connections(proj_idx) = self.sidebar_mode {
+                        if let Some(project) = self.projects.get(proj_idx) {
+                            if let Some(conn) = project.connections.get(self.selected_connection_idx) {
+                                modal.update_filter(&conn.tables);
+                            }
+                        }
+                    }
+                }
                 _ => {}
             },
 
@@ -1014,6 +1127,9 @@ impl App {
                     modal.navigate_down();
                 }
                 ModalState::SearchConnection(modal) => {
+                    modal.navigate_down();
+                }
+                ModalState::SearchTable(modal) => {
                     modal.navigate_down();
                 }
                 ModalState::ColumnVisibility(modal) => {
@@ -1036,6 +1152,9 @@ impl App {
                     modal.navigate_up();
                 }
                 ModalState::SearchConnection(modal) => {
+                    modal.navigate_up();
+                }
+                ModalState::SearchTable(modal) => {
                     modal.navigate_up();
                 }
                 ModalState::ColumnVisibility(modal) => {
@@ -1552,6 +1671,7 @@ impl App {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::model::schema::TableType;
 
     fn create_test_app_with_result(row_count: usize) -> App {
         let mut app = App::new(vec![]);
@@ -1566,6 +1686,63 @@ mod tests {
             });
         }
         app
+    }
+
+    fn create_test_tables() -> Vec<Table> {
+        vec![
+            Table {
+                name: "users".to_string(),
+                schema: Some("public".to_string()),
+                table_type: TableType::BaseTable,
+                columns: vec![],
+                indexes: vec![],
+                foreign_keys: vec![],
+                constraints: vec![],
+                row_count: 0,
+                size_bytes: 0,
+                comment: None,
+                details_loaded: false,
+            },
+            Table {
+                name: "orders".to_string(),
+                schema: Some("public".to_string()),
+                table_type: TableType::BaseTable,
+                columns: vec![],
+                indexes: vec![],
+                foreign_keys: vec![],
+                constraints: vec![],
+                row_count: 0,
+                size_bytes: 0,
+                comment: None,
+                details_loaded: false,
+            },
+            Table {
+                name: "user_sessions".to_string(),
+                schema: Some("public".to_string()),
+                table_type: TableType::BaseTable,
+                columns: vec![],
+                indexes: vec![],
+                foreign_keys: vec![],
+                constraints: vec![],
+                row_count: 0,
+                size_bytes: 0,
+                comment: None,
+                details_loaded: false,
+            },
+            Table {
+                name: "products".to_string(),
+                schema: Some("public".to_string()),
+                table_type: TableType::BaseTable,
+                columns: vec![],
+                indexes: vec![],
+                foreign_keys: vec![],
+                constraints: vec![],
+                row_count: 0,
+                size_bytes: 0,
+                comment: None,
+                details_loaded: false,
+            },
+        ]
     }
 
     #[test]
@@ -1660,5 +1837,160 @@ mod tests {
         // Page up (10 rows)
         app.navigate_data_table(-10);
         assert_eq!(app.data_table_state.selected(), Some(50));
+    }
+
+    #[test]
+    fn test_search_table_modal_with_all_tables_initializes_correctly() {
+        let modal = SearchTableModal::with_all_tables(5);
+
+        assert_eq!(modal.query, "");
+        assert_eq!(modal.filtered_indices, vec![0, 1, 2, 3, 4]);
+        assert_eq!(modal.selected_idx, 0);
+    }
+
+    #[test]
+    fn test_search_table_modal_with_all_tables_empty() {
+        let modal = SearchTableModal::with_all_tables(0);
+
+        assert_eq!(modal.query, "");
+        assert!(modal.filtered_indices.is_empty());
+        assert_eq!(modal.selected_idx, 0);
+    }
+
+    #[test]
+    fn test_search_table_modal_update_filter_matches_partial_name() {
+        let tables = create_test_tables();
+        let mut modal = SearchTableModal::with_all_tables(tables.len());
+
+        modal.query = "user".to_string();
+        modal.update_filter(&tables);
+
+        // Should match "users" (index 0) and "user_sessions" (index 2)
+        assert_eq!(modal.filtered_indices, vec![0, 2]);
+    }
+
+    #[test]
+    fn test_search_table_modal_update_filter_case_insensitive() {
+        let tables = create_test_tables();
+        let mut modal = SearchTableModal::with_all_tables(tables.len());
+
+        modal.query = "USER".to_string();
+        modal.update_filter(&tables);
+
+        // Should match "users" and "user_sessions" (case insensitive)
+        assert_eq!(modal.filtered_indices, vec![0, 2]);
+    }
+
+    #[test]
+    fn test_search_table_modal_update_filter_empty_query_shows_all() {
+        let tables = create_test_tables();
+        let mut modal = SearchTableModal::with_all_tables(tables.len());
+
+        modal.query = "".to_string();
+        modal.update_filter(&tables);
+
+        assert_eq!(modal.filtered_indices, vec![0, 1, 2, 3]);
+    }
+
+    #[test]
+    fn test_search_table_modal_update_filter_no_matches() {
+        let tables = create_test_tables();
+        let mut modal = SearchTableModal::with_all_tables(tables.len());
+
+        modal.query = "nonexistent".to_string();
+        modal.update_filter(&tables);
+
+        assert!(modal.filtered_indices.is_empty());
+    }
+
+    #[test]
+    fn test_search_table_modal_update_filter_adjusts_selected_idx() {
+        let tables = create_test_tables();
+        let mut modal = SearchTableModal::with_all_tables(tables.len());
+
+        modal.selected_idx = 3; // Select last item
+        modal.query = "user".to_string();
+        modal.update_filter(&tables);
+
+        // After filtering to 2 items, selected_idx should be adjusted to 1
+        assert_eq!(modal.selected_idx, 1);
+    }
+
+    #[test]
+    fn test_search_table_modal_selected_table_idx_returns_correct_index() {
+        let tables = create_test_tables();
+        let mut modal = SearchTableModal::with_all_tables(tables.len());
+
+        modal.query = "user".to_string();
+        modal.update_filter(&tables);
+        modal.selected_idx = 1; // Select second filtered item
+
+        // filtered_indices is [0, 2], so selected_idx 1 -> table index 2
+        assert_eq!(modal.selected_table_idx(), Some(2));
+    }
+
+    #[test]
+    fn test_search_table_modal_selected_table_idx_returns_none_when_empty() {
+        let tables = create_test_tables();
+        let mut modal = SearchTableModal::with_all_tables(tables.len());
+
+        modal.query = "nonexistent".to_string();
+        modal.update_filter(&tables);
+
+        assert_eq!(modal.selected_table_idx(), None);
+    }
+
+    #[test]
+    fn test_search_table_modal_navigate_down_wraps_around() {
+        let mut modal = SearchTableModal::with_all_tables(3);
+
+        modal.selected_idx = 2; // Last item
+        modal.navigate_down();
+
+        assert_eq!(modal.selected_idx, 0); // Wrapped to first
+    }
+
+    #[test]
+    fn test_search_table_modal_navigate_up_wraps_around() {
+        let mut modal = SearchTableModal::with_all_tables(3);
+
+        modal.selected_idx = 0; // First item
+        modal.navigate_up();
+
+        assert_eq!(modal.selected_idx, 2); // Wrapped to last
+    }
+
+    #[test]
+    fn test_search_table_modal_navigate_on_empty_list() {
+        let mut modal = SearchTableModal::with_all_tables(0);
+
+        modal.navigate_down();
+        assert_eq!(modal.selected_idx, 0);
+
+        modal.navigate_up();
+        assert_eq!(modal.selected_idx, 0);
+    }
+
+    #[test]
+    fn test_search_table_modal_navigate_down_increments() {
+        let mut modal = SearchTableModal::with_all_tables(5);
+
+        modal.navigate_down();
+        assert_eq!(modal.selected_idx, 1);
+
+        modal.navigate_down();
+        assert_eq!(modal.selected_idx, 2);
+    }
+
+    #[test]
+    fn test_search_table_modal_navigate_up_decrements() {
+        let mut modal = SearchTableModal::with_all_tables(5);
+        modal.selected_idx = 3;
+
+        modal.navigate_up();
+        assert_eq!(modal.selected_idx, 2);
+
+        modal.navigate_up();
+        assert_eq!(modal.selected_idx, 1);
     }
 }

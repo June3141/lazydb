@@ -9,6 +9,7 @@ use anyhow::Result;
 use app::{
     App, ColumnVisibilityModal, ConfirmModalField, ConnectionModalField, Focus, HistoryModal,
     MainPanelTab, ModalState, ProjectModalField, SearchConnectionModal, SearchProjectModal,
+    SearchTableModal,
 };
 use clap::Parser;
 use config::ConfigLoader;
@@ -184,12 +185,12 @@ fn run_app(
                     {
                         Some(Message::OpenSearchProjectModal)
                     }
-                    // Connection search: '/' key in Connections view
+                    // Table search: '/' key in Connections view (when a connection is expanded)
                     (KeyCode::Char('/'), _)
                         if app.focus == Focus::Sidebar
                             && matches!(app.sidebar_mode, app::SidebarMode::Connections(_)) =>
                     {
-                        Some(Message::OpenSearchConnectionModal)
+                        Some(Message::OpenSearchTableModal)
                     }
                     // Column visibility: 'c' key in Schema tab when main panel is focused
                     (KeyCode::Char('c'), _)
@@ -236,6 +237,7 @@ fn handle_modal_input(app: &App, key_code: KeyCode) -> Option<Message> {
         ModalState::SearchConnection(modal) => {
             handle_search_connection_modal_input(key_code, modal)
         }
+        ModalState::SearchTable(modal) => handle_search_table_modal_input(key_code, modal),
         ModalState::History(modal) => handle_history_modal_input(key_code, modal),
         ModalState::ColumnVisibility(modal) => {
             handle_column_visibility_modal_input(key_code, modal)
@@ -384,6 +386,23 @@ fn handle_search_connection_modal_input(
     match key_code {
         KeyCode::Esc => Some(Message::CloseModal),
         KeyCode::Enter => Some(Message::SearchConnectionConfirm),
+        KeyCode::Up | KeyCode::Char('k') => Some(Message::ModalPrevField),
+        KeyCode::Down | KeyCode::Char('j') => Some(Message::ModalNextField),
+        KeyCode::Tab => Some(Message::ModalNextField),
+        KeyCode::BackTab => Some(Message::ModalPrevField),
+        KeyCode::Backspace => Some(Message::ModalInputBackspace),
+        KeyCode::Char(c) => Some(Message::ModalInputChar(c)),
+        _ => None,
+    }
+}
+
+fn handle_search_table_modal_input(
+    key_code: KeyCode,
+    _modal: &SearchTableModal,
+) -> Option<Message> {
+    match key_code {
+        KeyCode::Esc => Some(Message::CloseModal),
+        KeyCode::Enter => Some(Message::TableSearchConfirm),
         KeyCode::Up | KeyCode::Char('k') => Some(Message::ModalPrevField),
         KeyCode::Down | KeyCode::Char('j') => Some(Message::ModalNextField),
         KeyCode::Tab => Some(Message::ModalNextField),
