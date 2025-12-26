@@ -243,6 +243,63 @@ pub struct HistoryModal {
     pub selected_idx: usize,
 }
 
+/// Search modal for filtering connections within a project
+#[derive(Debug, Clone, Default)]
+pub struct SearchConnectionModal {
+    pub query: String,
+    pub filtered_indices: Vec<usize>,
+    pub selected_idx: usize,
+}
+
+impl SearchConnectionModal {
+    pub fn with_all_connections(connection_count: usize) -> Self {
+        Self {
+            query: String::new(),
+            filtered_indices: (0..connection_count).collect(),
+            selected_idx: 0,
+        }
+    }
+
+    pub fn update_filter(&mut self, connections: &[Connection]) {
+        let query_lower = self.query.to_lowercase();
+        self.filtered_indices = connections
+            .iter()
+            .enumerate()
+            .filter(|(_, c)| self.query.is_empty() || c.name.to_lowercase().contains(&query_lower))
+            .map(|(idx, _)| idx)
+            .collect();
+
+        // Adjust selected index if needed
+        if self.selected_idx >= self.filtered_indices.len() {
+            self.selected_idx = self.filtered_indices.len().saturating_sub(1);
+        }
+    }
+
+    pub fn selected_connection_idx(&self) -> Option<usize> {
+        self.filtered_indices.get(self.selected_idx).copied()
+    }
+
+    pub fn navigate_up(&mut self) {
+        if !self.filtered_indices.is_empty() {
+            if self.selected_idx > 0 {
+                self.selected_idx -= 1;
+            } else {
+                self.selected_idx = self.filtered_indices.len() - 1;
+            }
+        }
+    }
+
+    pub fn navigate_down(&mut self) {
+        if !self.filtered_indices.is_empty() {
+            if self.selected_idx + 1 < self.filtered_indices.len() {
+                self.selected_idx += 1;
+            } else {
+                self.selected_idx = 0;
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum ModalState {
     None,
@@ -251,6 +308,7 @@ pub enum ModalState {
     EditProject(usize, ProjectModal), // (project index, modal)
     DeleteProject(DeleteProjectModal),
     SearchProject(SearchProjectModal),
+    SearchConnection(SearchConnectionModal),
     History(HistoryModal),
 }
 
@@ -467,11 +525,38 @@ impl App {
                 }
             }
 
+            Message::OpenSearchConnectionModal => {
+                if let SidebarMode::Connections(proj_idx) = self.sidebar_mode {
+                    if let Some(project) = self.projects.get(proj_idx) {
+                        self.modal_state = ModalState::SearchConnection(
+                            SearchConnectionModal::with_all_connections(project.connections.len()),
+                        );
+                    }
+                }
+            }
+
             Message::SearchConfirm => {
                 if let ModalState::SearchProject(modal) = &self.modal_state {
                     if let Some(proj_idx) = modal.selected_project_idx() {
                         self.selected_project_idx = proj_idx;
                         self.status_message = format!("Selected: {}", self.projects[proj_idx].name);
+                    }
+                }
+                self.modal_state = ModalState::None;
+            }
+
+            Message::SearchConnectionConfirm => {
+                if let ModalState::SearchConnection(modal) = &self.modal_state {
+                    if let Some(conn_idx) = modal.selected_connection_idx() {
+                        self.selected_connection_idx = conn_idx;
+                        self.selected_table_idx = None;
+                        if let SidebarMode::Connections(proj_idx) = self.sidebar_mode {
+                            if let Some(project) = self.projects.get(proj_idx) {
+                                if let Some(conn) = project.connections.get(conn_idx) {
+                                    self.status_message = format!("Selected: {}", conn.name);
+                                }
+                            }
+                        }
                     }
                 }
                 self.modal_state = ModalState::None;
@@ -541,6 +626,9 @@ impl App {
                     ModalState::SearchProject(_) => {
                         // SearchProject uses SearchConfirm instead of ModalConfirm
                     }
+                    ModalState::SearchConnection(_) => {
+                        // SearchConnection uses SearchConnectionConfirm instead of ModalConfirm
+                    }
                     ModalState::None | ModalState::History(_) => {}
                 }
             }
@@ -567,6 +655,14 @@ impl App {
                 ModalState::SearchProject(modal) => {
                     modal.query.push(c);
                     modal.update_filter(&self.projects);
+                }
+                ModalState::SearchConnection(modal) => {
+                    modal.query.push(c);
+                    if let SidebarMode::Connections(proj_idx) = self.sidebar_mode {
+                        if let Some(project) = self.projects.get(proj_idx) {
+                            modal.update_filter(&project.connections);
+                        }
+                    }
                 }
                 _ => {}
             },
@@ -602,6 +698,14 @@ impl App {
                     modal.query.pop();
                     modal.update_filter(&self.projects);
                 }
+                ModalState::SearchConnection(modal) => {
+                    modal.query.pop();
+                    if let SidebarMode::Connections(proj_idx) = self.sidebar_mode {
+                        if let Some(project) = self.projects.get(proj_idx) {
+                            modal.update_filter(&project.connections);
+                        }
+                    }
+                }
                 _ => {}
             },
 
@@ -618,6 +722,9 @@ impl App {
                 ModalState::SearchProject(modal) => {
                     modal.navigate_down();
                 }
+                ModalState::SearchConnection(modal) => {
+                    modal.navigate_down();
+                }
                 ModalState::None | ModalState::History(_) => {}
             },
 
@@ -632,6 +739,9 @@ impl App {
                     modal.focused_field = modal.focused_field.prev();
                 }
                 ModalState::SearchProject(modal) => {
+                    modal.navigate_up();
+                }
+                ModalState::SearchConnection(modal) => {
                     modal.navigate_up();
                 }
                 ModalState::None | ModalState::History(_) => {}

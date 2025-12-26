@@ -5,7 +5,7 @@ mod sidebar;
 mod status_bar;
 pub mod utils;
 
-use crate::app::App;
+use crate::app::{App, SidebarMode};
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     Frame,
@@ -67,5 +67,20 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
     draw_help_bar(frame, outer_chunks[1]);
 
     // Draw modal on top if open
-    draw_modal(frame, &app.modal_state, &app.projects, &app.query_history);
+    // Get current project's connections for SearchConnection modal
+    let connections = match app.sidebar_mode {
+        SidebarMode::Connections(proj_idx) => app
+            .projects
+            .get(proj_idx)
+            .map(|p| p.connections.as_slice())
+            .unwrap_or(&[]),
+        SidebarMode::Projects => &[],
+    };
+    draw_modal(
+        frame,
+        &app.modal_state,
+        &app.projects,
+        connections,
+        &app.query_history,
+    );
 }

@@ -29,7 +29,9 @@ pub enum Message {
     DeleteProject,
     // Search modal messages
     OpenSearchProjectModal,
+    OpenSearchConnectionModal,
     SearchConfirm,
+    SearchConnectionConfirm,
     // Common modal messages
     CloseModal,
     ModalConfirm,
