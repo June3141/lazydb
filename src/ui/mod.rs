@@ -82,5 +82,6 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
         &app.projects,
         connections,
         &app.query_history,
+        &app.column_visibility,
     );
 }

@@ -251,6 +251,258 @@ pub struct SearchConnectionModal {
     pub selected_idx: usize,
 }
 
+/// Column visibility settings for Columns tab
+#[derive(Debug, Clone)]
+pub struct ColumnsVisibility {
+    pub show_icon: bool,
+    pub show_name: bool,
+    pub show_type: bool,
+    pub show_nullable: bool,
+    pub show_default: bool,
+    pub show_key: bool,
+}
+
+impl Default for ColumnsVisibility {
+    fn default() -> Self {
+        Self {
+            show_icon: true,
+            show_name: true,
+            show_type: true,
+            show_nullable: true,
+            show_default: true,
+            show_key: true,
+        }
+    }
+}
+
+impl ColumnsVisibility {
+    pub fn all_columns() -> &'static [&'static str] {
+        &["Icon", "Name", "Type", "Null", "Default", "Key"]
+    }
+
+    pub fn is_visible(&self, index: usize) -> bool {
+        match index {
+            0 => self.show_icon,
+            1 => self.show_name,
+            2 => self.show_type,
+            3 => self.show_nullable,
+            4 => self.show_default,
+            5 => self.show_key,
+            _ => false,
+        }
+    }
+
+    pub fn toggle(&mut self, index: usize) {
+        match index {
+            0 => self.show_icon = !self.show_icon,
+            1 => self.show_name = !self.show_name,
+            2 => self.show_type = !self.show_type,
+            3 => self.show_nullable = !self.show_nullable,
+            4 => self.show_default = !self.show_default,
+            5 => self.show_key = !self.show_key,
+            _ => {}
+        }
+    }
+}
+
+/// Column visibility settings for Indexes tab
+#[derive(Debug, Clone)]
+pub struct IndexesVisibility {
+    pub show_name: bool,
+    pub show_type: bool,
+    pub show_method: bool,
+    pub show_columns: bool,
+}
+
+impl Default for IndexesVisibility {
+    fn default() -> Self {
+        Self {
+            show_name: true,
+            show_type: true,
+            show_method: true,
+            show_columns: true,
+        }
+    }
+}
+
+impl IndexesVisibility {
+    pub fn all_columns() -> &'static [&'static str] {
+        &["Name", "Type", "Method", "Columns"]
+    }
+
+    pub fn is_visible(&self, index: usize) -> bool {
+        match index {
+            0 => self.show_name,
+            1 => self.show_type,
+            2 => self.show_method,
+            3 => self.show_columns,
+            _ => false,
+        }
+    }
+
+    pub fn toggle(&mut self, index: usize) {
+        match index {
+            0 => self.show_name = !self.show_name,
+            1 => self.show_type = !self.show_type,
+            2 => self.show_method = !self.show_method,
+            3 => self.show_columns = !self.show_columns,
+            _ => {}
+        }
+    }
+}
+
+/// Column visibility settings for Foreign Keys tab
+#[derive(Debug, Clone)]
+pub struct ForeignKeysVisibility {
+    pub show_name: bool,
+    pub show_column: bool,
+    pub show_references: bool,
+    pub show_on_delete: bool,
+    pub show_on_update: bool,
+}
+
+impl Default for ForeignKeysVisibility {
+    fn default() -> Self {
+        Self {
+            show_name: true,
+            show_column: true,
+            show_references: true,
+            show_on_delete: true,
+            show_on_update: true,
+        }
+    }
+}
+
+impl ForeignKeysVisibility {
+    pub fn all_columns() -> &'static [&'static str] {
+        &["Name", "Column", "References", "ON DELETE", "ON UPDATE"]
+    }
+
+    pub fn is_visible(&self, index: usize) -> bool {
+        match index {
+            0 => self.show_name,
+            1 => self.show_column,
+            2 => self.show_references,
+            3 => self.show_on_delete,
+            4 => self.show_on_update,
+            _ => false,
+        }
+    }
+
+    pub fn toggle(&mut self, index: usize) {
+        match index {
+            0 => self.show_name = !self.show_name,
+            1 => self.show_column = !self.show_column,
+            2 => self.show_references = !self.show_references,
+            3 => self.show_on_delete = !self.show_on_delete,
+            4 => self.show_on_update = !self.show_on_update,
+            _ => {}
+        }
+    }
+}
+
+/// Column visibility settings for Constraints tab
+#[derive(Debug, Clone)]
+pub struct ConstraintsVisibility {
+    pub show_name: bool,
+    pub show_type: bool,
+    pub show_columns: bool,
+    pub show_definition: bool,
+}
+
+impl Default for ConstraintsVisibility {
+    fn default() -> Self {
+        Self {
+            show_name: true,
+            show_type: true,
+            show_columns: true,
+            show_definition: true,
+        }
+    }
+}
+
+impl ConstraintsVisibility {
+    pub fn all_columns() -> &'static [&'static str] {
+        &["Name", "Type", "Columns", "Definition"]
+    }
+
+    pub fn is_visible(&self, index: usize) -> bool {
+        match index {
+            0 => self.show_name,
+            1 => self.show_type,
+            2 => self.show_columns,
+            3 => self.show_definition,
+            _ => false,
+        }
+    }
+
+    pub fn toggle(&mut self, index: usize) {
+        match index {
+            0 => self.show_name = !self.show_name,
+            1 => self.show_type = !self.show_type,
+            2 => self.show_columns = !self.show_columns,
+            3 => self.show_definition = !self.show_definition,
+            _ => {}
+        }
+    }
+}
+
+/// Column visibility settings for all schema sub-tabs
+#[derive(Debug, Clone, Default)]
+pub struct ColumnVisibilitySettings {
+    pub columns: ColumnsVisibility,
+    pub indexes: IndexesVisibility,
+    pub foreign_keys: ForeignKeysVisibility,
+    pub constraints: ConstraintsVisibility,
+}
+
+/// Modal for configuring column visibility
+#[derive(Debug, Clone)]
+pub struct ColumnVisibilityModal {
+    pub tab: SchemaSubTab,
+    pub selected_idx: usize,
+}
+
+impl ColumnVisibilityModal {
+    pub fn new(tab: SchemaSubTab) -> Self {
+        Self {
+            tab,
+            selected_idx: 0,
+        }
+    }
+
+    pub fn column_count(&self) -> usize {
+        match self.tab {
+            SchemaSubTab::Columns => ColumnsVisibility::all_columns().len(),
+            SchemaSubTab::Indexes => IndexesVisibility::all_columns().len(),
+            SchemaSubTab::ForeignKeys => ForeignKeysVisibility::all_columns().len(),
+            SchemaSubTab::Constraints => ConstraintsVisibility::all_columns().len(),
+        }
+    }
+
+    pub fn navigate_up(&mut self) {
+        let count = self.column_count();
+        if count > 0 {
+            if self.selected_idx > 0 {
+                self.selected_idx -= 1;
+            } else {
+                self.selected_idx = count - 1;
+            }
+        }
+    }
+
+    pub fn navigate_down(&mut self) {
+        let count = self.column_count();
+        if count > 0 {
+            if self.selected_idx + 1 < count {
+                self.selected_idx += 1;
+            } else {
+                self.selected_idx = 0;
+            }
+        }
+    }
+}
+
 impl SearchConnectionModal {
     pub fn with_all_connections(connection_count: usize) -> Self {
         Self {
@@ -310,6 +562,7 @@ pub enum ModalState {
     SearchProject(SearchProjectModal),
     SearchConnection(SearchConnectionModal),
     History(HistoryModal),
+    ColumnVisibility(ColumnVisibilityModal),
 }
 
 pub struct App {
@@ -332,6 +585,8 @@ pub struct App {
     pub history_dirty: bool,
     /// Data table scroll state for navigation
     pub data_table_state: TableState,
+    /// Column visibility settings for schema sub-tabs
+    pub column_visibility: ColumnVisibilitySettings,
 }
 
 impl App {
@@ -355,6 +610,7 @@ impl App {
             query_history: QueryHistory::new(),
             history_dirty: false,
             data_table_state: TableState::default(),
+            column_visibility: ColumnVisibilitySettings::default(),
         }
     }
 
@@ -377,6 +633,7 @@ impl App {
             query_history: history,
             history_dirty: false,
             data_table_state: TableState::default(),
+            column_visibility: ColumnVisibilitySettings::default(),
         }
     }
 
@@ -562,6 +819,36 @@ impl App {
                 self.modal_state = ModalState::None;
             }
 
+            Message::OpenColumnVisibilityModal => {
+                // Only open in Schema tab (not Data or Relations)
+                if self.main_panel_tab == MainPanelTab::Schema {
+                    self.modal_state = ModalState::ColumnVisibility(ColumnVisibilityModal::new(
+                        self.schema_sub_tab,
+                    ));
+                }
+            }
+
+            Message::ToggleColumnVisibility => {
+                if let ModalState::ColumnVisibility(modal) = &self.modal_state {
+                    let idx = modal.selected_idx;
+                    let tab = modal.tab;
+                    match tab {
+                        SchemaSubTab::Columns => {
+                            self.column_visibility.columns.toggle(idx);
+                        }
+                        SchemaSubTab::Indexes => {
+                            self.column_visibility.indexes.toggle(idx);
+                        }
+                        SchemaSubTab::ForeignKeys => {
+                            self.column_visibility.foreign_keys.toggle(idx);
+                        }
+                        SchemaSubTab::Constraints => {
+                            self.column_visibility.constraints.toggle(idx);
+                        }
+                    }
+                }
+            }
+
             Message::CloseModal => {
                 self.modal_state = ModalState::None;
             }
@@ -628,6 +915,10 @@ impl App {
                     }
                     ModalState::SearchConnection(_) => {
                         // SearchConnection uses SearchConnectionConfirm instead of ModalConfirm
+                    }
+                    ModalState::ColumnVisibility(_) => {
+                        // ColumnVisibility uses ToggleColumnVisibility, just close on confirm
+                        self.modal_state = ModalState::None;
                     }
                     ModalState::None | ModalState::History(_) => {}
                 }
@@ -725,6 +1016,9 @@ impl App {
                 ModalState::SearchConnection(modal) => {
                     modal.navigate_down();
                 }
+                ModalState::ColumnVisibility(modal) => {
+                    modal.navigate_down();
+                }
                 ModalState::None | ModalState::History(_) => {}
             },
 
@@ -742,6 +1036,9 @@ impl App {
                     modal.navigate_up();
                 }
                 ModalState::SearchConnection(modal) => {
+                    modal.navigate_up();
+                }
+                ModalState::ColumnVisibility(modal) => {
                     modal.navigate_up();
                 }
                 ModalState::None | ModalState::History(_) => {}
