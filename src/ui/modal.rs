@@ -687,7 +687,7 @@ fn draw_search_connection_modal(
     frame.render_widget(help, chunks[3]);
 }
 
-/// Highlight matching substring in project name
+/// Highlight matching substring in text
 fn highlight_match(text: &str, query: &str, is_selected: bool) -> Line<'static> {
     let text_lower = text.to_lowercase();
     let query_lower = query.to_lowercase();

@@ -76,5 +76,11 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
             .unwrap_or(&[]),
         SidebarMode::Projects => &[],
     };
-    draw_modal(frame, &app.modal_state, &app.projects, connections, &app.query_history);
+    draw_modal(
+        frame,
+        &app.modal_state,
+        &app.projects,
+        connections,
+        &app.query_history,
+    );
 }
