@@ -32,6 +32,9 @@ pub enum Message {
     OpenSearchConnectionModal,
     SearchConfirm,
     SearchConnectionConfirm,
+    // Column visibility modal messages
+    OpenColumnVisibilityModal,
+    ToggleColumnVisibility,
     // Common modal messages
     CloseModal,
     ModalConfirm,

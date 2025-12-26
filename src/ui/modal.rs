@@ -1,6 +1,8 @@
 use crate::app::{
-    AddConnectionModal, ConfirmModalField, ConnectionModalField, DeleteProjectModal, HistoryModal,
-    ModalState, ProjectModal, ProjectModalField, SearchConnectionModal, SearchProjectModal,
+    AddConnectionModal, ColumnVisibilityModal, ColumnVisibilitySettings, ColumnsVisibility,
+    ConfirmModalField, ConnectionModalField, ConstraintsVisibility, DeleteProjectModal,
+    ForeignKeysVisibility, HistoryModal, IndexesVisibility, ModalState, ProjectModal,
+    ProjectModalField, SchemaSubTab, SearchConnectionModal, SearchProjectModal,
 };
 use crate::model::{Connection, Project, QueryHistory};
 use ratatui::{
@@ -17,6 +19,7 @@ pub fn draw_modal(
     projects: &[Project],
     connections: &[Connection],
     history: &QueryHistory,
+    column_visibility: &ColumnVisibilitySettings,
 ) {
     match modal_state {
         ModalState::None => {}
@@ -40,6 +43,9 @@ pub fn draw_modal(
         }
         ModalState::History(modal) => {
             draw_history_modal(frame, modal, history);
+        }
+        ModalState::ColumnVisibility(modal) => {
+            draw_column_visibility_modal(frame, modal, column_visibility);
         }
     }
 }
@@ -846,4 +852,124 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
             Constraint::Percentage((100 - percent_x) / 2),
         ])
         .split(popup_layout[1])[1]
+}
+
+fn draw_column_visibility_modal(
+    frame: &mut Frame,
+    modal: &ColumnVisibilityModal,
+    settings: &ColumnVisibilitySettings,
+) {
+    let area = centered_rect(45, 50, frame.area());
+
+    // Clear the area behind the modal
+    frame.render_widget(Clear, area);
+
+    // Modal title based on current tab
+    let title = match modal.tab {
+        SchemaSubTab::Columns => " Column Visibility - Columns ",
+        SchemaSubTab::Indexes => " Column Visibility - Indexes ",
+        SchemaSubTab::ForeignKeys => " Column Visibility - Foreign Keys ",
+        SchemaSubTab::Constraints => " Column Visibility - Constraints ",
+    };
+
+    // Modal container
+    let block = Block::default()
+        .title(title)
+        .title_alignment(Alignment::Center)
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Green));
+
+    frame.render_widget(block, area);
+
+    // Inner area for content
+    let inner = Rect {
+        x: area.x + 2,
+        y: area.y + 1,
+        width: area.width.saturating_sub(4),
+        height: area.height.saturating_sub(2),
+    };
+
+    // Get column names and visibility based on tab
+    let (column_names, visibility_fn): (&[&str], Box<dyn Fn(usize) -> bool>) = match modal.tab {
+        SchemaSubTab::Columns => (
+            ColumnsVisibility::all_columns(),
+            Box::new(|i| settings.columns.is_visible(i)),
+        ),
+        SchemaSubTab::Indexes => (
+            IndexesVisibility::all_columns(),
+            Box::new(|i| settings.indexes.is_visible(i)),
+        ),
+        SchemaSubTab::ForeignKeys => (
+            ForeignKeysVisibility::all_columns(),
+            Box::new(|i| settings.foreign_keys.is_visible(i)),
+        ),
+        SchemaSubTab::Constraints => (
+            ConstraintsVisibility::all_columns(),
+            Box::new(|i| settings.constraints.is_visible(i)),
+        ),
+    };
+
+    // Layout for column list and help text
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Min(3),    // Column list
+            Constraint::Length(2), // Help text
+        ])
+        .split(inner);
+
+    // Draw column list
+    let list_block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Gray))
+        .title(" Columns ");
+    let list_inner = list_block.inner(chunks[0]);
+    frame.render_widget(list_block, chunks[0]);
+
+    for (idx, col_name) in column_names.iter().enumerate() {
+        let is_selected = idx == modal.selected_idx;
+        let is_visible = visibility_fn(idx);
+
+        let checkbox = if is_visible { "[x]" } else { "[ ]" };
+
+        let style = if is_selected {
+            Style::default()
+                .fg(Color::Black)
+                .bg(Color::Cyan)
+                .add_modifier(Modifier::BOLD)
+        } else if is_visible {
+            Style::default().fg(Color::White)
+        } else {
+            Style::default().fg(Color::DarkGray)
+        };
+
+        let line = Line::from(vec![
+            Span::styled(format!(" {} ", checkbox), style),
+            Span::styled(*col_name, style),
+        ]);
+
+        if idx < list_inner.height as usize {
+            let item_area = Rect {
+                x: list_inner.x,
+                y: list_inner.y + idx as u16,
+                width: list_inner.width,
+                height: 1,
+            };
+
+            let paragraph = Paragraph::new(line);
+            frame.render_widget(paragraph, item_area);
+        }
+    }
+
+    // Draw help text
+    let help_text = Line::from(vec![
+        Span::styled("Space/Enter", Style::default().fg(Color::Green)),
+        Span::raw(": toggle  "),
+        Span::styled("Esc", Style::default().fg(Color::Red)),
+        Span::raw(": close  "),
+        Span::styled("j/k", Style::default().fg(Color::Cyan)),
+        Span::raw(": navigate"),
+    ]);
+    let help = Paragraph::new(help_text).alignment(Alignment::Center);
+    frame.render_widget(help, chunks[1]);
 }

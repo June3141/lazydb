@@ -7,8 +7,8 @@ mod ui;
 
 use anyhow::Result;
 use app::{
-    App, ConfirmModalField, ConnectionModalField, Focus, HistoryModal, MainPanelTab, ModalState,
-    ProjectModalField, SearchConnectionModal, SearchProjectModal,
+    App, ColumnVisibilityModal, ConfirmModalField, ConnectionModalField, Focus, HistoryModal,
+    MainPanelTab, ModalState, ProjectModalField, SearchConnectionModal, SearchProjectModal,
 };
 use clap::Parser;
 use config::ConfigLoader;
@@ -191,6 +191,10 @@ fn run_app(
                     {
                         Some(Message::OpenSearchConnectionModal)
                     }
+                    // Column visibility: 'c' key in Schema tab
+                    (KeyCode::Char('c'), _) if app.main_panel_tab == MainPanelTab::Schema => {
+                        Some(Message::OpenColumnVisibilityModal)
+                    }
                     _ => None,
                 }
             };
@@ -230,6 +234,9 @@ fn handle_modal_input(app: &App, key_code: KeyCode) -> Option<Message> {
             handle_search_connection_modal_input(key_code, modal)
         }
         ModalState::History(modal) => handle_history_modal_input(key_code, modal),
+        ModalState::ColumnVisibility(modal) => {
+            handle_column_visibility_modal_input(key_code, modal)
+        }
     }
 }
 
@@ -392,6 +399,19 @@ fn handle_history_modal_input(key_code: KeyCode, _modal: &HistoryModal) -> Optio
         KeyCode::Enter => Some(Message::HistorySelectEntry),
         // 'c' to clear history
         KeyCode::Char('c') => Some(Message::ClearHistory),
+        _ => None,
+    }
+}
+
+fn handle_column_visibility_modal_input(
+    key_code: KeyCode,
+    _modal: &ColumnVisibilityModal,
+) -> Option<Message> {
+    match key_code {
+        KeyCode::Esc | KeyCode::Char('q') => Some(Message::CloseModal),
+        KeyCode::Up | KeyCode::Char('k') => Some(Message::ModalPrevField),
+        KeyCode::Down | KeyCode::Char('j') => Some(Message::ModalNextField),
+        KeyCode::Enter | KeyCode::Char(' ') => Some(Message::ToggleColumnVisibility),
         _ => None,
     }
 }
