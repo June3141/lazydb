@@ -926,7 +926,23 @@ fn draw_column_visibility_modal(
     let list_inner = list_block.inner(chunks[0]);
     frame.render_widget(list_block, chunks[0]);
 
-    for (idx, col_name) in column_names.iter().enumerate() {
+    let visible_height = list_inner.height as usize;
+    let total_items = column_names.len();
+
+    // Calculate scroll offset to keep selected item visible
+    let scroll_offset = if visible_height == 0 || total_items <= visible_height {
+        0
+    } else if modal.selected_idx >= visible_height {
+        (modal.selected_idx - visible_height + 1).min(total_items.saturating_sub(visible_height))
+    } else {
+        0
+    };
+
+    for (display_idx, idx) in (scroll_offset..total_items)
+        .take(visible_height)
+        .enumerate()
+    {
+        let col_name = column_names[idx];
         let is_selected = idx == modal.selected_idx;
         let is_visible = visibility_fn(idx);
 
@@ -945,20 +961,18 @@ fn draw_column_visibility_modal(
 
         let line = Line::from(vec![
             Span::styled(format!(" {} ", checkbox), style),
-            Span::styled(*col_name, style),
+            Span::styled(col_name, style),
         ]);
 
-        if idx < list_inner.height as usize {
-            let item_area = Rect {
-                x: list_inner.x,
-                y: list_inner.y + idx as u16,
-                width: list_inner.width,
-                height: 1,
-            };
+        let item_area = Rect {
+            x: list_inner.x,
+            y: list_inner.y + display_idx as u16,
+            width: list_inner.width,
+            height: 1,
+        };
 
-            let paragraph = Paragraph::new(line);
-            frame.render_widget(paragraph, item_area);
-        }
+        let paragraph = Paragraph::new(line);
+        frame.render_widget(paragraph, item_area);
     }
 
     // Draw help text

@@ -191,8 +191,11 @@ fn run_app(
                     {
                         Some(Message::OpenSearchConnectionModal)
                     }
-                    // Column visibility: 'c' key in Schema tab
-                    (KeyCode::Char('c'), _) if app.main_panel_tab == MainPanelTab::Schema => {
+                    // Column visibility: 'c' key in Schema tab when main panel is focused
+                    (KeyCode::Char('c'), _)
+                        if app.focus == Focus::MainPanel
+                            && app.main_panel_tab == MainPanelTab::Schema =>
+                    {
                         Some(Message::OpenColumnVisibilityModal)
                     }
                     _ => None,
