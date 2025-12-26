@@ -897,7 +897,9 @@ impl App {
                         self.selected_table_idx = Some(table_idx);
                         if let SidebarMode::Connections(proj_idx) = self.sidebar_mode {
                             if let Some(project) = self.projects.get(proj_idx) {
-                                if let Some(conn) = project.connections.get(self.selected_connection_idx) {
+                                if let Some(conn) =
+                                    project.connections.get(self.selected_connection_idx)
+                                {
                                     if let Some(table) = conn.tables.get(table_idx) {
                                         self.status_message = format!("Selected: {}", table.name);
                                     }
@@ -1052,7 +1054,9 @@ impl App {
                     modal.query.push(c);
                     if let SidebarMode::Connections(proj_idx) = self.sidebar_mode {
                         if let Some(project) = self.projects.get(proj_idx) {
-                            if let Some(conn) = project.connections.get(self.selected_connection_idx) {
+                            if let Some(conn) =
+                                project.connections.get(self.selected_connection_idx)
+                            {
                                 modal.update_filter(&conn.tables);
                             }
                         }
@@ -1104,7 +1108,9 @@ impl App {
                     modal.query.pop();
                     if let SidebarMode::Connections(proj_idx) = self.sidebar_mode {
                         if let Some(project) = self.projects.get(proj_idx) {
-                            if let Some(conn) = project.connections.get(self.selected_connection_idx) {
+                            if let Some(conn) =
+                                project.connections.get(self.selected_connection_idx)
+                            {
                                 modal.update_filter(&conn.tables);
                             }
                         }
