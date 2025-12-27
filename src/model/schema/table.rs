@@ -30,11 +30,11 @@ impl TableType {
     /// Returns the icon for this table type (Nerd Font icons)
     pub fn icon(&self) -> &'static str {
         match self {
-            TableType::BaseTable => "󰓫",      // table icon
-            TableType::View => "󰈈",           // eye icon (view)
+            TableType::BaseTable => "󰓫",        // table icon
+            TableType::View => "󰈈",             // eye icon (view)
             TableType::MaterializedView => "󱁉", // cached/materialized icon
-            TableType::ForeignTable => "󰌷",   // link/external icon
-            TableType::Temporary => "󰔛",      // clock/temporary icon
+            TableType::ForeignTable => "󰌷",     // link/external icon
+            TableType::Temporary => "󰔛",        // clock/temporary icon
         }
     }
 
