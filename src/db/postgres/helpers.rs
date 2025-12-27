@@ -113,6 +113,20 @@ pub fn parse_column_sort_order(index_def: &str, column_name: &str) -> SortOrder 
 ///
 /// Uses the pre-fetched column type information to efficiently convert values
 /// without trial-and-error type checking on each row.
+///
+/// # Warning: NUMERIC Precision Loss
+///
+/// PostgreSQL `NUMERIC` values are converted to `f64`, which **will lose precision**
+/// for high-precision decimal values. PostgreSQL `NUMERIC` can store up to 131,072
+/// digits before the decimal point and 16,383 after, while `f64` has only ~15-17
+/// significant digits.
+///
+/// **Do not rely on this function when exact `NUMERIC` values are required**
+/// (e.g., financial calculations, scientific computations, or cryptographic operations).
+/// For such use cases, consider:
+/// - Using the `rust_decimal` crate with `BigDecimal` type
+/// - Fetching `NUMERIC` columns as `TEXT` and parsing in higher-level code
+/// - Using a specialized decimal library appropriate for your precision requirements
 pub fn convert_value_to_string(
     row: &postgres::Row,
     index: usize,
@@ -152,9 +166,12 @@ pub fn convert_value_to_string(
             .flatten()
             .map(|v| v.to_string())
             .unwrap_or_else(|| "NULL".to_string()),
-        // Note: NUMERIC is converted to f64 which may lose precision for high-precision
-        // decimal values. PostgreSQL NUMERIC can have up to 131072 digits before the decimal
-        // and 16383 after, while f64 has only ~15-17 significant digits.
+        // WARNING: NUMERIC is converted to f64 here, which can lose precision for
+        // high-precision decimal values. PostgreSQL NUMERIC can have up to 131072 digits
+        // before the decimal point and 16383 after, while f64 has only ~15-17 significant
+        // digits. Do not rely on this helper when exact NUMERIC values are required
+        // (for example, in financial or scientific calculations); instead, fetch these
+        // columns using a decimal/BigDecimal type or as text in higher-level code.
         Type::FLOAT8 | Type::NUMERIC => row
             .try_get::<_, Option<f64>>(index)
             .ok()
