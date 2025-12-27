@@ -225,6 +225,16 @@ impl App {
                 self.schema_sub_tab = SchemaSubTab::Constraints;
             }
 
+            Message::SwitchToDefinition => {
+                // Only switch to Definition tab if current table is a view
+                if let Some(table) = self.selected_table_info() {
+                    if table.table_type.is_view() {
+                        self.main_panel_tab = MainPanelTab::Schema;
+                        self.schema_sub_tab = SchemaSubTab::Definition;
+                    }
+                }
+            }
+
             Message::OpenAddConnectionModal => {
                 self.modal_state = ModalState::AddConnection(AddConnectionModal::default());
             }
@@ -430,6 +440,9 @@ impl App {
                         }
                         SchemaSubTab::Constraints => {
                             self.column_visibility.constraints.toggle(idx);
+                        }
+                        SchemaSubTab::Definition => {
+                            // No visibility settings for Definition tab
                         }
                     }
                 }
@@ -1476,6 +1489,7 @@ mod tests {
                 size_bytes: 0,
                 comment: None,
                 details_loaded: false,
+                view_definition: None,
             },
             Table {
                 name: "orders".to_string(),
@@ -1489,6 +1503,7 @@ mod tests {
                 size_bytes: 0,
                 comment: None,
                 details_loaded: false,
+                view_definition: None,
             },
             Table {
                 name: "user_sessions".to_string(),
@@ -1502,6 +1517,7 @@ mod tests {
                 size_bytes: 0,
                 comment: None,
                 details_loaded: false,
+                view_definition: None,
             },
             Table {
                 name: "products".to_string(),
@@ -1515,6 +1531,7 @@ mod tests {
                 size_bytes: 0,
                 comment: None,
                 details_loaded: false,
+                view_definition: None,
             },
         ]
     }

@@ -16,11 +16,12 @@ pub enum Message {
     SwitchToSchema,
     SwitchToData,
     SwitchToRelations,
-    // Schema sub-tabs (1-4 keys)
+    // Schema sub-tabs (1-5 keys)
     SwitchToColumns,
     SwitchToIndexes,
     SwitchToForeignKeys,
     SwitchToConstraints,
+    SwitchToDefinition,
     // Connection modal messages
     OpenAddConnectionModal,
     // Project modal messages
