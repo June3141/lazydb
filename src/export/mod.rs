@@ -1,3 +1,6 @@
+// TODO: Remove #[allow(dead_code)] once export is integrated with UI
+#![allow(dead_code)]
+
 mod csv;
 mod json;
 
@@ -281,7 +284,11 @@ mod tests {
     #[test]
     fn test_export_to_nested_directory() {
         let temp_dir = TempDir::new().unwrap();
-        let nested_path = temp_dir.path().join("subdir").join("deep").join("output.csv");
+        let nested_path = temp_dir
+            .path()
+            .join("subdir")
+            .join("deep")
+            .join("output.csv");
 
         // 親ディレクトリを作成
         fs::create_dir_all(nested_path.parent().unwrap()).unwrap();
