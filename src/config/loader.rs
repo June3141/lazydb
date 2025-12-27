@@ -72,7 +72,7 @@ impl ConfigLoader {
         let content = fs::read_to_string(&config_path)
             .with_context(|| format!("Failed to read config file: {}", config_path.display()))?;
 
-        let config: Config = serde_yml::from_str(&content)
+        let config: Config = serde_norway::from_str(&content)
             .with_context(|| format!("Failed to parse config file: {}", config_path.display()))?;
 
         Ok(config)
@@ -91,7 +91,7 @@ impl ConfigLoader {
         }
 
         let config_path = self.config_file_path();
-        let content = serde_yml::to_string(config).context("Failed to serialize config")?;
+        let content = serde_norway::to_string(config).context("Failed to serialize config")?;
 
         fs::write(&config_path, content)
             .with_context(|| format!("Failed to write config file: {}", config_path.display()))?;
@@ -122,7 +122,7 @@ impl ConfigLoader {
         let content = fs::read_to_string(&resolved_path)
             .with_context(|| format!("Failed to read project file: {}", resolved_path.display()))?;
 
-        let project_file: ProjectFile = serde_yml::from_str(&content).with_context(|| {
+        let project_file: ProjectFile = serde_norway::from_str(&content).with_context(|| {
             format!("Failed to parse project file: {}", resolved_path.display())
         })?;
 
@@ -142,7 +142,7 @@ impl ConfigLoader {
         }
 
         let content =
-            serde_yml::to_string(project_file).context("Failed to serialize project file")?;
+            serde_norway::to_string(project_file).context("Failed to serialize project file")?;
 
         fs::write(&resolved_path, content).with_context(|| {
             format!("Failed to write project file: {}", resolved_path.display())
@@ -272,7 +272,7 @@ impl ConfigLoader {
         let content = fs::read_to_string(&history_path)
             .with_context(|| format!("Failed to read history file: {}", history_path.display()))?;
 
-        let history: QueryHistory = serde_yml::from_str(&content)
+        let history: QueryHistory = serde_norway::from_str(&content)
             .with_context(|| format!("Failed to parse history file: {}", history_path.display()))?;
 
         Ok(history)
@@ -291,7 +291,7 @@ impl ConfigLoader {
         }
 
         let history_path = self.history_file_path();
-        let content = serde_yml::to_string(history).context("Failed to serialize history")?;
+        let content = serde_norway::to_string(history).context("Failed to serialize history")?;
 
         fs::write(&history_path, content)
             .with_context(|| format!("Failed to write history file: {}", history_path.display()))?;

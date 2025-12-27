@@ -140,7 +140,7 @@ projects:
   - projects/my-project.yaml
   - ~/work/other-project.yaml
 "#;
-        let config: Config = serde_yml::from_str(yaml).unwrap();
+        let config: Config = serde_norway::from_str(yaml).unwrap();
         assert_eq!(
             config.settings.default_project,
             Some("my-project".to_string())
@@ -169,7 +169,7 @@ connections:
     username: dev
     password: dev123
 "#;
-        let project_file: ProjectFile = serde_yml::from_str(yaml).unwrap();
+        let project_file: ProjectFile = serde_norway::from_str(yaml).unwrap();
         assert_eq!(project_file.project.name, "My Project");
         assert_eq!(project_file.connections.len(), 2);
         assert_eq!(project_file.connections[0].port, 5432);
