@@ -4,7 +4,9 @@ use ratatui::widgets::TableState;
 
 use crate::db::{DatabaseProvider, PostgresProvider};
 use crate::message::Message;
-use crate::model::{Connection, HistoryEntry, Pagination, Project, QueryHistory, QueryResult, Table};
+use crate::model::{
+    Connection, HistoryEntry, Pagination, Project, QueryHistory, QueryResult, Table,
+};
 
 use super::enums::{Focus, MainPanelTab, SchemaSubTab, SidebarMode};
 use super::modal_fields::{ConfirmModalField, ConnectionModalField, ProjectModalField};

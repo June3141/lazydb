@@ -1,8 +1,8 @@
 //! Table types and structures
 
-use super::{Column, Constraint, ForeignKey, Index};
 #[cfg(test)]
 use super::ForeignKeyAction;
+use super::{Column, Constraint, ForeignKey, Index};
 
 /// Table type
 #[derive(Debug, Clone, PartialEq)]
