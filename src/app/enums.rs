@@ -24,6 +24,8 @@ pub enum SchemaSubTab {
     Indexes,
     ForeignKeys,
     Constraints,
+    /// View/Materialized View definition (SELECT statement)
+    Definition,
 }
 
 /// Sidebar display mode - switches between Projects list and Connections list
