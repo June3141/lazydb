@@ -3,6 +3,7 @@ use crate::app::{
     ConfirmModalField, ConnectionModalField, ConstraintsVisibility, DeleteProjectModal,
     ForeignKeysVisibility, HistoryModal, IndexesVisibility, ModalState, ProjectModal,
     ProjectModalField, SchemaSubTab, SearchConnectionModal, SearchProjectModal, SearchTableModal,
+    UnifiedSearchModal, UnifiedSearchSection,
 };
 use crate::model::{Connection, Project, QueryHistory, Table};
 use ratatui::{
@@ -46,6 +47,9 @@ pub fn draw_modal(
             if let Some(tables) = tables {
                 draw_search_table_modal(frame, modal, tables);
             }
+        }
+        ModalState::UnifiedSearch(modal) => {
+            draw_unified_search_modal(frame, modal, connections, tables.unwrap_or(&[]));
         }
         ModalState::History(modal) => {
             draw_history_modal(frame, modal, history);
@@ -1122,4 +1126,200 @@ fn draw_column_visibility_modal(
     ]);
     let help = Paragraph::new(help_text).alignment(Alignment::Center);
     frame.render_widget(help, chunks[1]);
+}
+
+fn draw_unified_search_modal(
+    frame: &mut Frame,
+    modal: &UnifiedSearchModal,
+    connections: &[Connection],
+    tables: &[Table],
+) {
+    let area = centered_rect(55, 70, frame.area());
+
+    // Clear the area behind the modal
+    frame.render_widget(Clear, area);
+
+    // Modal container
+    let block = Block::default()
+        .title(" Search ")
+        .title_alignment(Alignment::Center)
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Cyan));
+
+    frame.render_widget(block, area);
+
+    // Inner area for content
+    let inner = Rect {
+        x: area.x + 1,
+        y: area.y + 1,
+        width: area.width.saturating_sub(2),
+        height: area.height.saturating_sub(2),
+    };
+
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(3), // Search input
+            Constraint::Min(4),    // First section (dynamic)
+            Constraint::Min(4),    // Second section (dynamic)
+            Constraint::Length(2), // Help text
+        ])
+        .split(inner);
+
+    // Draw search input field
+    let search_display = format!("{}_", modal.query);
+    let search_input = Paragraph::new(search_display)
+        .style(
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        )
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(Color::Yellow))
+                .title(" Search "),
+        );
+    frame.render_widget(search_input, chunks[0]);
+
+    // Determine section order based on tables_first
+    let (first_section, second_section) = if modal.tables_first {
+        (chunks[1], chunks[2])
+    } else {
+        (chunks[2], chunks[1])
+    };
+
+    // Draw connections section
+    let conn_is_active = modal.active_section == UnifiedSearchSection::Connections;
+    let conn_section = if modal.tables_first {
+        second_section
+    } else {
+        first_section
+    };
+    draw_unified_section(
+        frame,
+        conn_section,
+        &format!(" Connections ({}) ", modal.connection_count()),
+        connections
+            .iter()
+            .enumerate()
+            .filter(|(idx, _)| modal.filtered_connection_indices.contains(idx))
+            .map(|(_, c)| c.name.as_str())
+            .collect::<Vec<_>>(),
+        modal.selected_connection_idx,
+        &modal.query,
+        conn_is_active,
+    );
+
+    // Draw tables section
+    let table_is_active = modal.active_section == UnifiedSearchSection::Tables;
+    let table_section = if modal.tables_first {
+        first_section
+    } else {
+        second_section
+    };
+    draw_unified_section(
+        frame,
+        table_section,
+        &format!(" Tables ({}) ", modal.table_count()),
+        tables
+            .iter()
+            .enumerate()
+            .filter(|(idx, _)| modal.filtered_table_indices.contains(idx))
+            .map(|(_, t)| t.name.as_str())
+            .collect::<Vec<_>>(),
+        modal.selected_table_idx,
+        &modal.query,
+        table_is_active,
+    );
+
+    // Draw help text
+    let help_text = Line::from(vec![
+        Span::styled("Enter", Style::default().fg(Color::Green)),
+        Span::raw(": select  "),
+        Span::styled("Tab", Style::default().fg(Color::Magenta)),
+        Span::raw(": switch  "),
+        Span::styled("Esc", Style::default().fg(Color::Red)),
+        Span::raw(": cancel  "),
+        Span::styled("↑/↓", Style::default().fg(Color::Cyan)),
+        Span::raw(": navigate"),
+    ]);
+    let help = Paragraph::new(help_text).alignment(Alignment::Center);
+    frame.render_widget(help, chunks[3]);
+}
+
+fn draw_unified_section(
+    frame: &mut Frame,
+    area: Rect,
+    title: &str,
+    items: Vec<&str>,
+    selected_idx: usize,
+    query: &str,
+    is_active: bool,
+) {
+    let border_color = if is_active {
+        Color::Cyan
+    } else {
+        Color::DarkGray
+    };
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(border_color))
+        .title(title);
+
+    let inner = block.inner(area);
+    frame.render_widget(block, area);
+
+    if items.is_empty() {
+        let empty_msg = Paragraph::new("No results")
+            .style(Style::default().fg(Color::DarkGray))
+            .alignment(Alignment::Center);
+        frame.render_widget(empty_msg, inner);
+        return;
+    }
+
+    let visible_height = inner.height as usize;
+    let scroll_offset = if selected_idx >= visible_height {
+        selected_idx - visible_height + 1
+    } else {
+        0
+    };
+
+    for (display_idx, item_name) in items
+        .iter()
+        .skip(scroll_offset)
+        .take(visible_height)
+        .enumerate()
+    {
+        let actual_idx = scroll_offset + display_idx;
+        let is_selected = is_active && actual_idx == selected_idx;
+
+        let style = if is_selected {
+            Style::default()
+                .fg(Color::Black)
+                .bg(Color::Cyan)
+                .add_modifier(Modifier::BOLD)
+        } else if is_active {
+            Style::default().fg(Color::White)
+        } else {
+            Style::default().fg(Color::DarkGray)
+        };
+
+        let line = if !query.is_empty() && is_active {
+            highlight_match(item_name, query, is_selected)
+        } else {
+            Line::from(Span::styled(item_name.to_string(), style))
+        };
+
+        let item_area = Rect {
+            x: inner.x,
+            y: inner.y + display_idx as u16,
+            width: inner.width,
+            height: 1,
+        };
+
+        let paragraph = Paragraph::new(line).style(style);
+        frame.render_widget(paragraph, item_area);
+    }
 }

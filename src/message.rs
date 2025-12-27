@@ -29,11 +29,16 @@ pub enum Message {
     DeleteProject,
     // Search modal messages
     OpenSearchProjectModal,
+    #[allow(dead_code)] // Legacy: kept for potential future use
     OpenSearchConnectionModal,
+    #[allow(dead_code)] // Legacy: kept for potential future use
     OpenSearchTableModal,
+    OpenUnifiedSearchModal,
     SearchConfirm,
     SearchConnectionConfirm,
     TableSearchConfirm,
+    UnifiedSearchConfirm,
+    UnifiedSearchSwitchSection,
     // Column visibility modal messages
     OpenColumnVisibilityModal,
     ToggleColumnVisibility,
