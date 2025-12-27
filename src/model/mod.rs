@@ -1,7 +1,11 @@
 mod connection;
+pub mod history;
+mod project;
 mod query;
-mod table;
+pub mod schema;
 
 pub use connection::Connection;
-pub use query::QueryResult;
-pub use table::{Column, Table};
+pub use history::{HistoryEntry, QueryHistory};
+pub use project::Project;
+pub use query::{Pagination, QueryResult};
+pub use schema::{ConstraintType, ForeignKey, IndexType, SortOrder, Table};

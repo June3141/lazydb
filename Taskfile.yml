@@ -5,6 +5,8 @@ includes:
     taskfile: ./.taskfile/rust.yml
   markdown:
     taskfile: ./.taskfile/markdown.yml
+  docker:
+    taskfile: ./.taskfile/docker.yml
 
 tasks:
   default:
