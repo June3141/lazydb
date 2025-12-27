@@ -190,27 +190,26 @@ fn draw_connections_view(frame: &mut Frame, app: &App, area: Rect, proj_idx: usi
                 let is_selected_table = conn_idx == app.selected_connection_idx
                     && app.selected_table_idx == Some(table_idx);
 
+                let is_view = table.table_type.is_view();
+
                 let table_style = if is_selected_table && is_focused {
                     Style::default()
                         .bg(Color::Cyan)
                         .fg(Color::Black)
                         .add_modifier(Modifier::BOLD)
                 } else if is_selected_table {
-                    Style::default().fg(Color::Yellow)
+                    // Use magenta for views, yellow for regular tables
+                    if is_view {
+                        Style::default().fg(Color::Magenta)
+                    } else {
+                        Style::default().fg(Color::Yellow)
+                    }
                 } else {
                     Style::default().fg(Color::Gray)
                 };
 
-                // Icon style: Views are shown in a different color
-                let icon_style = if table.table_type.is_view() {
-                    if is_selected_table && is_focused {
-                        Style::default().bg(Color::Cyan).fg(Color::Black)
-                    } else {
-                        Style::default().fg(Color::Magenta)
-                    }
-                } else {
-                    table_style
-                };
+                // Icon style matches table style for consistency
+                let icon_style = table_style;
 
                 let prefix = if table_idx == conn.tables.len() - 1 {
                     "  └─ "
