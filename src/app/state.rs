@@ -818,6 +818,9 @@ impl App {
     }
 
     /// Navigate data table by the given delta (positive = down, negative = up)
+    ///
+    /// Navigation is constrained within the current page boundaries to prevent
+    /// the row index from going beyond what is displayed on the current page.
     pub(crate) fn navigate_data_table(&mut self, delta: i32) {
         if let Some(result) = &self.result {
             if result.rows.is_empty() {
@@ -825,10 +828,18 @@ impl App {
             }
             let row_count = result.rows.len();
             let current = self.data_table_state.selected().unwrap_or(0);
+
+            // Get page boundaries from pagination state
+            let page_start = self.pagination.start_index();
+            let page_end = self.pagination.end_index().min(row_count);
+
             let new_idx = if delta < 0 {
-                current.saturating_sub((-delta) as usize)
+                // Moving up: don't go below page start
+                current.saturating_sub((-delta) as usize).max(page_start)
             } else {
-                (current + delta as usize).min(row_count - 1)
+                // Moving down: don't go beyond page end - 1 (or row_count - 1)
+                let max_idx = page_end.saturating_sub(1);
+                (current + delta as usize).min(max_idx)
             };
             self.data_table_state.select(Some(new_idx));
         }
@@ -1445,6 +1456,8 @@ mod tests {
                 total_rows: row_count,
                 execution_time_ms: 0,
             });
+            // Initialize pagination to match the result for navigation tests
+            app.pagination = Pagination::new(row_count);
         }
         app
     }
@@ -1588,14 +1601,16 @@ mod tests {
 
     #[test]
     fn test_navigate_data_table_page_navigation() {
+        // Test navigation within a single page (page size 50, 100 rows total)
         let mut app = create_test_app_with_result(100);
+        app.pagination.next_page(); // Move to page 2 (rows 50-99)
         app.data_table_state.select(Some(50));
 
-        // Page down (10 rows)
+        // Page down (10 rows) within page 2
         app.navigate_data_table(10);
         assert_eq!(app.data_table_state.selected(), Some(60));
 
-        // Page up (10 rows)
+        // Page up (10 rows) within page 2
         app.navigate_data_table(-10);
         assert_eq!(app.data_table_state.selected(), Some(50));
     }
@@ -1950,5 +1965,71 @@ mod tests {
         // Empty query shows all
         assert_eq!(modal.filtered_connection_indices.len(), 3);
         assert_eq!(modal.filtered_table_indices.len(), 4);
+    }
+
+    #[test]
+    fn test_navigate_data_table_respects_page_boundary_down() {
+        // Create app with 100 rows and page size 50
+        let mut app = create_test_app_with_result(100);
+        app.pagination = Pagination::new(100);
+        app.pagination.page_size = 50;
+        app.data_table_state.select(Some(49)); // Last row of page 1
+
+        // Pressing down at the last row of the page should NOT move past page boundary
+        app.navigate_data_table(1);
+
+        // Should stay at 49 (last row of current page), not go to 50
+        assert_eq!(app.data_table_state.selected(), Some(49));
+    }
+
+    #[test]
+    fn test_navigate_data_table_respects_page_boundary_up() {
+        // Create app with 100 rows and page size 50
+        let mut app = create_test_app_with_result(100);
+        app.pagination = Pagination::new(100);
+        app.pagination.page_size = 50;
+        app.pagination.next_page(); // Go to page 2 (rows 50-99)
+        app.data_table_state.select(Some(50)); // First row of page 2
+
+        // Pressing up at the first row of the page should NOT move past page boundary
+        app.navigate_data_table(-1);
+
+        // Should stay at 50 (first row of current page), not go to 49
+        assert_eq!(app.data_table_state.selected(), Some(50));
+    }
+
+    #[test]
+    fn test_navigate_data_table_within_page_works_normally() {
+        // Create app with 100 rows and page size 50
+        let mut app = create_test_app_with_result(100);
+        app.pagination = Pagination::new(100);
+        app.pagination.page_size = 50;
+        app.data_table_state.select(Some(25)); // Middle of page 1
+
+        // Normal navigation within page should work
+        app.navigate_data_table(1);
+        assert_eq!(app.data_table_state.selected(), Some(26));
+
+        app.navigate_data_table(-1);
+        assert_eq!(app.data_table_state.selected(), Some(25));
+
+        // Jump navigation within page
+        app.navigate_data_table(10);
+        assert_eq!(app.data_table_state.selected(), Some(35));
+    }
+
+    #[test]
+    fn test_navigate_data_table_last_page_partial_rows() {
+        // Create app with 75 rows and page size 50
+        // Page 2 has only 25 rows (indices 50-74)
+        let mut app = create_test_app_with_result(75);
+        app.pagination = Pagination::new(75);
+        app.pagination.page_size = 50;
+        app.pagination.next_page(); // Go to page 2
+        app.data_table_state.select(Some(74)); // Last row of data
+
+        // Trying to go down should stay at 74
+        app.navigate_data_table(1);
+        assert_eq!(app.data_table_state.selected(), Some(74));
     }
 }
