@@ -5,6 +5,9 @@ mod message;
 mod model;
 mod ui;
 
+use std::io;
+use std::time::Duration;
+
 use anyhow::Result;
 use app::{
     App, ColumnVisibilityModal, ConfirmModalField, ConnectionModalField, Focus, HistoryModal,
@@ -18,10 +21,14 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
+use db::spawn_db_worker;
 use message::Message;
 use model::Project;
 use ratatui::{backend::CrosstermBackend, Terminal};
-use std::io;
+
+/// Poll timeout for checking DB responses while waiting for input.
+/// Lower values = more responsive to async results but higher CPU usage.
+const POLL_TIMEOUT: Duration = Duration::from_millis(50);
 
 /// A simple terminal UI for database management
 #[derive(Parser, Debug)]
@@ -52,6 +59,10 @@ fn main() -> Result<()> {
     // Create app with loaded projects and history
     let mut app = App::with_history(projects, history);
 
+    // Spawn background DB worker thread
+    let db_worker = spawn_db_worker();
+    app.set_db_worker(db_worker);
+
     // Main loop
     let res = run_app(&mut terminal, &mut app, &config_loader);
 
@@ -79,6 +90,15 @@ fn run_app(
     loop {
         // View: render UI
         terminal.draw(|frame| ui::draw(frame, app))?;
+
+        // Process any pending DB responses (non-blocking)
+        app.process_db_responses();
+
+        // Poll for input events with timeout (allows checking DB responses regularly)
+        if !event::poll(POLL_TIMEOUT)? {
+            // No input event - continue loop to check for DB responses
+            continue;
+        }
 
         // Handle input events
         if let Event::Key(key) = event::read()? {
