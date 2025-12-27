@@ -4,6 +4,7 @@
 //! and related types organized into submodules.
 
 mod enums;
+mod loading;
 mod modal_fields;
 mod modals;
 mod state;
@@ -18,6 +19,8 @@ pub use modals::{
     UnifiedSearchSection,
 };
 pub use state::App;
+#[allow(unused_imports)]
+pub use loading::LoadingState;
 pub use visibility::{
     ColumnVisibilitySettings, ColumnsVisibility, ConstraintsVisibility, ForeignKeysVisibility,
     IndexesVisibility,
