@@ -1055,6 +1055,11 @@ impl App {
     fn toggle_connection_expand(&mut self, proj_idx: usize) {
         let conn_idx = self.selected_connection_idx;
 
+        // Skip if tables are already being fetched for this connection
+        if self.loading.is_fetching_tables_for(conn_idx) {
+            return;
+        }
+
         // First, check if we need to fetch tables (connection is being expanded and has no tables)
         let should_fetch = if let Some(project) = self.projects.get(proj_idx) {
             if let Some(conn) = project.connections.get(conn_idx) {
@@ -1112,7 +1117,9 @@ impl App {
             return;
         };
 
-        let query = format!("SELECT * FROM {}", table.name);
+        // Safely quote the table name as a SQL identifier, escaping any embedded double quotes
+        let escaped_table_name = table.name.replace('"', "\"\"");
+        let query = format!("SELECT * FROM \"{}\"", escaped_table_name);
         self.query = format!("{};", query);
 
         // Clone connection for async operation
@@ -1338,11 +1345,6 @@ impl App {
 
     /// Send a command to fetch tables asynchronously
     fn send_fetch_tables(&mut self, conn: &Connection, proj_idx: usize, conn_idx: usize) {
-        if self.db_worker.is_none() {
-            self.status_message = "DB worker not initialized".to_string();
-            return;
-        }
-
         let request_id = self.next_request_id();
         let connection = ConnectionParams::from_connection(conn);
 
@@ -1353,11 +1355,14 @@ impl App {
             target: (proj_idx, conn_idx),
         };
 
-        // Safe to unwrap since we checked above
-        if self.db_worker.as_ref().unwrap().send(cmd).is_ok() {
-            self.loading.start_fetching_tables(conn_idx);
+        if let Some(worker) = self.db_worker.as_ref() {
+            if worker.send(cmd).is_ok() {
+                self.loading.start_fetching_tables(conn_idx);
+            } else {
+                self.status_message = "Failed to send command to DB worker".to_string();
+            }
         } else {
-            self.status_message = "Failed to send command to DB worker".to_string();
+            self.status_message = "DB worker not initialized".to_string();
         }
     }
 
@@ -1371,11 +1376,6 @@ impl App {
         conn_idx: usize,
         table_idx: usize,
     ) {
-        if self.db_worker.is_none() {
-            self.status_message = "DB worker not initialized".to_string();
-            return;
-        }
-
         let request_id = self.next_request_id();
         let connection = ConnectionParams::from_connection(conn);
 
@@ -1387,21 +1387,20 @@ impl App {
             target: (proj_idx, conn_idx, table_idx),
         };
 
-        if self.db_worker.as_ref().unwrap().send(cmd).is_ok() {
-            self.loading
-                .start_fetching_details(proj_idx, conn_idx, table_idx);
+        if let Some(worker) = self.db_worker.as_ref() {
+            if worker.send(cmd).is_ok() {
+                self.loading
+                    .start_fetching_details(proj_idx, conn_idx, table_idx);
+            } else {
+                self.status_message = "Failed to send command to DB worker".to_string();
+            }
         } else {
-            self.status_message = "Failed to send command to DB worker".to_string();
+            self.status_message = "DB worker not initialized".to_string();
         }
     }
 
     /// Send a command to execute a query asynchronously
     fn send_execute_query(&mut self, conn: &Connection, query: &str, proj_idx: usize) {
-        if self.db_worker.is_none() {
-            self.status_message = "DB worker not initialized".to_string();
-            return;
-        }
-
         let request_id = self.next_request_id();
         let connection = ConnectionParams::from_connection(conn);
 
@@ -1416,10 +1415,15 @@ impl App {
             project_idx: proj_idx,
         };
 
-        if self.db_worker.as_ref().unwrap().send(cmd).is_ok() {
-            self.loading.start_executing_query();
+        if let Some(worker) = self.db_worker.as_ref() {
+            if worker.send(cmd).is_ok() {
+                self.loading.start_executing_query();
+            } else {
+                self.status_message = "Failed to send command to DB worker".to_string();
+                self.pending_query_info = None;
+            }
         } else {
-            self.status_message = "Failed to send command to DB worker".to_string();
+            self.status_message = "DB worker not initialized".to_string();
             self.pending_query_info = None;
         }
     }

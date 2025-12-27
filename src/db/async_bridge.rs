@@ -3,17 +3,32 @@
 //! This module defines the command and response types used for
 //! non-blocking database operations.
 
+use std::fmt;
+
 use crate::model::{Connection, QueryResult, Table};
 
 /// Parameters needed to establish a database connection.
 /// This is a thread-safe, owned version of connection details.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct ConnectionParams {
     pub host: String,
     pub port: u16,
     pub database: String,
     pub username: String,
     pub password: String,
+}
+
+// Custom Debug implementation to redact password for security
+impl fmt::Debug for ConnectionParams {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ConnectionParams")
+            .field("host", &self.host)
+            .field("port", &self.port)
+            .field("database", &self.database)
+            .field("username", &self.username)
+            .field("password", &"[REDACTED]")
+            .finish()
+    }
 }
 
 impl ConnectionParams {

@@ -26,6 +26,10 @@ use message::Message;
 use model::Project;
 use ratatui::{backend::CrosstermBackend, Terminal};
 
+/// Poll timeout for checking DB responses while waiting for input.
+/// Lower values = more responsive to async results but higher CPU usage.
+const POLL_TIMEOUT: Duration = Duration::from_millis(50);
+
 /// A simple terminal UI for database management
 #[derive(Parser, Debug)]
 #[command(name = "lazydb")]
@@ -77,10 +81,6 @@ fn main() -> Result<()> {
 
     Ok(())
 }
-
-/// Poll timeout for checking DB responses while waiting for input.
-/// Lower values = more responsive to async results but higher CPU usage.
-const POLL_TIMEOUT: Duration = Duration::from_millis(50);
 
 fn run_app(
     terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,

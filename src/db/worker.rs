@@ -203,7 +203,33 @@ pub fn spawn_db_worker() -> DbWorkerHandle {
 mod tests {
     use super::*;
     use std::sync::mpsc;
-    use std::time::Duration;
+    use std::time::{Duration, Instant};
+
+    /// Maximum time to wait for a response in tests
+    const TEST_TIMEOUT: Duration = Duration::from_secs(30);
+
+    /// Helper function to wait for a response with timeout
+    fn wait_for_response(handle: &DbWorkerHandle) -> DbResponse {
+        let start = Instant::now();
+        loop {
+            match handle.try_recv() {
+                Ok(resp) => return resp,
+                Err(mpsc::TryRecvError::Empty) => {
+                    if start.elapsed() > TEST_TIMEOUT {
+                        panic!(
+                            "Test timeout: no response received within {:?}",
+                            TEST_TIMEOUT
+                        );
+                    }
+                    thread::sleep(Duration::from_millis(100));
+                    continue;
+                }
+                Err(mpsc::TryRecvError::Disconnected) => {
+                    panic!("Worker disconnected unexpectedly");
+                }
+            }
+        }
+    }
 
     #[test]
     fn test_worker_shutdown() {
@@ -278,18 +304,7 @@ mod tests {
             .unwrap();
 
         // Wait for response with timeout
-        let response = loop {
-            match handle.try_recv() {
-                Ok(resp) => break resp,
-                Err(mpsc::TryRecvError::Empty) => {
-                    thread::sleep(Duration::from_millis(100));
-                    continue;
-                }
-                Err(mpsc::TryRecvError::Disconnected) => {
-                    panic!("Worker disconnected unexpectedly");
-                }
-            }
-        };
+        let response = wait_for_response(&handle);
 
         // Should get an error response
         match response {
@@ -328,18 +343,7 @@ mod tests {
             .unwrap();
 
         // Wait for response with timeout
-        let response = loop {
-            match handle.try_recv() {
-                Ok(resp) => break resp,
-                Err(mpsc::TryRecvError::Empty) => {
-                    thread::sleep(Duration::from_millis(100));
-                    continue;
-                }
-                Err(mpsc::TryRecvError::Disconnected) => {
-                    panic!("Worker disconnected unexpectedly");
-                }
-            }
-        };
+        let response = wait_for_response(&handle);
 
         match response {
             DbResponse::TableDetailsLoaded {
@@ -376,18 +380,7 @@ mod tests {
             .unwrap();
 
         // Wait for response with timeout
-        let response = loop {
-            match handle.try_recv() {
-                Ok(resp) => break resp,
-                Err(mpsc::TryRecvError::Empty) => {
-                    thread::sleep(Duration::from_millis(100));
-                    continue;
-                }
-                Err(mpsc::TryRecvError::Disconnected) => {
-                    panic!("Worker disconnected unexpectedly");
-                }
-            }
-        };
+        let response = wait_for_response(&handle);
 
         match response {
             DbResponse::QueryExecuted {
@@ -426,22 +419,10 @@ mod tests {
                 .unwrap();
         }
 
-        // Collect all responses
+        // Collect all responses with timeout
         let mut responses = Vec::new();
         for _ in 0..3 {
-            let response = loop {
-                match handle.try_recv() {
-                    Ok(resp) => break resp,
-                    Err(mpsc::TryRecvError::Empty) => {
-                        thread::sleep(Duration::from_millis(100));
-                        continue;
-                    }
-                    Err(mpsc::TryRecvError::Disconnected) => {
-                        panic!("Worker disconnected unexpectedly");
-                    }
-                }
-            };
-            responses.push(response);
+            responses.push(wait_for_response(&handle));
         }
 
         // Should have received all 3 responses
