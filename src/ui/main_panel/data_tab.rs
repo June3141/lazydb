@@ -98,8 +98,9 @@ pub fn draw_data_content(frame: &mut Frame, app: &mut App, area: Rect) {
         // Render table with state for scrolling
         frame.render_stateful_widget(table, table_chunks[0], &mut app.data_table_state);
 
-        // Render scrollbar
-        let mut scrollbar_state = ScrollbarState::new(page_row_count).position(selected_idx);
+        // Render scrollbar (use page-relative index, not absolute)
+        let page_relative_idx = page_relative_index(selected_idx, start);
+        let mut scrollbar_state = ScrollbarState::new(page_row_count).position(page_relative_idx);
         let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
             .begin_symbol(Some("▲"))
             .end_symbol(Some("▼"))
@@ -119,6 +120,15 @@ pub fn draw_data_content(frame: &mut Frame, app: &mut App, area: Rect) {
             Paragraph::new("No data to display").style(Style::default().fg(Color::DarkGray));
         frame.render_widget(empty, area);
     }
+}
+
+/// Calculate page-relative index for scrollbar position.
+///
+/// The scrollbar should show position within the current page, not the absolute
+/// index across all pages. For example, on page 2 with 50 rows per page,
+/// if selected_idx is 75 (absolute), the page-relative index should be 25.
+fn page_relative_index(selected_idx: usize, page_start: usize) -> usize {
+    selected_idx.saturating_sub(page_start)
 }
 
 /// Formats the info bar text showing the current row position within the page.
@@ -211,6 +221,40 @@ fn draw_pagination_bar(frame: &mut Frame, app: &App, area: Rect) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_page_relative_index_first_page() {
+        // Page 1: start=0, selected=0 -> relative=0
+        assert_eq!(page_relative_index(0, 0), 0);
+        // Page 1: start=0, selected=25 -> relative=25
+        assert_eq!(page_relative_index(25, 0), 25);
+        // Page 1: start=0, selected=49 -> relative=49
+        assert_eq!(page_relative_index(49, 0), 49);
+    }
+
+    #[test]
+    fn test_page_relative_index_second_page() {
+        // Page 2: start=50, selected=50 -> relative=0
+        assert_eq!(page_relative_index(50, 50), 0);
+        // Page 2: start=50, selected=75 -> relative=25
+        assert_eq!(page_relative_index(75, 50), 25);
+        // Page 2: start=50, selected=99 -> relative=49
+        assert_eq!(page_relative_index(99, 50), 49);
+    }
+
+    #[test]
+    fn test_page_relative_index_later_pages() {
+        // Page 5: start=200, selected=225 -> relative=25
+        assert_eq!(page_relative_index(225, 200), 25);
+        // Page 10: start=450, selected=475 -> relative=25
+        assert_eq!(page_relative_index(475, 450), 25);
+    }
+
+    #[test]
+    fn test_page_relative_index_saturating_sub() {
+        // Edge case: if somehow selected_idx < page_start, should return 0
+        assert_eq!(page_relative_index(10, 50), 0);
+    }
 
     #[test]
     fn test_format_info_bar_text_first_page_first_row() {
