@@ -700,6 +700,18 @@ impl App {
         !matches!(self.modal_state, ModalState::None)
     }
 
+    /// Check if the currently selected connection is expanded
+    pub fn is_connection_expanded(&self) -> bool {
+        if let SidebarMode::Connections(proj_idx) = self.sidebar_mode {
+            if let Some(project) = self.projects.get(proj_idx) {
+                if let Some(conn) = project.connections.get(self.selected_connection_idx) {
+                    return conn.expanded;
+                }
+            }
+        }
+        false
+    }
+
     /// Update app state based on message. Returns true if app should quit.
     pub fn update(&mut self, message: Message) -> bool {
         match message {

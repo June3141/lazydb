@@ -29,7 +29,6 @@ pub enum Message {
     DeleteProject,
     // Search modal messages
     OpenSearchProjectModal,
-    #[allow(dead_code)] // Reserved for future connection search feature
     OpenSearchConnectionModal,
     OpenSearchTableModal,
     SearchConfirm,

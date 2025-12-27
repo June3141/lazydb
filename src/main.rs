@@ -185,12 +185,18 @@ fn run_app(
                     {
                         Some(Message::OpenSearchProjectModal)
                     }
-                    // Table search: '/' key in Connections view (when a connection is expanded)
+                    // Connection/Table search: '/' key in Connections view
+                    // - If connection is expanded: search tables
+                    // - Otherwise: search connections
                     (KeyCode::Char('/'), _)
                         if app.focus == Focus::Sidebar
                             && matches!(app.sidebar_mode, app::SidebarMode::Connections(_)) =>
                     {
-                        Some(Message::OpenSearchTableModal)
+                        if app.is_connection_expanded() {
+                            Some(Message::OpenSearchTableModal)
+                        } else {
+                            Some(Message::OpenSearchConnectionModal)
+                        }
                     }
                     // Column visibility: 'c' key in Schema tab when main panel is focused
                     (KeyCode::Char('c'), _)
