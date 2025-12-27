@@ -186,7 +186,7 @@ fn run_app(
                         Some(Message::OpenSearchProjectModal)
                     }
                     // Unified search: '/' key in Connections view
-                    // Searches both connections and tables simultaneously
+                    // Searches connections, and tables if a connection is expanded
                     (KeyCode::Char('/'), _)
                         if app.focus == Focus::Sidebar
                             && matches!(app.sidebar_mode, app::SidebarMode::Connections(_)) =>

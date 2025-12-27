@@ -1182,30 +1182,34 @@ fn draw_unified_search_modal(
         );
     frame.render_widget(search_input, chunks[0]);
 
-    // Determine section order based on tables_first
-    let (first_section, second_section) = if modal.tables_first {
-        (chunks[1], chunks[2])
+    // Determine section positions based on tables_first
+    // chunks[1] = top section, chunks[2] = bottom section
+    let (conn_area, table_area) = if modal.tables_first {
+        (chunks[2], chunks[1]) // tables on top, connections on bottom
     } else {
-        (chunks[2], chunks[1])
+        (chunks[1], chunks[2]) // connections on top, tables on bottom
     };
+
+    // Collect filtered items by iterating through filtered indices (O(n) instead of O(n²))
+    let conn_items: Vec<&str> = modal
+        .filtered_connection_indices
+        .iter()
+        .filter_map(|&idx| connections.get(idx).map(|c| c.name.as_str()))
+        .collect();
+
+    let table_items: Vec<&str> = modal
+        .filtered_table_indices
+        .iter()
+        .filter_map(|&idx| tables.get(idx).map(|t| t.name.as_str()))
+        .collect();
 
     // Draw connections section
     let conn_is_active = modal.active_section == UnifiedSearchSection::Connections;
-    let conn_section = if modal.tables_first {
-        second_section
-    } else {
-        first_section
-    };
     draw_unified_section(
         frame,
-        conn_section,
+        conn_area,
         &format!(" Connections ({}) ", modal.connection_count()),
-        connections
-            .iter()
-            .enumerate()
-            .filter(|(idx, _)| modal.filtered_connection_indices.contains(idx))
-            .map(|(_, c)| c.name.as_str())
-            .collect::<Vec<_>>(),
+        conn_items,
         modal.selected_connection_idx,
         &modal.query,
         conn_is_active,
@@ -1213,21 +1217,11 @@ fn draw_unified_search_modal(
 
     // Draw tables section
     let table_is_active = modal.active_section == UnifiedSearchSection::Tables;
-    let table_section = if modal.tables_first {
-        first_section
-    } else {
-        second_section
-    };
     draw_unified_section(
         frame,
-        table_section,
+        table_area,
         &format!(" Tables ({}) ", modal.table_count()),
-        tables
-            .iter()
-            .enumerate()
-            .filter(|(idx, _)| modal.filtered_table_indices.contains(idx))
-            .map(|(_, t)| t.name.as_str())
-            .collect::<Vec<_>>(),
+        table_items,
         modal.selected_table_idx,
         &modal.query,
         table_is_active,
