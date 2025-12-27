@@ -12,6 +12,8 @@ mod visibility;
 
 // Re-export all public types for external use
 pub use enums::{Focus, MainPanelTab, SchemaSubTab, SidebarMode};
+#[allow(unused_imports)]
+pub use loading::LoadingState;
 pub use modal_fields::{ConfirmModalField, ConnectionModalField, ProjectModalField};
 pub use modals::{
     AddConnectionModal, ColumnVisibilityModal, DeleteProjectModal, HistoryModal, ModalState,
@@ -19,8 +21,6 @@ pub use modals::{
     UnifiedSearchSection,
 };
 pub use state::App;
-#[allow(unused_imports)]
-pub use loading::LoadingState;
 pub use visibility::{
     ColumnVisibilitySettings, ColumnsVisibility, ConstraintsVisibility, ForeignKeysVisibility,
     IndexesVisibility,

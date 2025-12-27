@@ -18,9 +18,7 @@ pub struct LoadingState {
 impl LoadingState {
     /// Returns true if any loading operation is in progress
     pub fn is_loading(&self) -> bool {
-        self.fetching_tables.is_some()
-            || self.fetching_details.is_some()
-            || self.executing_query
+        self.fetching_tables.is_some() || self.fetching_details.is_some() || self.executing_query
     }
 
     /// Clear all loading states

@@ -2,9 +2,7 @@
 
 use ratatui::widgets::TableState;
 
-use crate::db::{
-    ConnectionParams, DbCommand, DbResponse, DbWorkerHandle,
-};
+use crate::db::{ConnectionParams, DbCommand, DbResponse, DbWorkerHandle};
 use crate::message::Message;
 use crate::model::{
     Connection, HistoryEntry, Pagination, Project, QueryHistory, QueryResult, Table,
@@ -1205,14 +1203,10 @@ impl App {
     /// Handle a single DB response
     fn handle_db_response(&mut self, response: DbResponse) {
         match response {
-            DbResponse::TablesLoaded {
-                result, target, ..
-            } => {
+            DbResponse::TablesLoaded { result, target, .. } => {
                 self.handle_tables_loaded(result, target);
             }
-            DbResponse::TableDetailsLoaded {
-                result, target, ..
-            } => {
+            DbResponse::TableDetailsLoaded { result, target, .. } => {
                 self.handle_table_details_loaded(result, target);
             }
             DbResponse::QueryExecuted {
@@ -1314,8 +1308,7 @@ impl App {
                         row_count,
                     ));
                     self.history_dirty = true;
-                    self.status_message =
-                        format!("Fetched {} rows from {}", row_count, database);
+                    self.status_message = format!("Fetched {} rows from {}", row_count, database);
                 }
 
                 // Update result
@@ -1326,8 +1319,12 @@ impl App {
             Err(e) => {
                 // Add error to history if we have query info
                 if let Some((conn_name, database, query)) = query_info {
-                    self.query_history
-                        .add(HistoryEntry::error(&query, &conn_name, &database, e.clone()));
+                    self.query_history.add(HistoryEntry::error(
+                        &query,
+                        &conn_name,
+                        &database,
+                        e.clone(),
+                    ));
                     self.history_dirty = true;
                 }
 
@@ -1391,19 +1388,15 @@ impl App {
         };
 
         if self.db_worker.as_ref().unwrap().send(cmd).is_ok() {
-            self.loading.start_fetching_details(proj_idx, conn_idx, table_idx);
+            self.loading
+                .start_fetching_details(proj_idx, conn_idx, table_idx);
         } else {
             self.status_message = "Failed to send command to DB worker".to_string();
         }
     }
 
     /// Send a command to execute a query asynchronously
-    fn send_execute_query(
-        &mut self,
-        conn: &Connection,
-        query: &str,
-        proj_idx: usize,
-    ) {
+    fn send_execute_query(&mut self, conn: &Connection, query: &str, proj_idx: usize) {
         if self.db_worker.is_none() {
             self.status_message = "DB worker not initialized".to_string();
             return;
@@ -1413,11 +1406,8 @@ impl App {
         let connection = ConnectionParams::from_connection(conn);
 
         // Store query info for history
-        self.pending_query_info = Some((
-            conn.name.clone(),
-            conn.database.clone(),
-            query.to_string(),
-        ));
+        self.pending_query_info =
+            Some((conn.name.clone(), conn.database.clone(), query.to_string()));
 
         let cmd = DbCommand::ExecuteQuery {
             request_id,
