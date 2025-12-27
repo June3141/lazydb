@@ -108,11 +108,7 @@ pub fn draw_data_content(frame: &mut Frame, app: &mut App, area: Rect) {
         frame.render_stateful_widget(scrollbar, table_chunks[1], &mut scrollbar_state);
 
         // Render info bar showing row position
-        let info_text = format!(
-            " Row {}/{} │ ↑↓/jk: navigate │ PgUp/PgDn: page │ g/G: first/last ",
-            selected_idx + 1,
-            page_row_count
-        );
+        let info_text = format_info_bar_text(selected_idx, start, page_row_count);
         let info_bar = Paragraph::new(info_text).style(Style::default().fg(Color::DarkGray));
         frame.render_widget(info_bar, chunks[1]);
 
@@ -123,6 +119,24 @@ pub fn draw_data_content(frame: &mut Frame, app: &mut App, area: Rect) {
             Paragraph::new("No data to display").style(Style::default().fg(Color::DarkGray));
         frame.render_widget(empty, area);
     }
+}
+
+/// Formats the info bar text showing the current row position within the page.
+///
+/// # Arguments
+/// * `selected_idx` - The absolute index of the selected row (0-based)
+/// * `start` - The start index of the current page (0-based)
+/// * `page_row_count` - The number of rows in the current page
+///
+/// # Returns
+/// A formatted string showing "Row X/Y" where X is the 1-based position within the page
+fn format_info_bar_text(selected_idx: usize, start: usize, page_row_count: usize) -> String {
+    let page_relative_idx = selected_idx - start;
+    format!(
+        " Row {}/{} │ ↑↓/jk: navigate │ PgUp/PgDn: page │ g/G: first/last ",
+        page_relative_idx + 1,
+        page_row_count
+    )
 }
 
 fn draw_pagination_bar(frame: &mut Frame, app: &App, area: Rect) {
@@ -192,4 +206,67 @@ fn draw_pagination_bar(frame: &mut Frame, app: &App, area: Rect) {
     );
 
     frame.render_widget(paragraph, area);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_format_info_bar_text_first_page_first_row() {
+        // Page 1: rows 0-49, selected_idx = 0, start = 0
+        let result = format_info_bar_text(0, 0, 50);
+        assert!(
+            result.contains("Row 1/50"),
+            "Expected 'Row 1/50' but got: {}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_format_info_bar_text_first_page_last_row() {
+        // Page 1: rows 0-49, selected_idx = 49, start = 0
+        let result = format_info_bar_text(49, 0, 50);
+        assert!(
+            result.contains("Row 50/50"),
+            "Expected 'Row 50/50' but got: {}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_format_info_bar_text_second_page_first_row() {
+        // Page 2: rows 50-99, selected_idx = 50, start = 50
+        // Should show "Row 1/50" (first row of page 2)
+        let result = format_info_bar_text(50, 50, 50);
+        assert!(
+            result.contains("Row 1/50"),
+            "Expected 'Row 1/50' but got: {}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_format_info_bar_text_second_page_middle_row() {
+        // Page 2: rows 50-99, selected_idx = 75, start = 50
+        // Should show "Row 26/50" (26th row of page 2)
+        let result = format_info_bar_text(75, 50, 50);
+        assert!(
+            result.contains("Row 26/50"),
+            "Expected 'Row 26/50' but got: {}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_format_info_bar_text_partial_last_page() {
+        // Last page with partial rows: rows 100-124, selected_idx = 110, start = 100
+        // Should show "Row 11/25" (11th row of partial page with 25 rows)
+        let result = format_info_bar_text(110, 100, 25);
+        assert!(
+            result.contains("Row 11/25"),
+            "Expected 'Row 11/25' but got: {}",
+            result
+        );
+    }
 }
