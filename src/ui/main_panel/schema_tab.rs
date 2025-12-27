@@ -1,0 +1,507 @@
+//! Schema tab rendering (Columns, Indexes, Foreign Keys, Constraints)
+
+use crate::app::{App, SchemaSubTab};
+use ratatui::{
+    layout::{Constraint, Direction, Layout, Rect},
+    style::{Color, Modifier, Style},
+    widgets::{Cell, Paragraph, Row, Table as RatatuiTable, Tabs},
+    Frame,
+};
+
+pub fn draw_schema_content(frame: &mut Frame, app: &App, area: Rect) {
+    // Split for sub-tabs and content
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(1), // Sub-tabs
+            Constraint::Min(1),    // Content
+        ])
+        .split(area);
+
+    // Draw sub-tabs
+    let sub_tab_titles = vec![
+        "Columns [1]",
+        "Indexes [2]",
+        "Foreign Keys [3]",
+        "Constraints [4]",
+    ];
+    let selected_sub_tab = match app.schema_sub_tab {
+        SchemaSubTab::Columns => 0,
+        SchemaSubTab::Indexes => 1,
+        SchemaSubTab::ForeignKeys => 2,
+        SchemaSubTab::Constraints => 3,
+    };
+
+    let sub_tabs = Tabs::new(sub_tab_titles)
+        .select(selected_sub_tab)
+        .style(Style::default().fg(Color::DarkGray))
+        .highlight_style(
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )
+        .divider(" | ");
+
+    frame.render_widget(sub_tabs, chunks[0]);
+
+    // Draw content based on selected sub-tab
+    match app.schema_sub_tab {
+        SchemaSubTab::Columns => draw_columns_content(frame, app, chunks[1]),
+        SchemaSubTab::Indexes => draw_indexes_content(frame, app, chunks[1]),
+        SchemaSubTab::ForeignKeys => draw_foreign_keys_content(frame, app, chunks[1]),
+        SchemaSubTab::Constraints => draw_constraints_content(frame, app, chunks[1]),
+    }
+}
+
+fn draw_columns_content(frame: &mut Frame, app: &App, area: Rect) {
+    if let Some(table) = app.selected_table_info() {
+        let vis = &app.column_visibility.columns;
+
+        // Build visible header cells
+        let all_headers = ["", "Name", "Type", "Null", "Default", "Key"];
+        let visibility_flags = [
+            vis.show_icon,
+            vis.show_name,
+            vis.show_type,
+            vis.show_nullable,
+            vis.show_default,
+            vis.show_key,
+        ];
+
+        let header_cells: Vec<Cell> = all_headers
+            .iter()
+            .zip(visibility_flags.iter())
+            .filter(|(_, &visible)| visible)
+            .map(|(h, _)| {
+                Cell::from(*h).style(
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
+                )
+            })
+            .collect();
+        let header = Row::new(header_cells).height(1);
+
+        // Create rows with visibility filtering
+        let rows: Vec<Row> = table
+            .columns
+            .iter()
+            .map(|col| {
+                let pk_marker = if col.is_primary_key {
+                    "🔑"
+                } else if col.is_unique {
+                    "⚡"
+                } else {
+                    ""
+                };
+
+                let key_info = if col.is_primary_key {
+                    "PK".to_string()
+                } else if col.is_unique {
+                    "UQ".to_string()
+                } else {
+                    "".to_string()
+                };
+
+                let null_str = if col.is_nullable { "YES" } else { "NO" };
+                let default_str = col.default_value.as_deref().unwrap_or("-");
+
+                let name_style = if col.is_primary_key {
+                    Style::default().fg(Color::Yellow)
+                } else {
+                    Style::default().fg(Color::White)
+                };
+
+                let all_cells = [
+                    (Cell::from(pk_marker), vis.show_icon),
+                    (
+                        Cell::from(col.name.clone()).style(name_style),
+                        vis.show_name,
+                    ),
+                    (
+                        Cell::from(col.data_type.clone()).style(Style::default().fg(Color::Cyan)),
+                        vis.show_type,
+                    ),
+                    (
+                        Cell::from(null_str).style(if col.is_nullable {
+                            Style::default().fg(Color::DarkGray)
+                        } else {
+                            Style::default().fg(Color::Red)
+                        }),
+                        vis.show_nullable,
+                    ),
+                    (
+                        Cell::from(default_str).style(Style::default().fg(Color::Green)),
+                        vis.show_default,
+                    ),
+                    (
+                        Cell::from(key_info).style(Style::default().fg(Color::Magenta)),
+                        vis.show_key,
+                    ),
+                ];
+
+                let visible_cells: Vec<Cell> = all_cells
+                    .into_iter()
+                    .filter(|(_, visible)| *visible)
+                    .map(|(cell, _)| cell)
+                    .collect();
+
+                Row::new(visible_cells).height(1)
+            })
+            .collect();
+
+        // Build widths based on visibility
+        let all_widths = [
+            (Constraint::Length(3), vis.show_icon),
+            (Constraint::Percentage(25), vis.show_name),
+            (Constraint::Percentage(25), vis.show_type),
+            (Constraint::Length(5), vis.show_nullable),
+            (Constraint::Percentage(25), vis.show_default),
+            (Constraint::Length(5), vis.show_key),
+        ];
+
+        let widths: Vec<Constraint> = all_widths
+            .into_iter()
+            .filter(|(_, visible)| *visible)
+            .map(|(w, _)| w)
+            .collect();
+
+        let table_widget = RatatuiTable::new(rows, widths)
+            .header(header)
+            .row_highlight_style(Style::default().bg(Color::DarkGray));
+
+        frame.render_widget(table_widget, area);
+    } else {
+        let empty = Paragraph::new("Select a table to view columns")
+            .style(Style::default().fg(Color::DarkGray));
+        frame.render_widget(empty, area);
+    }
+}
+
+fn draw_indexes_content(frame: &mut Frame, app: &App, area: Rect) {
+    if let Some(table) = app.selected_table_info() {
+        if table.indexes.is_empty() {
+            let empty =
+                Paragraph::new("No indexes defined").style(Style::default().fg(Color::DarkGray));
+            frame.render_widget(empty, area);
+            return;
+        }
+
+        let vis = &app.column_visibility.indexes;
+
+        // Build visible header cells
+        let all_headers = ["Name", "Type", "Method", "Columns"];
+        let visibility_flags = [
+            vis.show_name,
+            vis.show_type,
+            vis.show_method,
+            vis.show_columns,
+        ];
+
+        let header_cells: Vec<Cell> = all_headers
+            .iter()
+            .zip(visibility_flags.iter())
+            .filter(|(_, &visible)| visible)
+            .map(|(h, _)| {
+                Cell::from(*h).style(
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
+                )
+            })
+            .collect();
+        let header = Row::new(header_cells).height(1);
+
+        // Create rows with visibility filtering
+        let rows: Vec<Row> = table
+            .indexes
+            .iter()
+            .map(|idx| {
+                let columns_str = idx
+                    .columns
+                    .iter()
+                    .map(|c| {
+                        if matches!(c.order, crate::model::SortOrder::Desc) {
+                            format!("{} DESC", c.name)
+                        } else {
+                            c.name.clone()
+                        }
+                    })
+                    .collect::<Vec<_>>()
+                    .join(", ");
+
+                let type_style = match idx.index_type {
+                    crate::model::IndexType::Primary => Style::default().fg(Color::Yellow),
+                    crate::model::IndexType::Unique => Style::default().fg(Color::Magenta),
+                    _ => Style::default().fg(Color::White),
+                };
+
+                let all_cells = [
+                    (
+                        Cell::from(idx.name.clone()).style(Style::default().fg(Color::Cyan)),
+                        vis.show_name,
+                    ),
+                    (
+                        Cell::from(idx.index_type.to_string()).style(type_style),
+                        vis.show_type,
+                    ),
+                    (
+                        Cell::from(idx.method.to_string())
+                            .style(Style::default().fg(Color::DarkGray)),
+                        vis.show_method,
+                    ),
+                    (Cell::from(columns_str), vis.show_columns),
+                ];
+
+                let visible_cells: Vec<Cell> = all_cells
+                    .into_iter()
+                    .filter(|(_, visible)| *visible)
+                    .map(|(cell, _)| cell)
+                    .collect();
+
+                Row::new(visible_cells).height(1)
+            })
+            .collect();
+
+        // Build widths based on visibility
+        let all_widths = [
+            (Constraint::Percentage(30), vis.show_name),
+            (Constraint::Percentage(15), vis.show_type),
+            (Constraint::Percentage(15), vis.show_method),
+            (Constraint::Percentage(40), vis.show_columns),
+        ];
+
+        let widths: Vec<Constraint> = all_widths
+            .into_iter()
+            .filter(|(_, visible)| *visible)
+            .map(|(w, _)| w)
+            .collect();
+
+        let table_widget = RatatuiTable::new(rows, widths)
+            .header(header)
+            .row_highlight_style(Style::default().bg(Color::DarkGray));
+
+        frame.render_widget(table_widget, area);
+    } else {
+        let empty = Paragraph::new("Select a table to view indexes")
+            .style(Style::default().fg(Color::DarkGray));
+        frame.render_widget(empty, area);
+    }
+}
+
+fn draw_foreign_keys_content(frame: &mut Frame, app: &App, area: Rect) {
+    if let Some(table) = app.selected_table_info() {
+        if table.foreign_keys.is_empty() {
+            let empty = Paragraph::new("No foreign keys defined")
+                .style(Style::default().fg(Color::DarkGray));
+            frame.render_widget(empty, area);
+            return;
+        }
+
+        let vis = &app.column_visibility.foreign_keys;
+
+        // Build visible header cells
+        let all_headers = ["Name", "Column", "References", "ON DELETE", "ON UPDATE"];
+        let visibility_flags = [
+            vis.show_name,
+            vis.show_column,
+            vis.show_references,
+            vis.show_on_delete,
+            vis.show_on_update,
+        ];
+
+        let header_cells: Vec<Cell> = all_headers
+            .iter()
+            .zip(visibility_flags.iter())
+            .filter(|(_, &visible)| visible)
+            .map(|(h, _)| {
+                Cell::from(*h).style(
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
+                )
+            })
+            .collect();
+        let header = Row::new(header_cells).height(1);
+
+        // Create rows with visibility filtering
+        let rows: Vec<Row> = table
+            .foreign_keys
+            .iter()
+            .map(|fk| {
+                let columns_str = fk.columns.join(", ");
+                let ref_str = format!(
+                    "{}.{}",
+                    fk.referenced_table,
+                    fk.referenced_columns.join(", ")
+                );
+
+                let all_cells = [
+                    (
+                        Cell::from(fk.name.clone()).style(Style::default().fg(Color::Cyan)),
+                        vis.show_name,
+                    ),
+                    (Cell::from(columns_str), vis.show_column),
+                    (
+                        Cell::from(ref_str).style(Style::default().fg(Color::Green)),
+                        vis.show_references,
+                    ),
+                    (
+                        Cell::from(fk.on_delete.to_string()).style(Style::default().fg(Color::Red)),
+                        vis.show_on_delete,
+                    ),
+                    (
+                        Cell::from(fk.on_update.to_string())
+                            .style(Style::default().fg(Color::Magenta)),
+                        vis.show_on_update,
+                    ),
+                ];
+
+                let visible_cells: Vec<Cell> = all_cells
+                    .into_iter()
+                    .filter(|(_, visible)| *visible)
+                    .map(|(cell, _)| cell)
+                    .collect();
+
+                Row::new(visible_cells).height(1)
+            })
+            .collect();
+
+        // Build widths based on visibility
+        let all_widths = [
+            (Constraint::Percentage(25), vis.show_name),
+            (Constraint::Percentage(15), vis.show_column),
+            (Constraint::Percentage(25), vis.show_references),
+            (Constraint::Percentage(17), vis.show_on_delete),
+            (Constraint::Percentage(18), vis.show_on_update),
+        ];
+
+        let widths: Vec<Constraint> = all_widths
+            .into_iter()
+            .filter(|(_, visible)| *visible)
+            .map(|(w, _)| w)
+            .collect();
+
+        let table_widget = RatatuiTable::new(rows, widths)
+            .header(header)
+            .row_highlight_style(Style::default().bg(Color::DarkGray));
+
+        frame.render_widget(table_widget, area);
+    } else {
+        let empty = Paragraph::new("Select a table to view foreign keys")
+            .style(Style::default().fg(Color::DarkGray));
+        frame.render_widget(empty, area);
+    }
+}
+
+fn draw_constraints_content(frame: &mut Frame, app: &App, area: Rect) {
+    if let Some(table) = app.selected_table_info() {
+        if table.constraints.is_empty() {
+            let empty = Paragraph::new("No constraints defined")
+                .style(Style::default().fg(Color::DarkGray));
+            frame.render_widget(empty, area);
+            return;
+        }
+
+        let vis = &app.column_visibility.constraints;
+
+        // Build visible header cells
+        let all_headers = ["Name", "Type", "Columns", "Definition"];
+        let visibility_flags = [
+            vis.show_name,
+            vis.show_type,
+            vis.show_columns,
+            vis.show_definition,
+        ];
+
+        let header_cells: Vec<Cell> = all_headers
+            .iter()
+            .zip(visibility_flags.iter())
+            .filter(|(_, &visible)| visible)
+            .map(|(h, _)| {
+                Cell::from(*h).style(
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
+                )
+            })
+            .collect();
+        let header = Row::new(header_cells).height(1);
+
+        // Create rows with visibility filtering
+        let rows: Vec<Row> = table
+            .constraints
+            .iter()
+            .map(|c| {
+                let columns_str = if c.columns.is_empty() {
+                    "-".to_string()
+                } else {
+                    c.columns.join(", ")
+                };
+                let def_str = c.definition.as_deref().unwrap_or("-");
+
+                let type_style = match c.constraint_type {
+                    crate::model::ConstraintType::PrimaryKey => Style::default().fg(Color::Yellow),
+                    crate::model::ConstraintType::Unique => Style::default().fg(Color::Magenta),
+                    crate::model::ConstraintType::ForeignKey => Style::default().fg(Color::Cyan),
+                    crate::model::ConstraintType::Check => Style::default().fg(Color::Green),
+                    crate::model::ConstraintType::NotNull => Style::default().fg(Color::LightBlue),
+                    crate::model::ConstraintType::Default => {
+                        Style::default().fg(Color::LightYellow)
+                    }
+                    crate::model::ConstraintType::Exclusion => {
+                        Style::default().fg(Color::LightMagenta)
+                    }
+                };
+
+                let all_cells = [
+                    (
+                        Cell::from(c.name.clone()).style(Style::default().fg(Color::Cyan)),
+                        vis.show_name,
+                    ),
+                    (
+                        Cell::from(c.constraint_type.to_string()).style(type_style),
+                        vis.show_type,
+                    ),
+                    (Cell::from(columns_str), vis.show_columns),
+                    (
+                        Cell::from(def_str).style(Style::default().fg(Color::DarkGray)),
+                        vis.show_definition,
+                    ),
+                ];
+
+                let visible_cells: Vec<Cell> = all_cells
+                    .into_iter()
+                    .filter(|(_, visible)| *visible)
+                    .map(|(cell, _)| cell)
+                    .collect();
+
+                Row::new(visible_cells).height(1)
+            })
+            .collect();
+
+        // Build widths based on visibility
+        let all_widths = [
+            (Constraint::Percentage(25), vis.show_name),
+            (Constraint::Percentage(15), vis.show_type),
+            (Constraint::Percentage(20), vis.show_columns),
+            (Constraint::Percentage(40), vis.show_definition),
+        ];
+
+        let widths: Vec<Constraint> = all_widths
+            .into_iter()
+            .filter(|(_, visible)| *visible)
+            .map(|(w, _)| w)
+            .collect();
+
+        let table_widget = RatatuiTable::new(rows, widths)
+            .header(header)
+            .row_highlight_style(Style::default().bg(Color::DarkGray));
+
+        frame.render_widget(table_widget, area);
+    } else {
+        let empty = Paragraph::new("Select a table to view constraints")
+            .style(Style::default().fg(Color::DarkGray));
+        frame.render_widget(empty, area);
+    }
+}
