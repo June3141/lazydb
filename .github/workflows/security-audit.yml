@@ -1,18 +1,11 @@
 name: Security Audit
 
 on:
-  # Run daily at 9:00 UTC
+  # Run daily at 9:00 UTC for security advisories
   schedule:
-    - cron: '0 9 * * *'
+    - cron: "0 9 * * *"
   # Allow manual trigger
   workflow_dispatch:
-  # Also run on push to main for immediate feedback
-  push:
-    branches: [main]
-    paths:
-      - 'Cargo.toml'
-      - 'Cargo.lock'
-      - 'deny.toml'
 
 env:
   CARGO_TERM_COLOR: always
@@ -24,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run cargo-deny
+      - name: Run cargo-deny (advisories)
         uses: EmbarkStudios/cargo-deny-action@v2
         with:
           command: check advisories
