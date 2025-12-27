@@ -153,11 +153,12 @@ mod tests {
 
     #[test]
     fn test_multiple_loading_states() {
-        let mut state = LoadingState::default();
-
-        // Start multiple operations
-        state.fetching_tables = Some(0);
-        state.executing_query = true;
+        // Start with multiple operations in progress
+        let mut state = LoadingState {
+            fetching_tables: Some(0),
+            executing_query: true,
+            ..Default::default()
+        };
 
         assert!(state.is_loading());
 
