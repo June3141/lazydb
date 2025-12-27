@@ -70,7 +70,10 @@ pub fn draw_column_visibility_modal(
         ),
         SchemaSubTab::Definition => {
             // Definition tab has no column visibility settings
-            (&[] as &[&str], Box::new(|_| true) as Box<dyn Fn(usize) -> bool>)
+            (
+                &[] as &[&str],
+                Box::new(|_| true) as Box<dyn Fn(usize) -> bool>,
+            )
         }
     };
 

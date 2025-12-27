@@ -535,8 +535,9 @@ fn draw_constraints_content(frame: &mut Frame, app: &App, area: Rect) {
 fn draw_definition_content(frame: &mut Frame, app: &App, area: Rect) {
     if let Some(table) = app.selected_table_info() {
         if !table.table_type.is_view() {
-            let msg = Paragraph::new("Definition is only available for Views and Materialized Views")
-                .style(Style::default().fg(Color::DarkGray));
+            let msg =
+                Paragraph::new("Definition is only available for Views and Materialized Views")
+                    .style(Style::default().fg(Color::DarkGray));
             frame.render_widget(msg, area);
             return;
         }
@@ -571,11 +572,48 @@ fn draw_definition_content(frame: &mut Frame, app: &App, area: Rect) {
 /// Simple SQL keyword highlighting for view definitions
 fn highlight_sql_line(line: &str) -> Vec<Span<'static>> {
     let keywords = [
-        "SELECT", "FROM", "WHERE", "AND", "OR", "NOT", "IN", "IS", "NULL",
-        "JOIN", "LEFT", "RIGHT", "INNER", "OUTER", "ON", "AS", "ORDER", "BY",
-        "GROUP", "HAVING", "LIMIT", "OFFSET", "UNION", "ALL", "DISTINCT",
-        "CREATE", "VIEW", "MATERIALIZED", "WITH", "CASE", "WHEN", "THEN", "ELSE", "END",
-        "TRUE", "FALSE", "LIKE", "ILIKE", "BETWEEN", "EXISTS", "CAST", "COALESCE",
+        "SELECT",
+        "FROM",
+        "WHERE",
+        "AND",
+        "OR",
+        "NOT",
+        "IN",
+        "IS",
+        "NULL",
+        "JOIN",
+        "LEFT",
+        "RIGHT",
+        "INNER",
+        "OUTER",
+        "ON",
+        "AS",
+        "ORDER",
+        "BY",
+        "GROUP",
+        "HAVING",
+        "LIMIT",
+        "OFFSET",
+        "UNION",
+        "ALL",
+        "DISTINCT",
+        "CREATE",
+        "VIEW",
+        "MATERIALIZED",
+        "WITH",
+        "CASE",
+        "WHEN",
+        "THEN",
+        "ELSE",
+        "END",
+        "TRUE",
+        "FALSE",
+        "LIKE",
+        "ILIKE",
+        "BETWEEN",
+        "EXISTS",
+        "CAST",
+        "COALESCE",
     ];
 
     let mut spans = Vec::new();
@@ -592,12 +630,16 @@ fn highlight_sql_line(line: &str) -> Vec<Span<'static>> {
                 let keyword_len = keyword.len();
                 let next_char = remaining.chars().nth(keyword_len);
                 if next_char.is_none()
-                    || next_char.map(|c| !c.is_alphanumeric() && c != '_').unwrap_or(true)
+                    || next_char
+                        .map(|c| !c.is_alphanumeric() && c != '_')
+                        .unwrap_or(true)
                 {
                     let actual_keyword = &remaining[..keyword_len];
                     spans.push(Span::styled(
                         actual_keyword.to_string(),
-                        Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                        Style::default()
+                            .fg(Color::Cyan)
+                            .add_modifier(Modifier::BOLD),
                     ));
                     remaining = remaining[keyword_len..].to_string();
                     found = true;

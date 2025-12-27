@@ -274,9 +274,7 @@ pub fn draw_table_summary(frame: &mut Frame, app: &App, area: Rect) {
                 ),
                 Span::styled(
                     &table.name,
-                    Style::default()
-                        .fg(name_color)
-                        .add_modifier(Modifier::BOLD),
+                    Style::default().fg(name_color).add_modifier(Modifier::BOLD),
                 ),
             ]),
             Line::from(vec![Span::styled(
