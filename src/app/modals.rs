@@ -417,6 +417,7 @@ impl ColumnVisibilityModal {
             SchemaSubTab::Indexes => IndexesVisibility::all_columns().len(),
             SchemaSubTab::ForeignKeys => ForeignKeysVisibility::all_columns().len(),
             SchemaSubTab::Constraints => ConstraintsVisibility::all_columns().len(),
+            SchemaSubTab::Definition => 0, // No visibility settings for Definition tab
         }
     }
 

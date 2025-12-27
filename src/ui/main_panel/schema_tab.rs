@@ -4,6 +4,7 @@ use crate::app::{App, SchemaSubTab};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
+    text::{Line, Span},
     widgets::{Cell, Paragraph, Row, Table as RatatuiTable, Tabs},
     Frame,
 };
@@ -18,18 +19,42 @@ pub fn draw_schema_content(frame: &mut Frame, app: &App, area: Rect) {
         ])
         .split(area);
 
-    // Draw sub-tabs
-    let sub_tab_titles = vec![
-        "Columns [1]",
-        "Indexes [2]",
-        "Foreign Keys [3]",
-        "Constraints [4]",
-    ];
+    // Check if selected table is a view (to show Definition tab)
+    let is_view = app
+        .selected_table_info()
+        .map(|t| t.table_type.is_view())
+        .unwrap_or(false);
+
+    // Draw sub-tabs (Definition tab only shown for views)
+    let sub_tab_titles: Vec<&str> = if is_view {
+        vec![
+            "Columns [1]",
+            "Indexes [2]",
+            "Foreign Keys [3]",
+            "Constraints [4]",
+            "Definition [5]",
+        ]
+    } else {
+        vec![
+            "Columns [1]",
+            "Indexes [2]",
+            "Foreign Keys [3]",
+            "Constraints [4]",
+        ]
+    };
+
     let selected_sub_tab = match app.schema_sub_tab {
         SchemaSubTab::Columns => 0,
         SchemaSubTab::Indexes => 1,
         SchemaSubTab::ForeignKeys => 2,
         SchemaSubTab::Constraints => 3,
+        SchemaSubTab::Definition => {
+            if is_view {
+                4
+            } else {
+                0
+            }
+        }
     };
 
     let sub_tabs = Tabs::new(sub_tab_titles)
@@ -50,6 +75,7 @@ pub fn draw_schema_content(frame: &mut Frame, app: &App, area: Rect) {
         SchemaSubTab::Indexes => draw_indexes_content(frame, app, chunks[1]),
         SchemaSubTab::ForeignKeys => draw_foreign_keys_content(frame, app, chunks[1]),
         SchemaSubTab::Constraints => draw_constraints_content(frame, app, chunks[1]),
+        SchemaSubTab::Definition => draw_definition_content(frame, app, chunks[1]),
     }
 }
 
@@ -504,4 +530,96 @@ fn draw_constraints_content(frame: &mut Frame, app: &App, area: Rect) {
             .style(Style::default().fg(Color::DarkGray));
         frame.render_widget(empty, area);
     }
+}
+
+fn draw_definition_content(frame: &mut Frame, app: &App, area: Rect) {
+    if let Some(table) = app.selected_table_info() {
+        if !table.table_type.is_view() {
+            let msg = Paragraph::new("Definition is only available for Views and Materialized Views")
+                .style(Style::default().fg(Color::DarkGray));
+            frame.render_widget(msg, area);
+            return;
+        }
+
+        if let Some(definition) = &table.view_definition {
+            // Display the view definition (SELECT statement) with syntax-like coloring
+            let lines: Vec<Line> = definition
+                .lines()
+                .map(|line| {
+                    // Simple SQL keyword highlighting
+                    let styled_line = highlight_sql_line(line);
+                    Line::from(styled_line)
+                })
+                .collect();
+
+            let paragraph = Paragraph::new(lines)
+                .style(Style::default().fg(Color::White))
+                .wrap(ratatui::widgets::Wrap { trim: false });
+            frame.render_widget(paragraph, area);
+        } else {
+            let empty = Paragraph::new("View definition not loaded")
+                .style(Style::default().fg(Color::DarkGray));
+            frame.render_widget(empty, area);
+        }
+    } else {
+        let empty = Paragraph::new("Select a view to see its definition")
+            .style(Style::default().fg(Color::DarkGray));
+        frame.render_widget(empty, area);
+    }
+}
+
+/// Simple SQL keyword highlighting for view definitions
+fn highlight_sql_line(line: &str) -> Vec<Span<'static>> {
+    let keywords = [
+        "SELECT", "FROM", "WHERE", "AND", "OR", "NOT", "IN", "IS", "NULL",
+        "JOIN", "LEFT", "RIGHT", "INNER", "OUTER", "ON", "AS", "ORDER", "BY",
+        "GROUP", "HAVING", "LIMIT", "OFFSET", "UNION", "ALL", "DISTINCT",
+        "CREATE", "VIEW", "MATERIALIZED", "WITH", "CASE", "WHEN", "THEN", "ELSE", "END",
+        "TRUE", "FALSE", "LIKE", "ILIKE", "BETWEEN", "EXISTS", "CAST", "COALESCE",
+    ];
+
+    let mut spans = Vec::new();
+    let mut remaining = line.to_string();
+
+    while !remaining.is_empty() {
+        let mut found = false;
+
+        for keyword in &keywords {
+            // Check if the remaining string starts with a keyword (case-insensitive)
+            let upper = remaining.to_uppercase();
+            if upper.starts_with(keyword) {
+                // Verify it's a complete word (followed by whitespace, punctuation, or end)
+                let keyword_len = keyword.len();
+                let next_char = remaining.chars().nth(keyword_len);
+                if next_char.is_none()
+                    || next_char.map(|c| !c.is_alphanumeric() && c != '_').unwrap_or(true)
+                {
+                    let actual_keyword = &remaining[..keyword_len];
+                    spans.push(Span::styled(
+                        actual_keyword.to_string(),
+                        Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                    ));
+                    remaining = remaining[keyword_len..].to_string();
+                    found = true;
+                    break;
+                }
+            }
+        }
+
+        if !found {
+            // Take one character and continue
+            let ch = remaining.chars().next().unwrap();
+            let style = if ch == '\'' || ch == '"' {
+                Style::default().fg(Color::Green)
+            } else if ch.is_numeric() {
+                Style::default().fg(Color::Yellow)
+            } else {
+                Style::default().fg(Color::White)
+            };
+            spans.push(Span::styled(ch.to_string(), style));
+            remaining = remaining[ch.len_utf8()..].to_string();
+        }
+    }
+
+    spans
 }

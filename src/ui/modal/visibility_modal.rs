@@ -30,6 +30,7 @@ pub fn draw_column_visibility_modal(
         SchemaSubTab::Indexes => " Column Visibility - Indexes ",
         SchemaSubTab::ForeignKeys => " Column Visibility - Foreign Keys ",
         SchemaSubTab::Constraints => " Column Visibility - Constraints ",
+        SchemaSubTab::Definition => " View Definition ",
     };
 
     // Modal container
@@ -67,6 +68,10 @@ pub fn draw_column_visibility_modal(
             ConstraintsVisibility::all_columns(),
             Box::new(|i| settings.constraints.is_visible(i)),
         ),
+        SchemaSubTab::Definition => {
+            // Definition tab has no column visibility settings
+            (&[] as &[&str], Box::new(|_| true) as Box<dyn Fn(usize) -> bool>)
+        }
     };
 
     // Layout for column list and help text
