@@ -26,6 +26,24 @@ impl std::fmt::Display for TableType {
     }
 }
 
+impl TableType {
+    /// Returns the icon for this table type (Nerd Font icons)
+    pub fn icon(&self) -> &'static str {
+        match self {
+            TableType::BaseTable => "󰓫",      // table icon
+            TableType::View => "󰈈",           // eye icon (view)
+            TableType::MaterializedView => "󱁉", // cached/materialized icon
+            TableType::ForeignTable => "󰌷",   // link/external icon
+            TableType::Temporary => "󰔛",      // clock/temporary icon
+        }
+    }
+
+    /// Returns true if this is a View or MaterializedView
+    pub fn is_view(&self) -> bool {
+        matches!(self, TableType::View | TableType::MaterializedView)
+    }
+}
+
 /// Extended table information
 #[derive(Debug, Clone)]
 pub struct Table {
@@ -41,6 +59,8 @@ pub struct Table {
     pub comment: Option<String>,
     /// Whether detailed schema information has been loaded
     pub details_loaded: bool,
+    /// View definition (SELECT statement) for Views and Materialized Views
+    pub view_definition: Option<String>,
 }
 
 impl Table {
@@ -57,6 +77,7 @@ impl Table {
             size_bytes: 0,
             comment: None,
             details_loaded: false,
+            view_definition: None,
         }
     }
 
@@ -88,6 +109,16 @@ impl Table {
     pub fn with_stats(mut self, row_count: usize, size_bytes: u64) -> Self {
         self.row_count = row_count;
         self.size_bytes = size_bytes;
+        self
+    }
+
+    pub fn with_table_type(mut self, table_type: TableType) -> Self {
+        self.table_type = table_type;
+        self
+    }
+
+    pub fn with_view_definition(mut self, definition: impl Into<String>) -> Self {
+        self.view_definition = Some(definition.into());
         self
     }
 
@@ -254,5 +285,67 @@ mod tests {
 
         let refs = users.incoming_references(&all_tables);
         assert_eq!(refs.len(), 0);
+    }
+
+    // ===== TableType icon tests =====
+
+    #[test]
+    fn test_table_type_icon_base_table() {
+        assert_eq!(TableType::BaseTable.icon(), "󰓫");
+    }
+
+    #[test]
+    fn test_table_type_icon_view() {
+        assert_eq!(TableType::View.icon(), "󰈈");
+    }
+
+    #[test]
+    fn test_table_type_icon_materialized_view() {
+        assert_eq!(TableType::MaterializedView.icon(), "󱁉");
+    }
+
+    #[test]
+    fn test_table_type_icon_foreign_table() {
+        assert_eq!(TableType::ForeignTable.icon(), "󰌷");
+    }
+
+    #[test]
+    fn test_table_type_icon_temporary() {
+        assert_eq!(TableType::Temporary.icon(), "󰔛");
+    }
+
+    // ===== TableType is_view tests =====
+
+    #[test]
+    fn test_table_type_is_view() {
+        assert!(!TableType::BaseTable.is_view());
+        assert!(TableType::View.is_view());
+        assert!(TableType::MaterializedView.is_view());
+        assert!(!TableType::ForeignTable.is_view());
+        assert!(!TableType::Temporary.is_view());
+    }
+
+    // ===== Table with_table_type and with_view_definition tests =====
+
+    #[test]
+    fn test_table_with_table_type() {
+        let table = Table::new("my_view").with_table_type(TableType::View);
+        assert_eq!(table.table_type, TableType::View);
+    }
+
+    #[test]
+    fn test_table_with_view_definition() {
+        let definition = "SELECT id, name FROM users WHERE active = true";
+        let table = Table::new("active_users")
+            .with_table_type(TableType::View)
+            .with_view_definition(definition);
+
+        assert_eq!(table.view_definition, Some(definition.to_string()));
+    }
+
+    #[test]
+    fn test_table_view_definition_default_none() {
+        let table = Table::new("users");
+        assert_eq!(table.view_definition, None);
     }
 }
