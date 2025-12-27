@@ -1,13 +1,9 @@
 name: CodeQL
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
   # Run weekly on Sunday at 0:00 UTC
   schedule:
-    - cron: '0 0 * * 0' # Sunday at 00:00 UTC
+    - cron: "0 0 * * 0"
   # Allow manual trigger
   workflow_dispatch:
 
@@ -24,11 +20,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "codeql"
+
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: rust
-          # Use default queries plus security-extended
           queries: security-extended
 
       - name: Build
