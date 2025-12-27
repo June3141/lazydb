@@ -7,7 +7,7 @@ on:
     branches: [main]
   # Run weekly on Sunday at 0:00 UTC
   schedule:
-    - cron: '0 0 * * 0'
+    - cron: '0 0 * * 0' # Sunday at 00:00 UTC
   # Allow manual trigger
   workflow_dispatch:
 
