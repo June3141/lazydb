@@ -76,11 +76,13 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
             .unwrap_or(&[]),
         SidebarMode::Projects => &[],
     };
+    let tables = app.current_connection_tables();
     draw_modal(
         frame,
         &app.modal_state,
         &app.projects,
         connections,
+        tables,
         &app.query_history,
         &app.column_visibility,
     );
