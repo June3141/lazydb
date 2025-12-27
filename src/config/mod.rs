@@ -1,8 +1,7 @@
-// TODO: UIとの統合後に削除
-#![allow(dead_code, unused_imports)]
-
 mod loader;
 mod models;
 
 pub use loader::ConfigLoader;
+// These types are part of the public API and may be used by external consumers
+#[allow(unused_imports)]
 pub use models::{Config, ConnectionConfig, ProjectConfig, ProjectFile, Settings};

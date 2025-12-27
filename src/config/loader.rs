@@ -20,6 +20,7 @@ impl ConfigLoader {
     }
 
     /// カスタムの設定ディレクトリで ConfigLoader を作成（テスト用）
+    #[cfg(test)]
     pub fn with_config_dir(config_dir: PathBuf) -> Self {
         Self { config_dir }
     }
@@ -47,7 +48,9 @@ impl ConfigLoader {
         }
     }
 
-    /// 設定ディレクトリのパスを返す
+    /// 設定ディレクトリのパスを返す（テスト用）
+    #[cfg(test)]
+    #[allow(dead_code)]
     pub fn config_dir(&self) -> &Path {
         &self.config_dir
     }
