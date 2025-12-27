@@ -201,14 +201,28 @@ fn draw_connections_view(frame: &mut Frame, app: &App, area: Rect, proj_idx: usi
                     Style::default().fg(Color::Gray)
                 };
 
+                // Icon style: Views are shown in a different color
+                let icon_style = if table.table_type.is_view() {
+                    if is_selected_table && is_focused {
+                        Style::default().bg(Color::Cyan).fg(Color::Black)
+                    } else {
+                        Style::default().fg(Color::Magenta)
+                    }
+                } else {
+                    table_style
+                };
+
                 let prefix = if table_idx == conn.tables.len() - 1 {
                     "  └─ "
                 } else {
                     "  ├─ "
                 };
 
+                let icon = table.table_type.icon();
+
                 lines.push(Line::from(vec![
                     Span::styled(prefix, Style::default().fg(Color::DarkGray)),
+                    Span::styled(format!("{} ", icon), icon_style),
                     Span::styled(&table.name, table_style),
                 ]));
             }
@@ -245,30 +259,54 @@ pub fn draw_table_summary(frame: &mut Frame, app: &App, area: Rect) {
 
         let size_str = format_size(table.size_bytes);
 
-        vec![
+        // Name color varies by table type
+        let name_color = if table.table_type.is_view() {
+            Color::Magenta
+        } else {
+            Color::Yellow
+        };
+
+        let mut info_lines = vec![
+            Line::from(vec![
+                Span::styled(
+                    format!("{} ", table.table_type.icon()),
+                    Style::default().fg(name_color),
+                ),
+                Span::styled(
+                    &table.name,
+                    Style::default()
+                        .fg(name_color)
+                        .add_modifier(Modifier::BOLD),
+                ),
+            ]),
             Line::from(vec![Span::styled(
-                &table.name,
-                Style::default()
-                    .fg(Color::Yellow)
-                    .add_modifier(Modifier::BOLD),
+                table.table_type.to_string(),
+                Style::default().fg(Color::DarkGray),
             )]),
             Line::from(vec![Span::styled(
                 format!("{} columns", table.columns.len()),
                 Style::default().fg(Color::Gray),
             )]),
-            Line::from(vec![Span::styled(
+        ];
+
+        // Only show row count and PK for non-view tables
+        if !table.table_type.is_view() {
+            info_lines.push(Line::from(vec![Span::styled(
                 format!("{} rows", format_number(table.row_count)),
                 Style::default().fg(Color::Gray),
-            )]),
-            Line::from(vec![
+            )]));
+            info_lines.push(Line::from(vec![
                 Span::styled("PK: ", Style::default().fg(Color::DarkGray)),
                 Span::styled(pk_name, Style::default().fg(Color::Cyan)),
-            ]),
-            Line::from(vec![Span::styled(
-                size_str,
-                Style::default().fg(Color::DarkGray),
-            )]),
-        ]
+            ]));
+        }
+
+        info_lines.push(Line::from(vec![Span::styled(
+            size_str,
+            Style::default().fg(Color::DarkGray),
+        )]));
+
+        info_lines
     } else if let Some(conn) = app.selected_connection_info() {
         vec![
             Line::from(vec![Span::styled(
