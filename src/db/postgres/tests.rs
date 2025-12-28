@@ -1,13 +1,23 @@
 //! Tests for PostgreSQL provider
 
+use std::env;
+
 use super::helpers::{is_valid_identifier, parse_column_sort_order, quote_identifier};
 use super::{PostgresProvider, ProviderError};
 use crate::db::provider::DatabaseProvider;
 use crate::model::schema::SortOrder;
 
 fn create_test_provider() -> PostgresProvider {
-    PostgresProvider::connect("localhost", 5432, "lazydb_dev", "lazydb", "lazydb")
-        .expect("Failed to connect")
+    let host = env::var("POSTGRES_HOST").unwrap_or_else(|_| "localhost".to_string());
+    let port: u16 = env::var("POSTGRES_PORT")
+        .unwrap_or_else(|_| "15432".to_string())
+        .parse()
+        .expect("POSTGRES_PORT must be a valid port number");
+    let database = env::var("POSTGRES_DB").unwrap_or_else(|_| "lazydb_dev".to_string());
+    let user = env::var("POSTGRES_USER").unwrap_or_else(|_| "lazydb".to_string());
+    let password = env::var("POSTGRES_PASSWORD").unwrap_or_else(|_| "lazydb".to_string());
+
+    PostgresProvider::connect(&host, port, &database, &user, &password).expect("Failed to connect")
 }
 
 #[test]
@@ -125,10 +135,10 @@ fn test_get_foreign_keys() {
     let provider = create_test_provider();
 
     let table = provider
-        .get_table_details("posts", Some("public"))
+        .get_table_details("orders", Some("public"))
         .expect("Failed to get table details");
 
-    println!("Foreign keys for posts:");
+    println!("Foreign keys for orders:");
     for fk in &table.foreign_keys {
         println!(
             "  - {} ({:?} -> {} ({:?}))",
@@ -542,8 +552,8 @@ fn test_get_constraints_foreign_key() {
     let provider = create_test_provider();
     let mut client = provider.client.lock().unwrap();
 
-    // posts table should have foreign key to users
-    let constraints = InternalQueries::get_constraints(&mut client, "posts", "public")
+    // orders table should have foreign key to users
+    let constraints = InternalQueries::get_constraints(&mut client, "orders", "public")
         .expect("Failed to get constraints");
 
     let fk_constraints: Vec<_> = constraints
@@ -553,7 +563,7 @@ fn test_get_constraints_foreign_key() {
 
     assert!(
         !fk_constraints.is_empty(),
-        "posts table should have foreign key constraint"
+        "orders table should have foreign key constraint"
     );
 }
 
