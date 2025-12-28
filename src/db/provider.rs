@@ -313,16 +313,13 @@ mod tests {
 
         // ユーザーフレンドリーなメッセージを含むべき
         assert!(
-            display.contains("接続が拒否されました") || display.contains("Connection refused"),
+            display.contains("Connection refused"),
             "Expected user-friendly connection refused message, got: {}",
             display
         );
         // 対処法のヒントを含むべき
         assert!(
-            display.contains("ホスト")
-                || display.contains("ポート")
-                || display.contains("host")
-                || display.contains("port"),
+            display.contains("host") || display.contains("port"),
             "Expected hint about host/port, got: {}",
             display
         );
@@ -338,10 +335,7 @@ mod tests {
 
         // 認証エラーとわかるメッセージを含むべき
         assert!(
-            display.contains("認証")
-                || display.contains("パスワード")
-                || display.contains("authentication")
-                || display.contains("password"),
+            display.contains("Authentication") || display.contains("password"),
             "Expected authentication error message, got: {}",
             display
         );
@@ -357,10 +351,7 @@ mod tests {
 
         // ホスト名エラーとわかるメッセージを含むべき
         assert!(
-            display.contains("ホスト名")
-                || display.contains("解決")
-                || display.contains("host")
-                || display.contains("resolve"),
+            display.contains("Host not found") || display.contains("resolve"),
             "Expected hostname resolution error message, got: {}",
             display
         );
@@ -374,9 +365,7 @@ mod tests {
 
         // タイムアウトエラーとわかるメッセージを含むべき
         assert!(
-            display.contains("タイムアウト")
-                || display.contains("timeout")
-                || display.contains("Timeout"),
+            display.contains("timeout") || display.contains("Timeout"),
             "Expected timeout error message, got: {}",
             display
         );
@@ -394,7 +383,7 @@ mod tests {
 
         // 構文エラーとわかるメッセージを含むべき
         assert!(
-            display.contains("構文") || display.contains("syntax") || display.contains("Syntax"),
+            display.contains("SQL syntax error") || display.contains("syntax"),
             "Expected syntax error message, got: {}",
             display
         );
@@ -409,11 +398,7 @@ mod tests {
 
         // テーブルが見つからないとわかるメッセージを含むべき
         assert!(
-            display.contains("テーブル")
-                || display.contains("存在しません")
-                || display.contains("table")
-                || display.contains("not exist")
-                || display.contains("not found"),
+            display.contains("Table not found") || display.contains("does not exist"),
             "Expected table not found message, got: {}",
             display
         );
@@ -428,7 +413,7 @@ mod tests {
 
         // カラムが見つからないとわかるメッセージを含むべき
         assert!(
-            display.contains("カラム") || display.contains("列") || display.contains("column"),
+            display.contains("Column not found") || display.contains("column"),
             "Expected column not found message, got: {}",
             display
         );
@@ -442,9 +427,7 @@ mod tests {
 
         // 権限エラーとわかるメッセージを含むべき
         assert!(
-            display.contains("権限")
-                || display.contains("permission")
-                || display.contains("Permission"),
+            display.contains("Permission denied") || display.contains("permission"),
             "Expected permission error message, got: {}",
             display
         );
@@ -460,9 +443,7 @@ mod tests {
         let display = error.to_string();
 
         assert!(
-            display.contains("タイムアウト")
-                || display.contains("timeout")
-                || display.contains("Timeout"),
+            display.contains("Timeout"),
             "Expected timeout message, got: {}",
             display
         );
@@ -474,11 +455,7 @@ mod tests {
         let display = error.to_string();
 
         assert!(
-            display.contains("権限")
-                || display.contains("アクセス")
-                || display.contains("permission")
-                || display.contains("Permission")
-                || display.contains("access"),
+            display.contains("Permission denied"),
             "Expected permission denied message, got: {}",
             display
         );
@@ -490,9 +467,7 @@ mod tests {
         let display = error.to_string();
 
         assert!(
-            display.contains("見つかりません")
-                || display.contains("not found")
-                || display.contains("Not found"),
+            display.contains("Not found"),
             "Expected not found message, got: {}",
             display
         );
@@ -504,10 +479,7 @@ mod tests {
         let display = error.to_string();
 
         assert!(
-            display.contains("設定")
-                || display.contains("configuration")
-                || display.contains("Configuration")
-                || display.contains("config"),
+            display.contains("Invalid configuration"),
             "Expected configuration error message, got: {}",
             display
         );
@@ -520,9 +492,7 @@ mod tests {
 
         // 内部エラーでもユーザーに理解できるメッセージを含むべき
         assert!(
-            display.contains("内部")
-                || display.contains("internal")
-                || display.contains("Internal"),
+            display.contains("Internal error"),
             "Expected internal error message, got: {}",
             display
         );
