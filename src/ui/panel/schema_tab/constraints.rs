@@ -64,7 +64,10 @@ pub fn draw_constraints_content(frame: &mut Frame, app: &App, area: Rect) {
                         Cell::from(c.constraint_type.to_string()).style(type_style),
                         vis.show_type,
                     ),
-                    (Cell::from(columns_str).style(theme::text()), vis.show_columns),
+                    (
+                        Cell::from(columns_str).style(theme::text()),
+                        vis.show_columns,
+                    ),
                     (
                         Cell::from(def_str).style(theme::muted()),
                         vis.show_definition,

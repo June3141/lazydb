@@ -53,7 +53,10 @@ pub fn draw_foreign_keys_content(frame: &mut Frame, app: &App, area: Rect) {
                         Cell::from(fk.name.clone()).style(theme::selected()),
                         vis.show_name,
                     ),
-                    (Cell::from(columns_str).style(theme::text()), vis.show_column),
+                    (
+                        Cell::from(columns_str).style(theme::text()),
+                        vis.show_column,
+                    ),
                     (
                         Cell::from(ref_str).style(theme::header()),
                         vis.show_references,

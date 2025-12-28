@@ -83,10 +83,7 @@ pub fn draw_columns_content(frame: &mut Frame, app: &App, area: Rect) {
                         Cell::from(default_str).style(theme::muted()),
                         vis.show_default,
                     ),
-                    (
-                        Cell::from(key_info).style(theme::selected()),
-                        vis.show_key,
-                    ),
+                    (Cell::from(key_info).style(theme::selected()), vis.show_key),
                 ];
 
                 let visible_cells: Vec<Cell> = all_cells

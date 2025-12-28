@@ -53,9 +53,7 @@ pub fn border_inactive() -> Style {
 
 /// Style for headers and emphasis
 pub fn header() -> Style {
-    Style::default()
-        .fg(ACCENT)
-        .add_modifier(Modifier::BOLD)
+    Style::default().fg(ACCENT).add_modifier(Modifier::BOLD)
 }
 
 /// Style for normal text
@@ -70,16 +68,12 @@ pub fn muted() -> Style {
 
 /// Style for highlighted row in tables
 pub fn row_highlight() -> Style {
-    Style::default()
-        .bg(MUTED)
-        .add_modifier(Modifier::BOLD)
+    Style::default().bg(MUTED).add_modifier(Modifier::BOLD)
 }
 
 /// Style for input field when focused
 pub fn input_focused() -> Style {
-    Style::default()
-        .fg(ACCENT)
-        .add_modifier(Modifier::BOLD)
+    Style::default().fg(ACCENT).add_modifier(Modifier::BOLD)
 }
 
 /// Style for input field border when focused
@@ -94,9 +88,7 @@ pub fn input_border_inactive() -> Style {
 
 /// Style for highlighted match in search results
 pub fn highlight_match() -> Style {
-    Style::default()
-        .fg(ACCENT)
-        .add_modifier(Modifier::BOLD)
+    Style::default().fg(ACCENT).add_modifier(Modifier::BOLD)
 }
 
 /// Style for highlighted match in selected search result

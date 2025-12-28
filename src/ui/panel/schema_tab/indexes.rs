@@ -73,7 +73,10 @@ pub fn draw_indexes_content(frame: &mut Frame, app: &App, area: Rect) {
                         Cell::from(idx.method.to_string()).style(theme::muted()),
                         vis.show_method,
                     ),
-                    (Cell::from(columns_str).style(theme::text()), vis.show_columns),
+                    (
+                        Cell::from(columns_str).style(theme::text()),
+                        vis.show_columns,
+                    ),
                 ];
 
                 let visible_cells: Vec<Cell> = all_cells
