@@ -3,7 +3,7 @@
 //! This module provides a PostgreSQL implementation of the DatabaseProvider trait.
 
 mod helpers;
-mod internal;
+mod queries;
 mod provider;
 mod trait_impl;
 
