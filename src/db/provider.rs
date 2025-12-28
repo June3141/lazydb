@@ -157,15 +157,141 @@ pub enum ProviderError {
 impl std::fmt::Display for ProviderError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ProviderError::ConnectionFailed(msg) => write!(f, "Connection failed: {}", msg),
-            ProviderError::QueryFailed(msg) => write!(f, "Query failed: {}", msg),
+            ProviderError::ConnectionFailed(msg) => {
+                write!(f, "{}", format_connection_error(msg))
+            }
+            ProviderError::QueryFailed(msg) => {
+                write!(f, "{}", format_query_error(msg))
+            }
             ProviderError::NotFound(msg) => write!(f, "Not found: {}", msg),
             ProviderError::PermissionDenied(msg) => write!(f, "Permission denied: {}", msg),
             ProviderError::Timeout(msg) => write!(f, "Timeout: {}", msg),
-            ProviderError::InvalidConfiguration(msg) => write!(f, "Invalid configuration: {}", msg),
+            ProviderError::InvalidConfiguration(msg) => {
+                write!(f, "Invalid configuration: {}", msg)
+            }
             ProviderError::NotImplemented(msg) => write!(f, "Not implemented: {}", msg),
             ProviderError::InternalError(msg) => write!(f, "Internal error: {}", msg),
         }
+    }
+}
+
+/// Format connection error with user-friendly message and hints
+fn format_connection_error(msg: &str) -> String {
+    let msg_lower = msg.to_lowercase();
+
+    if msg_lower.contains("connection refused") || msg_lower.contains("could not connect") {
+        format!(
+            "Connection refused: Cannot connect to the database server. \
+             Check that the host and port are correct and the server is running. \
+             (Details: {})",
+            msg
+        )
+    } else if msg_lower.contains("authentication failed")
+        || msg_lower.contains("password")
+        || msg_lower.contains("auth")
+    {
+        format!(
+            "Authentication failed: Invalid username or password. \
+             Check your credentials and try again. \
+             (Details: {})",
+            msg
+        )
+    } else if msg_lower.contains("could not translate host")
+        || msg_lower.contains("name resolution")
+        || msg_lower.contains("unknown host")
+        || msg_lower.contains("no such host")
+    {
+        format!(
+            "Host not found: Cannot resolve the hostname. \
+             Check that the host address is correct. \
+             (Details: {})",
+            msg
+        )
+    } else if msg_lower.contains("timed out") || msg_lower.contains("timeout") {
+        format!(
+            "Connection timeout: The server did not respond in time. \
+             Check network connectivity and firewall settings. \
+             (Details: {})",
+            msg
+        )
+    } else if msg_lower.contains("ssl") || msg_lower.contains("tls") {
+        format!(
+            "SSL/TLS error: Secure connection failed. \
+             Check SSL configuration and certificates. \
+             (Details: {})",
+            msg
+        )
+    } else if msg_lower.contains("database") && msg_lower.contains("does not exist") {
+        format!(
+            "Database not found: The specified database does not exist. \
+             Check the database name and ensure it has been created. \
+             (Details: {})",
+            msg
+        )
+    } else {
+        format!("Connection failed: {} (Check connection settings)", msg)
+    }
+}
+
+/// Format query error with user-friendly message
+fn format_query_error(msg: &str) -> String {
+    let msg_lower = msg.to_lowercase();
+
+    if msg_lower.contains("syntax error") {
+        format!(
+            "SQL syntax error: Check your SQL query for typos or missing keywords. \
+             (Details: {})",
+            msg
+        )
+    } else if msg_lower.contains("relation") && msg_lower.contains("does not exist") {
+        format!(
+            "Table not found: The specified table does not exist. \
+             Check the table name and schema. \
+             (Details: {})",
+            msg
+        )
+    } else if msg_lower.contains("column") && msg_lower.contains("does not exist") {
+        format!(
+            "Column not found: The specified column does not exist. \
+             Check the column name in your query. \
+             (Details: {})",
+            msg
+        )
+    } else if msg_lower.contains("permission denied") {
+        format!(
+            "Permission denied: You don't have access to perform this operation. \
+             Contact your database administrator. \
+             (Details: {})",
+            msg
+        )
+    } else if msg_lower.contains("unique constraint") || msg_lower.contains("duplicate key") {
+        format!(
+            "Duplicate key error: A record with the same unique key already exists. \
+             (Details: {})",
+            msg
+        )
+    } else if msg_lower.contains("foreign key") || msg_lower.contains("violates") {
+        format!(
+            "Foreign key constraint violation: The operation conflicts with a foreign key. \
+             (Details: {})",
+            msg
+        )
+    } else if msg_lower.contains("deadlock") {
+        format!(
+            "Deadlock detected: The query was aborted due to a deadlock. \
+             Please retry the operation. \
+             (Details: {})",
+            msg
+        )
+    } else if msg_lower.contains("out of memory") || msg_lower.contains("memory") {
+        format!(
+            "Memory error: The query requires more memory than available. \
+             Try simplifying the query or contact your administrator. \
+             (Details: {})",
+            msg
+        )
+    } else {
+        format!("Query failed: {}", msg)
     }
 }
 
@@ -187,14 +313,16 @@ mod tests {
 
         // ユーザーフレンドリーなメッセージを含むべき
         assert!(
-            display.contains("接続が拒否されました")
-                || display.contains("Connection refused"),
+            display.contains("接続が拒否されました") || display.contains("Connection refused"),
             "Expected user-friendly connection refused message, got: {}",
             display
         );
         // 対処法のヒントを含むべき
         assert!(
-            display.contains("ホスト") || display.contains("ポート") || display.contains("host") || display.contains("port"),
+            display.contains("ホスト")
+                || display.contains("ポート")
+                || display.contains("host")
+                || display.contains("port"),
             "Expected hint about host/port, got: {}",
             display
         );
@@ -210,8 +338,10 @@ mod tests {
 
         // 認証エラーとわかるメッセージを含むべき
         assert!(
-            display.contains("認証") || display.contains("パスワード")
-                || display.contains("authentication") || display.contains("password"),
+            display.contains("認証")
+                || display.contains("パスワード")
+                || display.contains("authentication")
+                || display.contains("password"),
             "Expected authentication error message, got: {}",
             display
         );
@@ -227,8 +357,10 @@ mod tests {
 
         // ホスト名エラーとわかるメッセージを含むべき
         assert!(
-            display.contains("ホスト名") || display.contains("解決")
-                || display.contains("host") || display.contains("resolve"),
+            display.contains("ホスト名")
+                || display.contains("解決")
+                || display.contains("host")
+                || display.contains("resolve"),
             "Expected hostname resolution error message, got: {}",
             display
         );
@@ -242,7 +374,9 @@ mod tests {
 
         // タイムアウトエラーとわかるメッセージを含むべき
         assert!(
-            display.contains("タイムアウト") || display.contains("timeout") || display.contains("Timeout"),
+            display.contains("タイムアウト")
+                || display.contains("timeout")
+                || display.contains("Timeout"),
             "Expected timeout error message, got: {}",
             display
         );
@@ -255,9 +389,7 @@ mod tests {
     #[test]
     fn test_query_failed_displays_syntax_error_message() {
         // SQL構文エラー
-        let error = ProviderError::QueryFailed(
-            "syntax error at or near \"SELEC\"".to_string(),
-        );
+        let error = ProviderError::QueryFailed("syntax error at or near \"SELEC\"".to_string());
         let display = error.to_string();
 
         // 構文エラーとわかるメッセージを含むべき
@@ -271,15 +403,17 @@ mod tests {
     #[test]
     fn test_query_failed_displays_table_not_found_message() {
         // テーブルが見つからないエラー
-        let error = ProviderError::QueryFailed(
-            "relation \"nonexistent_table\" does not exist".to_string(),
-        );
+        let error =
+            ProviderError::QueryFailed("relation \"nonexistent_table\" does not exist".to_string());
         let display = error.to_string();
 
         // テーブルが見つからないとわかるメッセージを含むべき
         assert!(
-            display.contains("テーブル") || display.contains("存在しません")
-                || display.contains("table") || display.contains("not exist") || display.contains("not found"),
+            display.contains("テーブル")
+                || display.contains("存在しません")
+                || display.contains("table")
+                || display.contains("not exist")
+                || display.contains("not found"),
             "Expected table not found message, got: {}",
             display
         );
@@ -288,15 +422,13 @@ mod tests {
     #[test]
     fn test_query_failed_displays_column_not_found_message() {
         // カラムが見つからないエラー
-        let error = ProviderError::QueryFailed(
-            "column \"nonexistent_column\" does not exist".to_string(),
-        );
+        let error =
+            ProviderError::QueryFailed("column \"nonexistent_column\" does not exist".to_string());
         let display = error.to_string();
 
         // カラムが見つからないとわかるメッセージを含むべき
         assert!(
-            display.contains("カラム") || display.contains("列")
-                || display.contains("column"),
+            display.contains("カラム") || display.contains("列") || display.contains("column"),
             "Expected column not found message, got: {}",
             display
         );
@@ -305,14 +437,14 @@ mod tests {
     #[test]
     fn test_query_failed_displays_permission_error_message() {
         // 権限エラー
-        let error = ProviderError::QueryFailed(
-            "permission denied for table users".to_string(),
-        );
+        let error = ProviderError::QueryFailed("permission denied for table users".to_string());
         let display = error.to_string();
 
         // 権限エラーとわかるメッセージを含むべき
         assert!(
-            display.contains("権限") || display.contains("permission") || display.contains("Permission"),
+            display.contains("権限")
+                || display.contains("permission")
+                || display.contains("Permission"),
             "Expected permission error message, got: {}",
             display
         );
@@ -328,7 +460,9 @@ mod tests {
         let display = error.to_string();
 
         assert!(
-            display.contains("タイムアウト") || display.contains("timeout") || display.contains("Timeout"),
+            display.contains("タイムアウト")
+                || display.contains("timeout")
+                || display.contains("Timeout"),
             "Expected timeout message, got: {}",
             display
         );
@@ -340,8 +474,11 @@ mod tests {
         let display = error.to_string();
 
         assert!(
-            display.contains("権限") || display.contains("アクセス")
-                || display.contains("permission") || display.contains("Permission") || display.contains("access"),
+            display.contains("権限")
+                || display.contains("アクセス")
+                || display.contains("permission")
+                || display.contains("Permission")
+                || display.contains("access"),
             "Expected permission denied message, got: {}",
             display
         );
@@ -353,7 +490,9 @@ mod tests {
         let display = error.to_string();
 
         assert!(
-            display.contains("見つかりません") || display.contains("not found") || display.contains("Not found"),
+            display.contains("見つかりません")
+                || display.contains("not found")
+                || display.contains("Not found"),
             "Expected not found message, got: {}",
             display
         );
@@ -365,7 +504,10 @@ mod tests {
         let display = error.to_string();
 
         assert!(
-            display.contains("設定") || display.contains("configuration") || display.contains("Configuration") || display.contains("config"),
+            display.contains("設定")
+                || display.contains("configuration")
+                || display.contains("Configuration")
+                || display.contains("config"),
             "Expected configuration error message, got: {}",
             display
         );
@@ -378,7 +520,9 @@ mod tests {
 
         // 内部エラーでもユーザーに理解できるメッセージを含むべき
         assert!(
-            display.contains("内部") || display.contains("internal") || display.contains("Internal"),
+            display.contains("内部")
+                || display.contains("internal")
+                || display.contains("Internal"),
             "Expected internal error message, got: {}",
             display
         );
