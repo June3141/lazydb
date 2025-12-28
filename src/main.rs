@@ -1,3 +1,28 @@
+//! lazydb - A simple terminal UI for database management
+//!
+//! lazydb is a TUI (Terminal User Interface) tool that allows developers to interact
+//! with databases directly from the terminal. It aims to provide a lightweight
+//! alternative to GUI database clients like DBeaver, focusing on keyboard-driven workflows.
+//!
+//! # Architecture
+//!
+//! lazydb follows **The Elm Architecture (TEA)** pattern:
+//!
+//! 1. **Model** - Application state ([`app::App`])
+//! 2. **View** - UI rendering ([`ui`] module)
+//! 3. **Update** - State updates via messages ([`message::Message`])
+//!
+//! # Modules
+//!
+//! - [`app`] - Application state and update logic
+//! - [`config`] - Configuration file management
+//! - [`db`] - Database provider abstraction layer
+//! - [`event`] - Keyboard event handling
+//! - [`export`] - Data export (CSV, JSON)
+//! - [`message`] - Message types for TEA pattern
+//! - [`model`] - Data models
+//! - [`ui`] - User interface components
+
 mod app;
 mod config;
 mod db;

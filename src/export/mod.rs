@@ -1,3 +1,31 @@
+//! Data export functionality
+//!
+//! This module provides functionality to export query results to various
+//! file formats with support for different character encodings.
+//!
+//! # Supported Formats
+//!
+//! - CSV (Comma-Separated Values)
+//! - JSON (JavaScript Object Notation)
+//!
+//! # Supported Encodings
+//!
+//! - UTF-8 (default)
+//! - Shift_JIS (for Japanese Windows compatibility)
+//! - EUC-JP (for Japanese Unix compatibility)
+//!
+//! # Example
+//!
+//! ```ignore
+//! use lazydb::export::{export_to_file, Encoding, ExportConfig, ExportFormat};
+//!
+//! let config = ExportConfig {
+//!     format: ExportFormat::Csv,
+//!     encoding: Encoding::Utf8,
+//! };
+//! export_to_file(&query_result, Path::new("output.csv"), &config)?;
+//! ```
+
 // TODO: Remove #[allow(dead_code)] once export is integrated with UI
 #![allow(dead_code)]
 
@@ -8,14 +36,14 @@ use std::path::Path;
 
 use crate::model::QueryResult;
 
-/// エクスポート形式
+/// Export format
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ExportFormat {
     Csv,
     Json,
 }
 
-/// 文字エンコーディング
+/// Character encoding for export files
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Encoding {
     #[default]
@@ -24,7 +52,7 @@ pub enum Encoding {
     EucJp,
 }
 
-/// エクスポート設定
+/// Export configuration
 #[derive(Debug, Clone)]
 pub struct ExportConfig {
     pub format: ExportFormat,
@@ -40,7 +68,7 @@ impl Default for ExportConfig {
     }
 }
 
-/// クエリ結果をファイルにエクスポートする
+/// Export query results to a file
 pub fn export_to_file(
     result: &QueryResult,
     path: &Path,

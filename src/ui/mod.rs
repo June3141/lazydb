@@ -1,3 +1,31 @@
+//! User interface components for lazydb
+//!
+//! This module contains all TUI rendering logic using the ratatui framework.
+//!
+//! # Layout Structure
+//!
+//! ```text
+//! ┌─────────────────────────────────────────────────────────┐
+//! │ Sidebar              │ Query Editor                     │
+//! │ (Projects/           ├───────────────────────────────────┤
+//! │  Connections)        │ Main Panel (Schema/Data/Relations)│
+//! │                      │                                   │
+//! ├──────────────────────┤                                   │
+//! │ Table Summary        ├───────────────────────────────────┤
+//! │                      │ Status Bar                        │
+//! ├──────────────────────┴───────────────────────────────────┤
+//! │ Help Bar                                                 │
+//! └─────────────────────────────────────────────────────────┘
+//! ```
+//!
+//! # Modules
+//!
+//! - [`sidebar`] - Left sidebar with project/connection tree
+//! - [`panel`] - Main content panel with tabs (Schema, Data, Relations)
+//! - [`modal`] - Modal dialogs for user input
+//! - [`help_bar`] - Context-sensitive keybinding hints
+//! - [`status_bar`] - Status messages and current state info
+
 mod help_bar;
 mod modal;
 mod panel;

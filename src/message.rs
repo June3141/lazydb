@@ -1,3 +1,20 @@
+//! Application messages for the TEA (The Elm Architecture) pattern
+//!
+//! This module defines all messages that can be sent to update the application state.
+//! Messages are triggered by user input (keyboard events) and processed by the
+//! `App::update()` method.
+//!
+//! # Message Categories
+//!
+//! - **Navigation** - Moving between UI elements
+//! - **Tab switching** - Switching main panel and sub-tabs
+//! - **Modal operations** - Opening/closing modal dialogs
+//! - **Pagination** - Navigating through paginated data
+//! - **Data table** - Scrolling within the data table
+
+/// Application message type
+///
+/// Each variant represents a specific user action or state change request.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Message {
     Quit,

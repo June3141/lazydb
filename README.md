@@ -161,7 +161,7 @@ Passwords can be configured in two ways:
 
 ## Documentation
 
-- [Architecture](docs/architecture.md) - TEA パターンとディレクトリ構成
+- [Architecture](docs/architecture.md) - TEA pattern and directory structure
 
 ## Development Environment
 
@@ -226,13 +226,12 @@ The following tools are required for development:
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details
+on our development process, coding standards, and how to submit pull requests.
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for a list of changes and release history.
 
 ## License
 
