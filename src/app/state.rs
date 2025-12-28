@@ -1310,6 +1310,7 @@ impl App {
                             table.indexes = detailed_table.indexes;
                             table.foreign_keys = detailed_table.foreign_keys;
                             table.constraints = detailed_table.constraints;
+                            table.triggers = detailed_table.triggers;
                             table.details_loaded = true;
                             self.status_message = format!("Loaded schema for {}", table_name);
                         }
