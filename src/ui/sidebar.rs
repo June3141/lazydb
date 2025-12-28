@@ -179,7 +179,8 @@ fn draw_connections_view(frame: &mut Frame, app: &App, area: Rect, proj_idx: usi
                 let table_style = if is_selected_table && is_focused {
                     theme::focused()
                 } else if is_selected_table {
-                    theme::header()
+                    // Selected table highlighted in white+bold when not focused
+                    theme::text().add_modifier(Modifier::BOLD)
                 } else {
                     theme::muted()
                 };
@@ -195,11 +196,19 @@ fn draw_connections_view(frame: &mut Frame, app: &App, area: Rect, proj_idx: usi
 
                 let icon = table.table_type.icon();
 
-                lines.push(Line::from(vec![
+                // Apply style to entire line for proper background highlighting
+                let line = Line::from(vec![
                     Span::styled(prefix, theme::muted()),
                     Span::styled(format!("{} ", icon), icon_style),
                     Span::styled(&table.name, table_style),
-                ]));
+                ]);
+
+                // If table is selected and focused, apply background to entire line
+                if is_selected_table && is_focused {
+                    lines.push(line.style(theme::focused()));
+                } else {
+                    lines.push(line);
+                }
             }
         }
     }
