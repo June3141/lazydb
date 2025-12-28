@@ -7,15 +7,17 @@ use ratatui::{
 };
 
 pub fn draw_help_bar(frame: &mut Frame, area: Rect) {
-    let help_items = vec![
+    let help_items = [
         ("q", "Quit"),
         ("↑/k", "Up"),
         ("↓/j", "Down"),
         ("Tab", "Focus"),
+        ("S-hjkl", "Pane"),
         ("Enter", "Select"),
-        ("e", "Expand"),
-        ("s", "Schema"),
-        ("d", "Data"),
+        ("BS", "Back"),
+        ("a", "Add"),
+        ("s/d/r", "Schema/Data/Relations"),
+        ("1-4", "SubTab"),
     ];
 
     let spans: Vec<Span> = help_items

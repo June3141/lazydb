@@ -5,8 +5,69 @@ pub enum Message {
     NavigateDown,
     NextFocus,
     PrevFocus,
+    // Directional pane focus (Shift + h/j/k/l or arrow keys)
+    FocusLeft,
+    FocusRight,
+    FocusUp,
+    FocusDown,
     Activate,
-    ToggleExpandCollapse,
+    GoBack,
+    // Main panel tabs
     SwitchToSchema,
     SwitchToData,
+    SwitchToRelations,
+    // Schema sub-tabs (1-6 keys)
+    SwitchToColumns,
+    SwitchToIndexes,
+    SwitchToForeignKeys,
+    SwitchToConstraints,
+    SwitchToTriggers,
+    SwitchToDefinition,
+    // Connection modal messages
+    OpenAddConnectionModal,
+    // Project modal messages
+    OpenAddProjectModal,
+    OpenEditProjectModal,
+    DeleteProject,
+    // Search modal messages
+    OpenSearchProjectModal,
+    #[allow(dead_code)] // Legacy: kept for potential future use
+    OpenSearchConnectionModal,
+    #[allow(dead_code)] // Legacy: kept for potential future use
+    OpenSearchTableModal,
+    OpenUnifiedSearchModal,
+    SearchConfirm,
+    SearchConnectionConfirm,
+    TableSearchConfirm,
+    UnifiedSearchConfirm,
+    UnifiedSearchSwitchSection,
+    // Column visibility modal messages
+    OpenColumnVisibilityModal,
+    ToggleColumnVisibility,
+    // Common modal messages
+    CloseModal,
+    ModalConfirm,
+    ModalInputChar(char),
+    ModalInputBackspace,
+    ModalNextField,
+    ModalPrevField,
+    // Query history messages
+    OpenHistoryModal,
+    HistoryNavigateUp,
+    HistoryNavigateDown,
+    HistorySelectEntry,
+    ClearHistory,
+    // Pagination messages
+    PageNext,
+    PagePrev,
+    PageFirst,
+    PageLast,
+    PageSizeCycle,
+    // Data table navigation messages
+    DataTableUp,
+    DataTableDown,
+    DataTablePageUp,
+    DataTablePageDown,
+    DataTableFirst,
+    DataTableLast,
 }
