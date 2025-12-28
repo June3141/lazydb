@@ -30,7 +30,10 @@
 #![allow(dead_code)]
 
 mod csv;
+mod error;
 mod json;
+
+pub use error::ExportError;
 
 use std::path::Path;
 

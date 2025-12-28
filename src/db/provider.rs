@@ -170,3 +170,235 @@ impl std::fmt::Display for ProviderError {
 }
 
 impl std::error::Error for ProviderError {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ===========================================
+    // 接続エラーのテスト
+    // ===========================================
+
+    #[test]
+    fn test_connection_failed_displays_user_friendly_message() {
+        // 接続拒否エラー
+        let error = ProviderError::ConnectionFailed("connection refused".to_string());
+        let display = error.to_string();
+
+        // ユーザーフレンドリーなメッセージを含むべき
+        assert!(
+            display.contains("接続が拒否されました")
+                || display.contains("Connection refused"),
+            "Expected user-friendly connection refused message, got: {}",
+            display
+        );
+        // 対処法のヒントを含むべき
+        assert!(
+            display.contains("ホスト") || display.contains("ポート") || display.contains("host") || display.contains("port"),
+            "Expected hint about host/port, got: {}",
+            display
+        );
+    }
+
+    #[test]
+    fn test_connection_failed_displays_auth_error_message() {
+        // 認証エラー
+        let error = ProviderError::ConnectionFailed(
+            "password authentication failed for user \"postgres\"".to_string(),
+        );
+        let display = error.to_string();
+
+        // 認証エラーとわかるメッセージを含むべき
+        assert!(
+            display.contains("認証") || display.contains("パスワード")
+                || display.contains("authentication") || display.contains("password"),
+            "Expected authentication error message, got: {}",
+            display
+        );
+    }
+
+    #[test]
+    fn test_connection_failed_displays_hostname_error_message() {
+        // ホスト名解決エラー
+        let error = ProviderError::ConnectionFailed(
+            "could not translate host name \"invalid-host\" to address".to_string(),
+        );
+        let display = error.to_string();
+
+        // ホスト名エラーとわかるメッセージを含むべき
+        assert!(
+            display.contains("ホスト名") || display.contains("解決")
+                || display.contains("host") || display.contains("resolve"),
+            "Expected hostname resolution error message, got: {}",
+            display
+        );
+    }
+
+    #[test]
+    fn test_connection_failed_displays_timeout_message() {
+        // タイムアウトエラー
+        let error = ProviderError::ConnectionFailed("connection timed out".to_string());
+        let display = error.to_string();
+
+        // タイムアウトエラーとわかるメッセージを含むべき
+        assert!(
+            display.contains("タイムアウト") || display.contains("timeout") || display.contains("Timeout"),
+            "Expected timeout error message, got: {}",
+            display
+        );
+    }
+
+    // ===========================================
+    // クエリエラーのテスト
+    // ===========================================
+
+    #[test]
+    fn test_query_failed_displays_syntax_error_message() {
+        // SQL構文エラー
+        let error = ProviderError::QueryFailed(
+            "syntax error at or near \"SELEC\"".to_string(),
+        );
+        let display = error.to_string();
+
+        // 構文エラーとわかるメッセージを含むべき
+        assert!(
+            display.contains("構文") || display.contains("syntax") || display.contains("Syntax"),
+            "Expected syntax error message, got: {}",
+            display
+        );
+    }
+
+    #[test]
+    fn test_query_failed_displays_table_not_found_message() {
+        // テーブルが見つからないエラー
+        let error = ProviderError::QueryFailed(
+            "relation \"nonexistent_table\" does not exist".to_string(),
+        );
+        let display = error.to_string();
+
+        // テーブルが見つからないとわかるメッセージを含むべき
+        assert!(
+            display.contains("テーブル") || display.contains("存在しません")
+                || display.contains("table") || display.contains("not exist") || display.contains("not found"),
+            "Expected table not found message, got: {}",
+            display
+        );
+    }
+
+    #[test]
+    fn test_query_failed_displays_column_not_found_message() {
+        // カラムが見つからないエラー
+        let error = ProviderError::QueryFailed(
+            "column \"nonexistent_column\" does not exist".to_string(),
+        );
+        let display = error.to_string();
+
+        // カラムが見つからないとわかるメッセージを含むべき
+        assert!(
+            display.contains("カラム") || display.contains("列")
+                || display.contains("column"),
+            "Expected column not found message, got: {}",
+            display
+        );
+    }
+
+    #[test]
+    fn test_query_failed_displays_permission_error_message() {
+        // 権限エラー
+        let error = ProviderError::QueryFailed(
+            "permission denied for table users".to_string(),
+        );
+        let display = error.to_string();
+
+        // 権限エラーとわかるメッセージを含むべき
+        assert!(
+            display.contains("権限") || display.contains("permission") || display.contains("Permission"),
+            "Expected permission error message, got: {}",
+            display
+        );
+    }
+
+    // ===========================================
+    // その他のエラーのテスト
+    // ===========================================
+
+    #[test]
+    fn test_timeout_error_displays_user_friendly_message() {
+        let error = ProviderError::Timeout("query took too long".to_string());
+        let display = error.to_string();
+
+        assert!(
+            display.contains("タイムアウト") || display.contains("timeout") || display.contains("Timeout"),
+            "Expected timeout message, got: {}",
+            display
+        );
+    }
+
+    #[test]
+    fn test_permission_denied_displays_user_friendly_message() {
+        let error = ProviderError::PermissionDenied("access denied to schema".to_string());
+        let display = error.to_string();
+
+        assert!(
+            display.contains("権限") || display.contains("アクセス")
+                || display.contains("permission") || display.contains("Permission") || display.contains("access"),
+            "Expected permission denied message, got: {}",
+            display
+        );
+    }
+
+    #[test]
+    fn test_not_found_displays_user_friendly_message() {
+        let error = ProviderError::NotFound("resource not available".to_string());
+        let display = error.to_string();
+
+        assert!(
+            display.contains("見つかりません") || display.contains("not found") || display.contains("Not found"),
+            "Expected not found message, got: {}",
+            display
+        );
+    }
+
+    #[test]
+    fn test_invalid_configuration_displays_user_friendly_message() {
+        let error = ProviderError::InvalidConfiguration("invalid port number".to_string());
+        let display = error.to_string();
+
+        assert!(
+            display.contains("設定") || display.contains("configuration") || display.contains("Configuration") || display.contains("config"),
+            "Expected configuration error message, got: {}",
+            display
+        );
+    }
+
+    #[test]
+    fn test_internal_error_displays_user_friendly_message() {
+        let error = ProviderError::InternalError("mutex poisoned".to_string());
+        let display = error.to_string();
+
+        // 内部エラーでもユーザーに理解できるメッセージを含むべき
+        assert!(
+            display.contains("内部") || display.contains("internal") || display.contains("Internal"),
+            "Expected internal error message, got: {}",
+            display
+        );
+    }
+
+    // ===========================================
+    // エラーメッセージにデバッグ情報を含むテスト
+    // ===========================================
+
+    #[test]
+    fn test_error_preserves_original_details() {
+        let original_error = "connection refused (os error 111)";
+        let error = ProviderError::ConnectionFailed(original_error.to_string());
+        let display = error.to_string();
+
+        // デバッグのため、元のエラー情報も含むべき
+        assert!(
+            display.contains("111") || display.contains("refused"),
+            "Expected original error details to be preserved, got: {}",
+            display
+        );
+    }
+}
