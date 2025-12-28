@@ -446,18 +446,17 @@ fn test_get_columns_auto_increment_detection() {
     let provider = create_test_provider();
     let mut client = provider.client.lock().unwrap();
 
-    let columns = InternalQueries::get_columns(&mut client, "users", "public")
+    // Use 'categories' table which has SERIAL id (auto-increment)
+    let columns = InternalQueries::get_columns(&mut client, "categories", "public")
         .expect("Failed to get columns");
 
     // Check if 'id' column has auto-increment (serial type)
     let id_column = columns.iter().find(|c| c.name == "id").unwrap();
     // Serial columns have default value starting with "nextval("
-    if id_column.default_value.is_some() {
-        assert!(
-            id_column.is_auto_increment,
-            "'id' with nextval default should be auto_increment"
-        );
-    }
+    assert!(
+        id_column.is_auto_increment,
+        "SERIAL 'id' column should be detected as auto_increment"
+    );
 }
 
 #[test]

@@ -26,6 +26,7 @@ pub fn get_constraints(
         LEFT JOIN information_schema.key_column_usage kcu
             ON tc.constraint_name = kcu.constraint_name
             AND tc.table_schema = kcu.table_schema
+            AND tc.table_name = kcu.table_name
         LEFT JOIN information_schema.check_constraints cc
             ON tc.constraint_name = cc.constraint_name
             AND tc.constraint_schema = cc.constraint_schema
