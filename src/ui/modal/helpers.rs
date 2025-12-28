@@ -108,15 +108,13 @@ pub fn highlight_match(text: &str, query: &str, is_selected: bool) -> Line<'stat
     }
 }
 
-/// Draw standard OK/Cancel buttons with custom styles
+/// Draw standard OK/Cancel buttons
 #[allow(dead_code)]
 pub fn draw_ok_cancel_buttons(
     frame: &mut Frame,
     area: Rect,
     ok_focused: bool,
     cancel_focused: bool,
-    _ok_style_base: (ratatui::style::Color, ratatui::style::Color),
-    _cancel_style_base: (ratatui::style::Color, ratatui::style::Color),
 ) {
     let button_chunks = Layout::default()
         .direction(Direction::Horizontal)

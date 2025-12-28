@@ -1,7 +1,8 @@
 //! Centralized color theme for the UI
 //!
-//! This module defines a minimal 5-color palette for consistent styling:
-//! - Primary (Cyan): Focus/selection, active borders, links
+//! This module defines a 6-color palette for consistent styling:
+//! - Primary (Cyan): Item selection/focus within a pane
+//! - Pane (Green): Active pane indicator (borders)
 //! - Accent (Yellow): Headers, emphasis, important info (PK, etc.)
 //! - Muted (DarkGray): Inactive elements, borders, secondary info
 //! - Text (White): Normal text
@@ -9,8 +10,11 @@
 
 use ratatui::style::{Color, Modifier, Style};
 
-/// Primary color for focus/selection states and active elements
+/// Primary color for item selection/focus within a pane
 pub const PRIMARY: Color = Color::Cyan;
+
+/// Pane focus color - indicates which pane is active
+pub const PANE: Color = Color::Green;
 
 /// Accent color for headers and emphasis
 pub const ACCENT: Color = Color::Yellow;
@@ -41,9 +45,9 @@ pub fn selected() -> Style {
     Style::default().fg(PRIMARY)
 }
 
-/// Style for active/focused borders
+/// Style for active/focused pane borders (green)
 pub fn border_focused() -> Style {
-    Style::default().fg(PRIMARY)
+    Style::default().fg(PANE)
 }
 
 /// Style for inactive borders

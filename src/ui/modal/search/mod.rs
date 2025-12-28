@@ -23,7 +23,7 @@ pub(super) fn draw_search_help(frame: &mut Frame, area: Rect) {
     let help_text = Line::from(vec![
         Span::styled("Enter", theme::header()),
         Span::raw(": select  "),
-        Span::styled("Esc", theme::muted()),
+        Span::styled("Esc", theme::header()),
         Span::raw(": cancel  "),
         Span::styled("↑/↓", theme::selected()),
         Span::raw(": navigate"),
