@@ -153,12 +153,13 @@ fn run_app(
                     // Query history: Ctrl+r to open history modal (like shell reverse-search)
                     (KeyCode::Char('r'), KeyModifiers::CONTROL) => Some(Message::OpenHistoryModal),
                     (KeyCode::Char('r'), _) => Some(Message::SwitchToRelations),
-                    // Schema sub-tab shortcuts (1-5)
+                    // Schema sub-tab shortcuts (1-6)
                     (KeyCode::Char('1'), _) => Some(Message::SwitchToColumns),
                     (KeyCode::Char('2'), _) => Some(Message::SwitchToIndexes),
                     (KeyCode::Char('3'), _) => Some(Message::SwitchToForeignKeys),
                     (KeyCode::Char('4'), _) => Some(Message::SwitchToConstraints),
-                    (KeyCode::Char('5'), _) => Some(Message::SwitchToDefinition),
+                    (KeyCode::Char('5'), _) => Some(Message::SwitchToTriggers),
+                    (KeyCode::Char('6'), _) => Some(Message::SwitchToDefinition),
                     // Pagination shortcuts (Data tab)
                     (KeyCode::Char('n'), _) if app.main_panel_tab == app::MainPanelTab::Data => {
                         Some(Message::PageNext)

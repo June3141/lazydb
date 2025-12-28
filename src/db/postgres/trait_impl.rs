@@ -137,6 +137,9 @@ impl DatabaseProvider for PostgresProvider {
         // Get constraints
         let constraints = InternalQueries::get_constraints(&mut client, table_name, schema_str)?;
 
+        // Get triggers
+        let triggers = InternalQueries::get_triggers(&mut client, table_name, schema_str)?;
+
         // Get row count and size
         let (row_count, size_bytes) =
             InternalQueries::get_table_stats(&mut client, table_name, schema_str)?;
@@ -147,6 +150,7 @@ impl DatabaseProvider for PostgresProvider {
             .with_indexes(indexes)
             .with_foreign_keys(foreign_keys)
             .with_constraints(constraints)
+            .with_triggers(triggers)
             .with_stats(row_count, size_bytes);
 
         table.table_type = table_type;

@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 use super::ForeignKeyAction;
-use super::{Column, Constraint, ForeignKey, Index};
+use super::{Column, Constraint, ForeignKey, Index, Trigger};
 
 /// Table type
 #[derive(Debug, Clone, PartialEq)]
@@ -54,6 +54,7 @@ pub struct Table {
     pub indexes: Vec<Index>,
     pub foreign_keys: Vec<ForeignKey>,
     pub constraints: Vec<Constraint>,
+    pub triggers: Vec<Trigger>,
     pub row_count: usize,
     pub size_bytes: u64,
     pub comment: Option<String>,
@@ -73,6 +74,7 @@ impl Table {
             indexes: Vec::new(),
             foreign_keys: Vec::new(),
             constraints: Vec::new(),
+            triggers: Vec::new(),
             row_count: 0,
             size_bytes: 0,
             comment: None,
@@ -103,6 +105,11 @@ impl Table {
 
     pub fn with_constraints(mut self, constraints: Vec<Constraint>) -> Self {
         self.constraints = constraints;
+        self
+    }
+
+    pub fn with_triggers(mut self, triggers: Vec<Trigger>) -> Self {
+        self.triggers = triggers;
         self
     }
 

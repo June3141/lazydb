@@ -196,6 +196,60 @@ impl ConstraintsVisibility {
     }
 }
 
+/// Column visibility settings for Triggers tab
+#[derive(Debug, Clone)]
+pub struct TriggersVisibility {
+    pub show_name: bool,
+    pub show_timing: bool,
+    pub show_events: bool,
+    pub show_level: bool,
+    pub show_function: bool,
+    pub show_enabled: bool,
+}
+
+impl Default for TriggersVisibility {
+    fn default() -> Self {
+        Self {
+            show_name: true,
+            show_timing: true,
+            show_events: true,
+            show_level: true,
+            show_function: true,
+            show_enabled: true,
+        }
+    }
+}
+
+impl TriggersVisibility {
+    pub fn all_columns() -> &'static [&'static str] {
+        &["Name", "Timing", "Events", "Level", "Function", "Enabled"]
+    }
+
+    pub fn is_visible(&self, index: usize) -> bool {
+        match index {
+            0 => self.show_name,
+            1 => self.show_timing,
+            2 => self.show_events,
+            3 => self.show_level,
+            4 => self.show_function,
+            5 => self.show_enabled,
+            _ => false,
+        }
+    }
+
+    pub fn toggle(&mut self, index: usize) {
+        match index {
+            0 => self.show_name = !self.show_name,
+            1 => self.show_timing = !self.show_timing,
+            2 => self.show_events = !self.show_events,
+            3 => self.show_level = !self.show_level,
+            4 => self.show_function = !self.show_function,
+            5 => self.show_enabled = !self.show_enabled,
+            _ => {}
+        }
+    }
+}
+
 /// Column visibility settings for all schema sub-tabs
 #[derive(Debug, Clone, Default)]
 pub struct ColumnVisibilitySettings {
@@ -203,4 +257,5 @@ pub struct ColumnVisibilitySettings {
     pub indexes: IndexesVisibility,
     pub foreign_keys: ForeignKeysVisibility,
     pub constraints: ConstraintsVisibility,
+    pub triggers: TriggersVisibility,
 }

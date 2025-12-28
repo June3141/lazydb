@@ -225,6 +225,11 @@ impl App {
                 self.schema_sub_tab = SchemaSubTab::Constraints;
             }
 
+            Message::SwitchToTriggers => {
+                self.main_panel_tab = MainPanelTab::Schema;
+                self.schema_sub_tab = SchemaSubTab::Triggers;
+            }
+
             Message::SwitchToDefinition => {
                 // Only switch to Definition tab if current table is a view
                 if let Some(table) = self.selected_table_info() {
@@ -440,6 +445,9 @@ impl App {
                         }
                         SchemaSubTab::Constraints => {
                             self.column_visibility.constraints.toggle(idx);
+                        }
+                        SchemaSubTab::Triggers => {
+                            self.column_visibility.triggers.toggle(idx);
                         }
                         SchemaSubTab::Definition => {
                             // No visibility settings for Definition tab
@@ -1302,6 +1310,7 @@ impl App {
                             table.indexes = detailed_table.indexes;
                             table.foreign_keys = detailed_table.foreign_keys;
                             table.constraints = detailed_table.constraints;
+                            table.triggers = detailed_table.triggers;
                             table.details_loaded = true;
                             self.status_message = format!("Loaded schema for {}", table_name);
                         }
@@ -1485,6 +1494,7 @@ mod tests {
                 indexes: vec![],
                 foreign_keys: vec![],
                 constraints: vec![],
+                triggers: vec![],
                 row_count: 0,
                 size_bytes: 0,
                 comment: None,
@@ -1499,6 +1509,7 @@ mod tests {
                 indexes: vec![],
                 foreign_keys: vec![],
                 constraints: vec![],
+                triggers: vec![],
                 row_count: 0,
                 size_bytes: 0,
                 comment: None,
@@ -1513,6 +1524,7 @@ mod tests {
                 indexes: vec![],
                 foreign_keys: vec![],
                 constraints: vec![],
+                triggers: vec![],
                 row_count: 0,
                 size_bytes: 0,
                 comment: None,
@@ -1527,6 +1539,7 @@ mod tests {
                 indexes: vec![],
                 foreign_keys: vec![],
                 constraints: vec![],
+                triggers: vec![],
                 row_count: 0,
                 size_bytes: 0,
                 comment: None,

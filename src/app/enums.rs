@@ -24,6 +24,8 @@ pub enum SchemaSubTab {
     Indexes,
     ForeignKeys,
     Constraints,
+    /// Triggers defined on the table
+    Triggers,
     /// View/Materialized View definition (SELECT statement)
     Definition,
 }
