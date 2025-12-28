@@ -69,15 +69,9 @@ pub fn handle_normal_input(
         (KeyCode::Char('6'), _) => Some(Message::SwitchToDefinition),
 
         // Pagination shortcuts (Data tab)
-        (KeyCode::Char('n'), _) if app.panel_tab == MainPanelTab::Data => {
-            Some(Message::PageNext)
-        }
-        (KeyCode::Char('p'), _) if app.panel_tab == MainPanelTab::Data => {
-            Some(Message::PagePrev)
-        }
-        (KeyCode::Char('g'), _) if app.panel_tab == MainPanelTab::Data => {
-            Some(Message::PageFirst)
-        }
+        (KeyCode::Char('n'), _) if app.panel_tab == MainPanelTab::Data => Some(Message::PageNext),
+        (KeyCode::Char('p'), _) if app.panel_tab == MainPanelTab::Data => Some(Message::PagePrev),
+        (KeyCode::Char('g'), _) if app.panel_tab == MainPanelTab::Data => Some(Message::PageFirst),
         (KeyCode::Char('G'), KeyModifiers::SHIFT) if app.panel_tab == MainPanelTab::Data => {
             Some(Message::PageLast)
         }

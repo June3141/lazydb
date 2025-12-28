@@ -1,6 +1,6 @@
 mod help_bar;
-mod panel;
 mod modal;
+mod panel;
 mod sidebar;
 mod status_bar;
 pub mod utils;
@@ -12,8 +12,8 @@ use ratatui::{
 };
 
 use help_bar::draw_help_bar;
-use panel::{draw_panel, draw_query_editor};
 use modal::draw_modal;
+use panel::{draw_panel, draw_query_editor};
 use sidebar::{draw_sidebar, draw_table_summary};
 use status_bar::draw_status_bar;
 

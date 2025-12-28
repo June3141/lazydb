@@ -176,7 +176,12 @@ impl App {
     }
 
     /// Send a command to fetch tables asynchronously
-    pub(crate) fn send_fetch_tables(&mut self, conn: &Connection, proj_idx: usize, conn_idx: usize) {
+    pub(crate) fn send_fetch_tables(
+        &mut self,
+        conn: &Connection,
+        proj_idx: usize,
+        conn_idx: usize,
+    ) {
         let request_id = self.next_request_id();
         let connection = ConnectionParams::from_connection(conn);
 

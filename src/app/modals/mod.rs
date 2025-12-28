@@ -10,6 +10,8 @@ mod visibility;
 pub use connection::AddConnectionModal;
 pub use history::HistoryModal;
 pub use project::{DeleteProjectModal, ProjectModal, SearchProjectModal};
-pub use search::{SearchConnectionModal, SearchTableModal, UnifiedSearchModal, UnifiedSearchSection};
+pub use search::{
+    SearchConnectionModal, SearchTableModal, UnifiedSearchModal, UnifiedSearchSection,
+};
 pub use state::ModalState;
 pub use visibility::ColumnVisibilityModal;

@@ -52,12 +52,7 @@ pub fn draw_modal(
             }
         }
         ModalState::UnifiedSearch(modal) => {
-            search::draw_unified_search_modal(
-                frame,
-                modal,
-                connections,
-                tables.unwrap_or(&[]),
-            );
+            search::draw_unified_search_modal(frame, modal, connections, tables.unwrap_or(&[]));
         }
         ModalState::History(modal) => {
             history_modal::draw_history_modal(frame, modal, history);

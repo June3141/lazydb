@@ -1,12 +1,12 @@
 //! Search modal rendering (projects, connections, tables, unified)
 
-mod project;
 mod connection;
+mod project;
 mod table;
 mod unified;
 
-pub use project::draw_search_project_modal;
 pub use connection::draw_search_connection_modal;
+pub use project::draw_search_project_modal;
 pub use table::draw_search_table_modal;
 pub use unified::draw_unified_search_modal;
 

@@ -59,17 +59,17 @@ impl App {
                 // Get the filter data
                 if let SidebarMode::Connections(proj_idx) = self.sidebar_mode {
                     if let Some(project) = self.projects.get(proj_idx) {
-                        let tables =
-                            if let Some(conn) = project.connections.get(self.selected_connection_idx)
-                            {
-                                if conn.expanded {
-                                    &conn.tables[..]
-                                } else {
-                                    &[]
-                                }
+                        let tables = if let Some(conn) =
+                            project.connections.get(self.selected_connection_idx)
+                        {
+                            if conn.expanded {
+                                &conn.tables[..]
                             } else {
                                 &[]
-                            };
+                            }
+                        } else {
+                            &[]
+                        };
                         modal.update_filter(&project.connections, tables);
                     }
                 }
@@ -134,17 +134,17 @@ impl App {
                 // Get the filter data
                 if let SidebarMode::Connections(proj_idx) = self.sidebar_mode {
                     if let Some(project) = self.projects.get(proj_idx) {
-                        let tables =
-                            if let Some(conn) = project.connections.get(self.selected_connection_idx)
-                            {
-                                if conn.expanded {
-                                    &conn.tables[..]
-                                } else {
-                                    &[]
-                                }
+                        let tables = if let Some(conn) =
+                            project.connections.get(self.selected_connection_idx)
+                        {
+                            if conn.expanded {
+                                &conn.tables[..]
                             } else {
                                 &[]
-                            };
+                            }
+                        } else {
+                            &[]
+                        };
                         modal.update_filter(&project.connections, tables);
                     }
                 }
@@ -366,8 +366,9 @@ impl App {
     #[allow(dead_code)]
     pub(crate) fn open_search_project_modal(&mut self) {
         if let SidebarMode::Projects = self.sidebar_mode {
-            self.modal_state =
-                ModalState::SearchProject(SearchProjectModal::with_all_projects(self.projects.len()));
+            self.modal_state = ModalState::SearchProject(SearchProjectModal::with_all_projects(
+                self.projects.len(),
+            ));
         }
     }
 
