@@ -6,7 +6,7 @@ use crate::model::schema::{Table, TableType};
 use crate::model::QueryResult;
 
 use super::helpers::{convert_value_to_string, is_valid_identifier, quote_identifier};
-use super::internal::InternalQueries;
+use super::queries::InternalQueries;
 use super::{DatabaseProvider, DatabaseType, PostgresProvider, ProviderError};
 
 impl DatabaseProvider for PostgresProvider {

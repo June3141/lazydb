@@ -18,7 +18,7 @@ use ratatui::{
 // Re-export for external use
 pub use query_editor::draw_query_editor;
 
-pub fn draw_main_panel(frame: &mut Frame, app: &mut App, area: Rect) {
+pub fn draw_panel(frame: &mut Frame, app: &mut App, area: Rect) {
     let is_focused = app.focus == Focus::MainPanel;
     let border_style = if is_focused {
         Style::default().fg(Color::Cyan)
@@ -37,7 +37,7 @@ pub fn draw_main_panel(frame: &mut Frame, app: &mut App, area: Rect) {
 
     // Draw tabs
     let tab_titles = vec!["Schema [s]", "Data [d]", "Relations [r]"];
-    let selected_tab = match app.main_panel_tab {
+    let selected_tab = match app.panel_tab {
         MainPanelTab::Schema => 0,
         MainPanelTab::Data => 1,
         MainPanelTab::Relations => 2,
@@ -63,7 +63,7 @@ pub fn draw_main_panel(frame: &mut Frame, app: &mut App, area: Rect) {
     let inner_area = content_block.inner(chunks[1]);
     frame.render_widget(content_block, chunks[1]);
 
-    match app.main_panel_tab {
+    match app.panel_tab {
         MainPanelTab::Schema => schema_tab::draw_schema_content(frame, app, inner_area),
         MainPanelTab::Data => data_tab::draw_data_content(frame, app, inner_area),
         MainPanelTab::Relations => relations_tab::draw_relations_content(frame, app, inner_area),

@@ -6,7 +6,7 @@ mod connection_modal;
 mod helpers;
 mod history_modal;
 mod project_modal;
-mod search_modal;
+mod search;
 mod visibility_modal;
 
 use crate::app::{ColumnVisibilitySettings, ModalState};
@@ -41,23 +41,18 @@ pub fn draw_modal(
             project_modal::draw_delete_project_modal(frame, modal);
         }
         ModalState::SearchProject(modal) => {
-            search_modal::draw_search_project_modal(frame, modal, projects);
+            search::draw_search_project_modal(frame, modal, projects);
         }
         ModalState::SearchConnection(modal) => {
-            search_modal::draw_search_connection_modal(frame, modal, connections);
+            search::draw_search_connection_modal(frame, modal, connections);
         }
         ModalState::SearchTable(modal) => {
             if let Some(tables) = tables {
-                search_modal::draw_search_table_modal(frame, modal, tables);
+                search::draw_search_table_modal(frame, modal, tables);
             }
         }
         ModalState::UnifiedSearch(modal) => {
-            search_modal::draw_unified_search_modal(
-                frame,
-                modal,
-                connections,
-                tables.unwrap_or(&[]),
-            );
+            search::draw_unified_search_modal(frame, modal, connections, tables.unwrap_or(&[]));
         }
         ModalState::History(modal) => {
             history_modal::draw_history_modal(frame, modal, history);
