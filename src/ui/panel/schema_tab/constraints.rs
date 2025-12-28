@@ -47,12 +47,15 @@ pub fn draw_constraints_content(frame: &mut Frame, app: &App, area: Rect) {
                 };
                 let def_str = c.definition.as_deref().unwrap_or("-");
 
-                // Simplified: PrimaryKey/Unique use header style, others use selected/muted
+                // PrimaryKey/Unique use header style, FK uses selected, others use text
                 let type_style = match c.constraint_type {
                     crate::model::ConstraintType::PrimaryKey => theme::header(),
                     crate::model::ConstraintType::Unique => theme::header(),
                     crate::model::ConstraintType::ForeignKey => theme::selected(),
-                    _ => theme::text(),
+                    crate::model::ConstraintType::Check
+                    | crate::model::ConstraintType::NotNull
+                    | crate::model::ConstraintType::Default
+                    | crate::model::ConstraintType::Exclusion => theme::text(),
                 };
 
                 let all_cells = [

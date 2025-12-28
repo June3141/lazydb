@@ -62,7 +62,7 @@ pub fn draw_foreign_keys_content(frame: &mut Frame, app: &App, area: Rect) {
                         vis.show_references,
                     ),
                     (
-                        Cell::from(fk.on_delete.to_string()).style(theme::muted()),
+                        Cell::from(fk.on_delete.to_string()).style(theme::header()), // Emphasize potentially destructive action
                         vis.show_on_delete,
                     ),
                     (

@@ -149,7 +149,7 @@ pub fn draw_column_visibility_modal(
     let help_text = Line::from(vec![
         Span::styled("Space/Enter", theme::header()),
         Span::raw(": toggle  "),
-        Span::styled("Esc", theme::muted()),
+        Span::styled("Esc", theme::header()),
         Span::raw(": close  "),
         Span::styled("j/k", theme::selected()),
         Span::raw(": navigate"),

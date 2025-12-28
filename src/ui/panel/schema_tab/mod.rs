@@ -69,7 +69,7 @@ pub fn draw_schema_content(frame: &mut Frame, app: &App, area: Rect) {
     let sub_tabs = Tabs::new(sub_tab_titles)
         .select(selected_sub_tab)
         .style(theme::muted())
-        .highlight_style(theme::selected())
+        .highlight_style(theme::header())
         .divider(" | ");
 
     frame.render_widget(sub_tabs, chunks[0]);

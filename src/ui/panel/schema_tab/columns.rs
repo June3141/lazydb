@@ -75,7 +75,7 @@ pub fn draw_columns_content(frame: &mut Frame, app: &App, area: Rect) {
                         Cell::from(null_str).style(if col.is_nullable {
                             theme::muted()
                         } else {
-                            theme::text()
+                            theme::header() // NOT NULL is important constraint
                         }),
                         vis.show_nullable,
                     ),

@@ -133,7 +133,7 @@ fn highlight_sql_line(line: &str) -> Vec<Span<'static>> {
                 if is_word_boundary {
                     spans.push(Span::styled(
                         remaining[..keyword.len()].to_string(),
-                        theme::focused().add_modifier(Modifier::BOLD), // SQL keywords use Cyan with bold
+                        theme::selected().add_modifier(Modifier::BOLD), // SQL keywords use Cyan with bold (no background)
                     ));
                     pos += keyword.len();
                     found = true;

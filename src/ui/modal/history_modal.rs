@@ -73,7 +73,7 @@ pub fn draw_history_modal(frame: &mut Frame, modal: &HistoryModal, history: &Que
             } else if entry.is_success() {
                 theme::text()
             } else {
-                theme::muted()
+                theme::header() // Failed queries use accent color for visibility
             };
 
             ListItem::new(Line::from(vec![
