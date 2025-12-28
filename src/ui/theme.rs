@@ -98,3 +98,11 @@ pub fn highlight_match_selected() -> Style {
         .bg(PRIMARY)
         .add_modifier(Modifier::BOLD)
 }
+
+/// Style for cancel button when focused (inverted: white text on gray bg)
+pub fn button_cancel_focused() -> Style {
+    Style::default()
+        .fg(TEXT)
+        .bg(MUTED)
+        .add_modifier(Modifier::BOLD)
+}

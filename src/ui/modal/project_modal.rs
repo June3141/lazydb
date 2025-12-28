@@ -82,10 +82,7 @@ fn draw_project_buttons(frame: &mut Frame, area: Rect, focused_field: ProjectMod
 
     // Cancel button
     let cancel_style = if focused_field == ProjectModalField::ButtonCancel {
-        Style::default()
-            .fg(theme::BG)
-            .bg(theme::MUTED)
-            .add_modifier(Modifier::BOLD)
+        theme::button_cancel_focused()
     } else {
         theme::muted()
     };
@@ -184,10 +181,7 @@ fn draw_confirm_buttons(frame: &mut Frame, area: Rect, focused_field: ConfirmMod
 
     // Cancel button
     let cancel_style = if focused_field == ConfirmModalField::ButtonCancel {
-        Style::default()
-            .fg(theme::BG)
-            .bg(theme::MUTED)
-            .add_modifier(Modifier::BOLD)
+        theme::button_cancel_focused()
     } else {
         theme::muted()
     };

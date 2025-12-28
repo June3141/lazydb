@@ -4,7 +4,6 @@ use crate::app::{AddConnectionModal, ConnectionModalField};
 use crate::ui::theme;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
-    style::{Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Clear, Paragraph},
     Frame,
@@ -127,10 +126,7 @@ fn draw_connection_buttons(frame: &mut Frame, area: Rect, focused_field: Connect
 
     // Cancel button
     let cancel_style = if focused_field == ConnectionModalField::ButtonCancel {
-        Style::default()
-            .fg(theme::BG)
-            .bg(theme::MUTED)
-            .add_modifier(Modifier::BOLD)
+        theme::button_cancel_focused()
     } else {
         theme::muted()
     };

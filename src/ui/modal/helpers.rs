@@ -2,7 +2,6 @@
 
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
-    style::{Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
     Frame,
@@ -141,10 +140,7 @@ pub fn draw_ok_cancel_buttons(
 
     // Cancel button
     let cancel_style = if cancel_focused {
-        Style::default()
-            .fg(theme::BG)
-            .bg(theme::MUTED)
-            .add_modifier(Modifier::BOLD)
+        theme::button_cancel_focused()
     } else {
         theme::muted()
     };
