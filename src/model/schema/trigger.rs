@@ -75,7 +75,11 @@ pub struct Trigger {
 
 impl Trigger {
     /// Create a new trigger with required fields
-    pub fn new(name: impl Into<String>, timing: TriggerTiming, function_name: impl Into<String>) -> Self {
+    pub fn new(
+        name: impl Into<String>,
+        timing: TriggerTiming,
+        function_name: impl Into<String>,
+    ) -> Self {
         Self {
             name: name.into(),
             timing,
@@ -255,8 +259,7 @@ mod tests {
 
     #[test]
     fn test_trigger_events_display_single() {
-        let trigger = Trigger::new("t", TriggerTiming::After, "f")
-            .with_event(TriggerEvent::Insert);
+        let trigger = Trigger::new("t", TriggerTiming::After, "f").with_event(TriggerEvent::Insert);
 
         assert_eq!(trigger.events_display(), "INSERT");
     }
@@ -278,7 +281,10 @@ mod tests {
             .with_event(TriggerEvent::Delete)
             .with_event(TriggerEvent::Truncate);
 
-        assert_eq!(trigger.events_display(), "INSERT OR UPDATE OR DELETE OR TRUNCATE");
+        assert_eq!(
+            trigger.events_display(),
+            "INSERT OR UPDATE OR DELETE OR TRUNCATE"
+        );
     }
 
     #[test]

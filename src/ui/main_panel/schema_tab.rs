@@ -621,7 +621,10 @@ fn draw_triggers_content(frame: &mut Frame, app: &App, area: Rect) {
                             .style(Style::default().fg(Color::Cyan)),
                         vis.show_function,
                     ),
-                    (Cell::from(enabled_str).style(enabled_style), vis.show_enabled),
+                    (
+                        Cell::from(enabled_str).style(enabled_style),
+                        vis.show_enabled,
+                    ),
                 ];
 
                 let visible_cells: Vec<Cell> = all_cells
