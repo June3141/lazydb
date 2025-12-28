@@ -1,5 +1,5 @@
 mod help_bar;
-mod main_panel;
+mod panel;
 mod modal;
 mod sidebar;
 mod status_bar;
@@ -12,7 +12,7 @@ use ratatui::{
 };
 
 use help_bar::draw_help_bar;
-use main_panel::{draw_main_panel, draw_query_editor};
+use panel::{draw_panel, draw_query_editor};
 use modal::draw_modal;
 use sidebar::{draw_sidebar, draw_table_summary};
 use status_bar::draw_status_bar;
@@ -62,7 +62,7 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
     draw_sidebar(frame, app, sidebar_chunks[0]);
     draw_table_summary(frame, app, sidebar_chunks[1]);
     draw_query_editor(frame, app, right_chunks[0]);
-    draw_main_panel(frame, app, right_chunks[1]);
+    draw_panel(frame, app, right_chunks[1]);
     draw_status_bar(frame, app, right_chunks[2]);
     draw_help_bar(frame, outer_chunks[1]);
 

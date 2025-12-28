@@ -13,7 +13,7 @@ pub fn handle_normal_input(
 ) -> Option<Message> {
     // Check if we're in data table navigation mode
     let in_data_table = app.focus == Focus::MainPanel
-        && app.main_panel_tab == MainPanelTab::Data
+        && app.panel_tab == MainPanelTab::Data
         && app.result.is_some();
 
     match (key_code, modifiers) {
@@ -69,19 +69,19 @@ pub fn handle_normal_input(
         (KeyCode::Char('6'), _) => Some(Message::SwitchToDefinition),
 
         // Pagination shortcuts (Data tab)
-        (KeyCode::Char('n'), _) if app.main_panel_tab == MainPanelTab::Data => {
+        (KeyCode::Char('n'), _) if app.panel_tab == MainPanelTab::Data => {
             Some(Message::PageNext)
         }
-        (KeyCode::Char('p'), _) if app.main_panel_tab == MainPanelTab::Data => {
+        (KeyCode::Char('p'), _) if app.panel_tab == MainPanelTab::Data => {
             Some(Message::PagePrev)
         }
-        (KeyCode::Char('g'), _) if app.main_panel_tab == MainPanelTab::Data => {
+        (KeyCode::Char('g'), _) if app.panel_tab == MainPanelTab::Data => {
             Some(Message::PageFirst)
         }
-        (KeyCode::Char('G'), KeyModifiers::SHIFT) if app.main_panel_tab == MainPanelTab::Data => {
+        (KeyCode::Char('G'), KeyModifiers::SHIFT) if app.panel_tab == MainPanelTab::Data => {
             Some(Message::PageLast)
         }
-        (KeyCode::Char('z'), _) if app.main_panel_tab == MainPanelTab::Data => {
+        (KeyCode::Char('z'), _) if app.panel_tab == MainPanelTab::Data => {
             Some(Message::PageSizeCycle)
         }
 
@@ -122,7 +122,7 @@ pub fn handle_normal_input(
 
         // Column visibility: 'c' key in Schema tab when main panel is focused
         (KeyCode::Char('c'), _)
-            if app.focus == Focus::MainPanel && app.main_panel_tab == MainPanelTab::Schema =>
+            if app.focus == Focus::MainPanel && app.panel_tab == MainPanelTab::Schema =>
         {
             Some(Message::OpenColumnVisibilityModal)
         }

@@ -425,7 +425,7 @@ impl App {
     #[allow(dead_code)]
     pub(crate) fn open_column_visibility_modal(&mut self) {
         // Only open in Schema tab (not Data or Relations)
-        if self.main_panel_tab == MainPanelTab::Schema {
+        if self.panel_tab == MainPanelTab::Schema {
             self.modal_state =
                 ModalState::ColumnVisibility(ColumnVisibilityModal::new(self.schema_sub_tab));
         }

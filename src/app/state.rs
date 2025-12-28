@@ -26,7 +26,7 @@ pub struct App {
     pub result: Option<QueryResult>,
     pub pagination: Pagination,
     pub focus: Focus,
-    pub main_panel_tab: MainPanelTab,
+    pub panel_tab: MainPanelTab,
     pub schema_sub_tab: SchemaSubTab,
     pub status_message: String,
     pub modal_state: ModalState,
@@ -62,7 +62,7 @@ impl App {
             result: None,
             pagination: Pagination::default(),
             focus: Focus::Sidebar,
-            main_panel_tab: MainPanelTab::Schema,
+            panel_tab: MainPanelTab::Schema,
             schema_sub_tab: SchemaSubTab::default(),
             status_message: "Ready".to_string(),
             modal_state: ModalState::None,
@@ -89,7 +89,7 @@ impl App {
             result: None,
             pagination: Pagination::default(),
             focus: Focus::Sidebar,
-            main_panel_tab: MainPanelTab::Schema,
+            panel_tab: MainPanelTab::Schema,
             schema_sub_tab: SchemaSubTab::default(),
             status_message: "Ready".to_string(),
             modal_state: ModalState::None,
@@ -229,38 +229,38 @@ impl App {
 
             // Tab switching
             Message::SwitchToSchema => {
-                self.main_panel_tab = MainPanelTab::Schema;
+                self.panel_tab = MainPanelTab::Schema;
             }
             Message::SwitchToData => {
-                self.main_panel_tab = MainPanelTab::Data;
+                self.panel_tab = MainPanelTab::Data;
             }
             Message::SwitchToRelations => {
-                self.main_panel_tab = MainPanelTab::Relations;
+                self.panel_tab = MainPanelTab::Relations;
             }
             Message::SwitchToColumns => {
-                self.main_panel_tab = MainPanelTab::Schema;
+                self.panel_tab = MainPanelTab::Schema;
                 self.schema_sub_tab = SchemaSubTab::Columns;
             }
             Message::SwitchToIndexes => {
-                self.main_panel_tab = MainPanelTab::Schema;
+                self.panel_tab = MainPanelTab::Schema;
                 self.schema_sub_tab = SchemaSubTab::Indexes;
             }
             Message::SwitchToForeignKeys => {
-                self.main_panel_tab = MainPanelTab::Schema;
+                self.panel_tab = MainPanelTab::Schema;
                 self.schema_sub_tab = SchemaSubTab::ForeignKeys;
             }
             Message::SwitchToConstraints => {
-                self.main_panel_tab = MainPanelTab::Schema;
+                self.panel_tab = MainPanelTab::Schema;
                 self.schema_sub_tab = SchemaSubTab::Constraints;
             }
             Message::SwitchToTriggers => {
-                self.main_panel_tab = MainPanelTab::Schema;
+                self.panel_tab = MainPanelTab::Schema;
                 self.schema_sub_tab = SchemaSubTab::Triggers;
             }
             Message::SwitchToDefinition => {
                 if let Some(table) = self.selected_table_info() {
                     if table.table_type.is_view() {
-                        self.main_panel_tab = MainPanelTab::Schema;
+                        self.panel_tab = MainPanelTab::Schema;
                         self.schema_sub_tab = SchemaSubTab::Definition;
                     }
                 }
@@ -348,7 +348,7 @@ impl App {
                 }
             }
             Message::OpenColumnVisibilityModal => {
-                if self.main_panel_tab == MainPanelTab::Schema {
+                if self.panel_tab == MainPanelTab::Schema {
                     self.modal_state = ModalState::ColumnVisibility(ColumnVisibilityModal::new(
                         self.schema_sub_tab,
                     ));
