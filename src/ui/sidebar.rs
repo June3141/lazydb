@@ -1,12 +1,13 @@
 use crate::app::{App, Focus, SidebarMode};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
     Frame,
 };
 
+use super::theme;
 use super::utils::{format_number, format_size};
 
 pub fn draw_sidebar(frame: &mut Frame, app: &App, area: Rect) {
@@ -34,26 +35,20 @@ fn draw_mode_indicator(frame: &mut Frame, app: &App, area: Rect) {
     let is_projects_mode = matches!(app.sidebar_mode, SidebarMode::Projects);
 
     let projects_style = if is_projects_mode {
-        Style::default()
-            .bg(Color::Cyan)
-            .fg(Color::Black)
-            .add_modifier(Modifier::BOLD)
+        theme::focused()
     } else {
-        Style::default().fg(Color::DarkGray)
+        theme::muted()
     };
 
     let connections_style = if !is_projects_mode {
-        Style::default()
-            .bg(Color::Cyan)
-            .fg(Color::Black)
-            .add_modifier(Modifier::BOLD)
+        theme::focused()
     } else {
-        Style::default().fg(Color::DarkGray)
+        theme::muted()
     };
 
     let indicator = Line::from(vec![
         Span::styled(" Projects ", projects_style),
-        Span::styled("│", Style::default().fg(Color::DarkGray)),
+        Span::styled("│", theme::muted()),
         Span::styled(" Connections ", connections_style),
     ]);
 
@@ -65,9 +60,9 @@ fn draw_mode_indicator(frame: &mut Frame, app: &App, area: Rect) {
 fn draw_projects_view(frame: &mut Frame, app: &App, area: Rect) {
     let is_focused = app.focus == Focus::Sidebar;
     let border_style = if is_focused {
-        Style::default().fg(Color::Cyan)
+        theme::border_focused()
     } else {
-        Style::default().fg(Color::DarkGray)
+        theme::border_inactive()
     };
 
     let block = Block::default()
@@ -83,7 +78,7 @@ fn draw_projects_view(frame: &mut Frame, app: &App, area: Rect) {
     // Help hints for project operations
     lines.push(Line::from(Span::styled(
         "a: add  e: edit  d: delete",
-        Style::default().fg(Color::DarkGray),
+        theme::muted(),
     )));
     lines.push(Line::from(""));
 
@@ -91,14 +86,11 @@ fn draw_projects_view(frame: &mut Frame, app: &App, area: Rect) {
         let is_selected = idx == app.selected_project_idx;
 
         let style = if is_selected && is_focused {
-            Style::default()
-                .bg(Color::Cyan)
-                .fg(Color::Black)
-                .add_modifier(Modifier::BOLD)
+            theme::focused()
         } else if is_selected {
-            Style::default().fg(Color::Cyan)
+            theme::selected()
         } else {
-            Style::default().fg(Color::White)
+            theme::text()
         };
 
         let conn_count = project.connections.len();
@@ -111,15 +103,12 @@ fn draw_projects_view(frame: &mut Frame, app: &App, area: Rect) {
         lines.push(Line::from(vec![
             Span::styled("▶ ", style),
             Span::styled(&project.name, style),
-            Span::styled(suffix, Style::default().fg(Color::DarkGray)),
+            Span::styled(suffix, theme::muted()),
         ]));
     }
 
     if lines.is_empty() {
-        lines.push(Line::from(Span::styled(
-            "No projects",
-            Style::default().fg(Color::DarkGray),
-        )));
+        lines.push(Line::from(Span::styled("No projects", theme::muted())));
     }
 
     let paragraph = Paragraph::new(lines);
@@ -130,9 +119,9 @@ fn draw_projects_view(frame: &mut Frame, app: &App, area: Rect) {
 fn draw_connections_view(frame: &mut Frame, app: &App, area: Rect, proj_idx: usize) {
     let is_focused = app.focus == Focus::Sidebar;
     let border_style = if is_focused {
-        Style::default().fg(Color::Cyan)
+        theme::border_focused()
     } else {
-        Style::default().fg(Color::DarkGray)
+        theme::border_inactive()
     };
 
     let project_name = app
@@ -154,7 +143,7 @@ fn draw_connections_view(frame: &mut Frame, app: &App, area: Rect, proj_idx: usi
     // Navigation and operation hints
     lines.push(Line::from(Span::styled(
         "← Back  a: add connection",
-        Style::default().fg(Color::DarkGray),
+        theme::muted(),
     )));
     lines.push(Line::from(""));
 
@@ -170,14 +159,11 @@ fn draw_connections_view(frame: &mut Frame, app: &App, area: Rect, proj_idx: usi
         let expand_icon = if conn.expanded { "▼" } else { "▶" };
 
         let conn_style = if is_selected_conn && is_focused {
-            Style::default()
-                .bg(Color::Cyan)
-                .fg(Color::Black)
-                .add_modifier(Modifier::BOLD)
+            theme::focused()
         } else if conn_idx == app.selected_connection_idx {
-            Style::default().fg(Color::Cyan)
+            theme::selected()
         } else {
-            Style::default().fg(Color::White)
+            theme::text()
         };
 
         lines.push(Line::from(vec![
@@ -190,22 +176,13 @@ fn draw_connections_view(frame: &mut Frame, app: &App, area: Rect, proj_idx: usi
                 let is_selected_table = conn_idx == app.selected_connection_idx
                     && app.selected_table_idx == Some(table_idx);
 
-                let is_view = table.table_type.is_view();
-
                 let table_style = if is_selected_table && is_focused {
-                    Style::default()
-                        .bg(Color::Cyan)
-                        .fg(Color::Black)
-                        .add_modifier(Modifier::BOLD)
+                    theme::focused()
                 } else if is_selected_table {
-                    // Use magenta for views, yellow for regular tables
-                    if is_view {
-                        Style::default().fg(Color::Magenta)
-                    } else {
-                        Style::default().fg(Color::Yellow)
-                    }
+                    // Selected table highlighted in white+bold when not focused
+                    theme::text().add_modifier(Modifier::BOLD)
                 } else {
-                    Style::default().fg(Color::Gray)
+                    theme::muted()
                 };
 
                 // Icon style matches table style for consistency
@@ -219,20 +196,25 @@ fn draw_connections_view(frame: &mut Frame, app: &App, area: Rect, proj_idx: usi
 
                 let icon = table.table_type.icon();
 
-                lines.push(Line::from(vec![
-                    Span::styled(prefix, Style::default().fg(Color::DarkGray)),
+                // Apply style to entire line for proper background highlighting
+                let line = Line::from(vec![
+                    Span::styled(prefix, theme::muted()),
                     Span::styled(format!("{} ", icon), icon_style),
                     Span::styled(&table.name, table_style),
-                ]));
+                ]);
+
+                // If table is selected and focused, apply background to entire line
+                if is_selected_table && is_focused {
+                    lines.push(line.style(theme::focused()));
+                } else {
+                    lines.push(line);
+                }
             }
         }
     }
 
     if connections.is_empty() {
-        lines.push(Line::from(Span::styled(
-            "No connections",
-            Style::default().fg(Color::DarkGray),
-        )));
+        lines.push(Line::from(Span::styled("No connections", theme::muted())));
     }
 
     let paragraph = Paragraph::new(lines);
@@ -243,7 +225,7 @@ pub fn draw_table_summary(frame: &mut Frame, app: &App, area: Rect) {
     let block = Block::default()
         .title(" Info ")
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::DarkGray));
+        .border_style(theme::border_inactive());
 
     let inner_area = block.inner(area);
     frame.render_widget(block, area);
@@ -258,31 +240,23 @@ pub fn draw_table_summary(frame: &mut Frame, app: &App, area: Rect) {
 
         let size_str = format_size(table.size_bytes);
 
-        // Name color varies by table type
-        let name_color = if table.table_type.is_view() {
-            Color::Magenta
-        } else {
-            Color::Yellow
-        };
-
         let mut info_lines = vec![
             Line::from(vec![
-                Span::styled(
-                    format!("{} ", table.table_type.icon()),
-                    Style::default().fg(name_color),
-                ),
+                Span::styled(format!("{} ", table.table_type.icon()), theme::header()),
                 Span::styled(
                     &table.name,
-                    Style::default().fg(name_color).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(theme::ACCENT)
+                        .add_modifier(Modifier::BOLD),
                 ),
             ]),
             Line::from(vec![Span::styled(
                 table.table_type.to_string(),
-                Style::default().fg(Color::DarkGray),
+                theme::muted(),
             )]),
             Line::from(vec![Span::styled(
                 format!("{} columns", table.columns.len()),
-                Style::default().fg(Color::Gray),
+                theme::muted(),
             )]),
         ];
 
@@ -290,18 +264,15 @@ pub fn draw_table_summary(frame: &mut Frame, app: &App, area: Rect) {
         if !table.table_type.is_view() {
             info_lines.push(Line::from(vec![Span::styled(
                 format!("{} rows", format_number(table.row_count)),
-                Style::default().fg(Color::Gray),
+                theme::muted(),
             )]));
             info_lines.push(Line::from(vec![
-                Span::styled("PK: ", Style::default().fg(Color::DarkGray)),
-                Span::styled(pk_name, Style::default().fg(Color::Cyan)),
+                Span::styled("PK: ", theme::muted()),
+                Span::styled(pk_name, theme::selected()),
             ]));
         }
 
-        info_lines.push(Line::from(vec![Span::styled(
-            size_str,
-            Style::default().fg(Color::DarkGray),
-        )]));
+        info_lines.push(Line::from(vec![Span::styled(size_str, theme::muted())]));
 
         info_lines
     } else if let Some(conn) = app.selected_connection_info() {
@@ -309,20 +280,17 @@ pub fn draw_table_summary(frame: &mut Frame, app: &App, area: Rect) {
             Line::from(vec![Span::styled(
                 &conn.name,
                 Style::default()
-                    .fg(Color::Cyan)
+                    .fg(theme::PRIMARY)
                     .add_modifier(Modifier::BOLD),
             )]),
-            Line::from(vec![Span::styled(
-                &conn.database,
-                Style::default().fg(Color::Gray),
-            )]),
+            Line::from(vec![Span::styled(&conn.database, theme::muted())]),
             Line::from(vec![Span::styled(
                 format!("{}:{}", conn.host, conn.port),
-                Style::default().fg(Color::DarkGray),
+                theme::muted(),
             )]),
             Line::from(vec![Span::styled(
                 format!("{} tables", conn.tables.len()),
-                Style::default().fg(Color::Gray),
+                theme::muted(),
             )]),
         ]
     } else if let Some(project) = app.selected_project_info() {
@@ -332,29 +300,23 @@ pub fn draw_table_summary(frame: &mut Frame, app: &App, area: Rect) {
                 Line::from(vec![Span::styled(
                     &project.name,
                     Style::default()
-                        .fg(Color::Magenta)
+                        .fg(theme::PRIMARY)
                         .add_modifier(Modifier::BOLD),
                 )]),
                 Line::from(vec![Span::styled(
                     format!("{} connections", project.connections.len()),
-                    Style::default().fg(Color::Gray),
+                    theme::muted(),
                 )]),
-                Line::from(vec![Span::styled(
-                    "Press Enter to view",
-                    Style::default().fg(Color::DarkGray),
-                )]),
+                Line::from(vec![Span::styled("Press Enter to view", theme::muted())]),
             ]
         } else {
             vec![Line::from(Span::styled(
                 "Select a connection",
-                Style::default().fg(Color::DarkGray),
+                theme::muted(),
             ))]
         }
     } else {
-        vec![Line::from(Span::styled(
-            "No selection",
-            Style::default().fg(Color::DarkGray),
-        ))]
+        vec![Line::from(Span::styled("No selection", theme::muted()))]
     };
 
     let paragraph = Paragraph::new(lines);

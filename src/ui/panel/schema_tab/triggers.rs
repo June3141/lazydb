@@ -1,9 +1,9 @@
 //! Triggers sub-tab rendering
 
 use crate::app::App;
+use crate::ui::theme;
 use ratatui::{
     layout::{Constraint, Rect},
-    style::{Color, Modifier, Style},
     widgets::{Cell, Paragraph, Row, Table as RatatuiTable},
     Frame,
 };
@@ -11,8 +11,7 @@ use ratatui::{
 pub fn draw_triggers_content(frame: &mut Frame, app: &App, area: Rect) {
     if let Some(table) = app.selected_table_info() {
         if table.triggers.is_empty() {
-            let empty =
-                Paragraph::new("No triggers defined").style(Style::default().fg(Color::DarkGray));
+            let empty = Paragraph::new("No triggers defined").style(theme::muted());
             frame.render_widget(empty, area);
             return;
         }
@@ -34,13 +33,7 @@ pub fn draw_triggers_content(frame: &mut Frame, app: &App, area: Rect) {
             .iter()
             .zip(visibility_flags.iter())
             .filter(|(_, &visible)| visible)
-            .map(|(h, _)| {
-                Cell::from(*h).style(
-                    Style::default()
-                        .fg(Color::Yellow)
-                        .add_modifier(Modifier::BOLD),
-                )
-            })
+            .map(|(h, _)| Cell::from(*h).style(theme::header()))
             .collect();
         let header = Row::new(header_cells).height(1);
 
@@ -49,22 +42,20 @@ pub fn draw_triggers_content(frame: &mut Frame, app: &App, area: Rect) {
             .triggers
             .iter()
             .map(|trigger| {
-                let timing_style = match trigger.timing {
-                    crate::model::TriggerTiming::Before => Style::default().fg(Color::Cyan),
-                    crate::model::TriggerTiming::After => Style::default().fg(Color::Green),
-                    crate::model::TriggerTiming::InsteadOf => Style::default().fg(Color::Magenta),
-                };
+                // Use selected for all timing types (simplified)
+                let timing_style = theme::selected();
 
                 let enabled_str = if trigger.enabled { "YES" } else { "NO" };
+                // Enabled: header (accent), Disabled: muted
                 let enabled_style = if trigger.enabled {
-                    Style::default().fg(Color::Green)
+                    theme::header()
                 } else {
-                    Style::default().fg(Color::Red)
+                    theme::muted()
                 };
 
                 let all_cells = [
                     (
-                        Cell::from(trigger.name.clone()).style(Style::default().fg(Color::Yellow)),
+                        Cell::from(trigger.name.clone()).style(theme::header()),
                         vis.show_name,
                     ),
                     (
@@ -72,18 +63,15 @@ pub fn draw_triggers_content(frame: &mut Frame, app: &App, area: Rect) {
                         vis.show_timing,
                     ),
                     (
-                        Cell::from(trigger.events_display())
-                            .style(Style::default().fg(Color::White)),
+                        Cell::from(trigger.events_display()).style(theme::text()),
                         vis.show_events,
                     ),
                     (
-                        Cell::from(trigger.orientation.to_string())
-                            .style(Style::default().fg(Color::DarkGray)),
+                        Cell::from(trigger.orientation.to_string()).style(theme::muted()),
                         vis.show_level,
                     ),
                     (
-                        Cell::from(trigger.function_name.clone())
-                            .style(Style::default().fg(Color::Cyan)),
+                        Cell::from(trigger.function_name.clone()).style(theme::selected()),
                         vis.show_function,
                     ),
                     (
@@ -120,12 +108,11 @@ pub fn draw_triggers_content(frame: &mut Frame, app: &App, area: Rect) {
 
         let table_widget = RatatuiTable::new(rows, widths)
             .header(header)
-            .row_highlight_style(Style::default().bg(Color::DarkGray));
+            .row_highlight_style(theme::row_highlight());
 
         frame.render_widget(table_widget, area);
     } else {
-        let empty = Paragraph::new("Select a table to view triggers")
-            .style(Style::default().fg(Color::DarkGray));
+        let empty = Paragraph::new("Select a table to view triggers").style(theme::muted());
         frame.render_widget(empty, area);
     }
 }

@@ -4,9 +4,9 @@ use crate::app::{
     ColumnVisibilityModal, ColumnVisibilitySettings, ColumnsVisibility, ConstraintsVisibility,
     ForeignKeysVisibility, IndexesVisibility, SchemaSubTab, TriggersVisibility,
 };
+use crate::ui::theme;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
-    style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Clear, Paragraph},
     Frame,
@@ -39,7 +39,7 @@ pub fn draw_column_visibility_modal(
         .title(title)
         .title_alignment(Alignment::Center)
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Green));
+        .border_style(theme::border_focused());
 
     frame.render_widget(block, area);
 
@@ -94,7 +94,7 @@ pub fn draw_column_visibility_modal(
     // Draw column list
     let list_block = Block::default()
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Gray))
+        .border_style(theme::border_inactive())
         .title(" Columns ");
     let list_inner = list_block.inner(chunks[0]);
     frame.render_widget(list_block, chunks[0]);
@@ -122,14 +122,11 @@ pub fn draw_column_visibility_modal(
         let checkbox = if is_visible { "[x]" } else { "[ ]" };
 
         let style = if is_selected {
-            Style::default()
-                .fg(Color::Black)
-                .bg(Color::Cyan)
-                .add_modifier(Modifier::BOLD)
+            theme::focused()
         } else if is_visible {
-            Style::default().fg(Color::White)
+            theme::text()
         } else {
-            Style::default().fg(Color::DarkGray)
+            theme::muted()
         };
 
         let line = Line::from(vec![
@@ -150,11 +147,11 @@ pub fn draw_column_visibility_modal(
 
     // Draw help text
     let help_text = Line::from(vec![
-        Span::styled("Space/Enter", Style::default().fg(Color::Green)),
+        Span::styled("Space/Enter", theme::header()),
         Span::raw(": toggle  "),
-        Span::styled("Esc", Style::default().fg(Color::Red)),
+        Span::styled("Esc", theme::header()),
         Span::raw(": close  "),
-        Span::styled("j/k", Style::default().fg(Color::Cyan)),
+        Span::styled("j/k", theme::selected()),
         Span::raw(": navigate"),
     ]);
     let help = Paragraph::new(help_text).alignment(Alignment::Center);
