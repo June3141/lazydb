@@ -134,7 +134,7 @@ mod tests {
         let display = err.to_string();
 
         assert!(
-            display.contains("Directory not found") || display.contains("ディレクトリ"),
+            display.contains("Directory not found"),
             "Expected directory not found message, got: {}",
             display
         );
@@ -144,7 +144,7 @@ mod tests {
             display
         );
         assert!(
-            display.contains("Create") || display.contains("作成"),
+            display.contains("Create"),
             "Expected hint to create directory, got: {}",
             display
         );
@@ -158,7 +158,7 @@ mod tests {
         let display = err.to_string();
 
         assert!(
-            display.contains("Permission denied") || display.contains("権限"),
+            display.contains("Permission denied"),
             "Expected permission denied message, got: {}",
             display
         );
@@ -177,12 +177,12 @@ mod tests {
         let display = err.to_string();
 
         assert!(
-            display.contains("Disk full") || display.contains("ディスク"),
+            display.contains("Disk full"),
             "Expected disk full message, got: {}",
             display
         );
         assert!(
-            display.contains("Free up") || display.contains("空き"),
+            display.contains("Free up"),
             "Expected hint to free up space, got: {}",
             display
         );
@@ -196,7 +196,7 @@ mod tests {
         let display = err.to_string();
 
         assert!(
-            display.contains("Encoding") || display.contains("エンコーディング"),
+            display.contains("Encoding error"),
             "Expected encoding error message, got: {}",
             display
         );
