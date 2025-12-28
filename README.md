@@ -10,23 +10,30 @@ lazydb is a TUI (Terminal User Interface) tool that allows developers to interac
 directly from the terminal. It aims to provide a lightweight alternative to GUI database clients
 like DBeaver, focusing on keyboard-driven workflows.
 
-## Features (Planned)
+## Features
+
+### Implemented
 
 - 🔌 **Connection Manager** - Add, edit, and delete database connections interactively
-- 📊 **Table Browser** - Browse database schemas, tables, and views
+- 📊 **Schema Browser** - Browse database schemas, tables, views, materialized views, and triggers
 - 🔍 **Data Viewer** - View and filter table data with pagination
-- ✏️ **Data Editor** - Edit records directly in the terminal
-- 💻 **Query Executor** - Write and execute SQL queries
+- 📤 **Data Export** - Export table data to CSV/JSON formats
+- 💻 **Query Executor** - Write and execute SQL queries (basic functionality)
 - 📝 **Query History** - Access previously executed queries
+- 🔎 **Search** - Quick search for connections, projects, and tables
 - ⌨️ **Vim-style Keybindings** - Efficient keyboard navigation
+
+### Planned
+
+- ✏️ **Data Editor** - Edit records directly in the terminal (v0.2.0+)
 
 ## Supported Databases
 
-| Database   | Status      |
-| ---------- | ----------- |
-| PostgreSQL | 🚧 Planned  |
-| MySQL      | 📋 Roadmap  |
-| SQLite     | 📋 Roadmap  |
+| Database   | Status       |
+| ---------- | ------------ |
+| PostgreSQL | ✅ Supported |
+| MySQL      | 📋 Roadmap   |
+| SQLite     | 📋 Roadmap   |
 
 ## Installation
 
