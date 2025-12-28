@@ -53,11 +53,7 @@ impl std::fmt::Display for ExportError {
                 )
             }
             ExportError::EncodingError { message } => {
-                write!(
-                    f,
-                    "Encoding error: {} (Try using UTF-8 encoding)",
-                    message
-                )
+                write!(f, "Encoding error: {} (Try using UTF-8 encoding)", message)
             }
         }
     }
@@ -114,7 +110,7 @@ mod tests {
     fn test_file_write_error_displays_path_and_hint() {
         let err = ExportError::FileWriteError {
             path: PathBuf::from("/tmp/test.csv"),
-            source: io::Error::new(io::ErrorKind::Other, "write failed"),
+            source: io::Error::other("write failed"),
         };
         let display = err.to_string();
 
@@ -229,7 +225,7 @@ mod tests {
 
     #[test]
     fn test_from_io_error_fallback_to_file_write_error() {
-        let io_err = io::Error::new(io::ErrorKind::Other, "some other error");
+        let io_err = io::Error::other("some other error");
         let err = ExportError::from_io_error(io_err, PathBuf::from("/test/path"));
 
         assert!(matches!(err, ExportError::FileWriteError { .. }));
