@@ -6,6 +6,7 @@ use super::enums::SchemaSubTab;
 use super::modal_fields::{ConfirmModalField, ConnectionModalField, ProjectModalField};
 use super::visibility::{
     ColumnsVisibility, ConstraintsVisibility, ForeignKeysVisibility, IndexesVisibility,
+    TriggersVisibility,
 };
 
 /// Modal for adding a new connection
@@ -417,6 +418,7 @@ impl ColumnVisibilityModal {
             SchemaSubTab::Indexes => IndexesVisibility::all_columns().len(),
             SchemaSubTab::ForeignKeys => ForeignKeysVisibility::all_columns().len(),
             SchemaSubTab::Constraints => ConstraintsVisibility::all_columns().len(),
+            SchemaSubTab::Triggers => TriggersVisibility::all_columns().len(),
             SchemaSubTab::Definition => 0, // No visibility settings for Definition tab
         }
     }

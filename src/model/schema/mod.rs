@@ -7,9 +7,11 @@ mod constraint;
 mod foreign_key;
 mod index;
 mod table;
+mod trigger;
 
 pub use column::Column;
 pub use constraint::{Constraint, ConstraintType};
 pub use foreign_key::{ForeignKey, ForeignKeyAction};
 pub use index::{Index, IndexColumn, IndexMethod, IndexType, SortOrder};
 pub use table::{Table, TableType};
+pub use trigger::{Trigger, TriggerEvent, TriggerOrientation, TriggerTiming};

@@ -2,7 +2,7 @@
 
 use crate::app::{
     ColumnVisibilityModal, ColumnVisibilitySettings, ColumnsVisibility, ConstraintsVisibility,
-    ForeignKeysVisibility, IndexesVisibility, SchemaSubTab,
+    ForeignKeysVisibility, IndexesVisibility, SchemaSubTab, TriggersVisibility,
 };
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
@@ -30,6 +30,7 @@ pub fn draw_column_visibility_modal(
         SchemaSubTab::Indexes => " Column Visibility - Indexes ",
         SchemaSubTab::ForeignKeys => " Column Visibility - Foreign Keys ",
         SchemaSubTab::Constraints => " Column Visibility - Constraints ",
+        SchemaSubTab::Triggers => " Column Visibility - Triggers ",
         SchemaSubTab::Definition => " View Definition ",
     };
 
@@ -67,6 +68,10 @@ pub fn draw_column_visibility_modal(
         SchemaSubTab::Constraints => (
             ConstraintsVisibility::all_columns(),
             Box::new(|i| settings.constraints.is_visible(i)),
+        ),
+        SchemaSubTab::Triggers => (
+            TriggersVisibility::all_columns(),
+            Box::new(|i| settings.triggers.is_visible(i)),
         ),
         SchemaSubTab::Definition => {
             // Definition tab has no column visibility settings

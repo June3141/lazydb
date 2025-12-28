@@ -23,5 +23,5 @@ pub use modals::{
 pub use state::App;
 pub use visibility::{
     ColumnVisibilitySettings, ColumnsVisibility, ConstraintsVisibility, ForeignKeysVisibility,
-    IndexesVisibility,
+    IndexesVisibility, TriggersVisibility,
 };
