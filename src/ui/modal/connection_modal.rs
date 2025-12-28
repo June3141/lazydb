@@ -1,9 +1,10 @@
 //! Connection modal rendering
 
 use crate::app::{AddConnectionModal, ConnectionModalField};
+use crate::ui::theme;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Clear, Paragraph},
     Frame,
@@ -22,7 +23,7 @@ pub fn draw_add_connection_modal(frame: &mut Frame, modal: &AddConnectionModal) 
         .title(" Add Connection ")
         .title_alignment(Alignment::Center)
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Green));
+        .border_style(theme::border_focused());
 
     frame.render_widget(block, area);
 
@@ -111,12 +112,9 @@ fn draw_connection_buttons(frame: &mut Frame, area: Rect, focused_field: Connect
 
     // OK button
     let ok_style = if focused_field == ConnectionModalField::ButtonOk {
-        Style::default()
-            .fg(Color::Black)
-            .bg(Color::Green)
-            .add_modifier(Modifier::BOLD)
+        theme::focused()
     } else {
-        Style::default().fg(Color::Green)
+        theme::selected()
     };
 
     let ok_button = Paragraph::new(Line::from(vec![
@@ -130,11 +128,11 @@ fn draw_connection_buttons(frame: &mut Frame, area: Rect, focused_field: Connect
     // Cancel button
     let cancel_style = if focused_field == ConnectionModalField::ButtonCancel {
         Style::default()
-            .fg(Color::Black)
-            .bg(Color::Red)
+            .fg(theme::BG)
+            .bg(theme::MUTED)
             .add_modifier(Modifier::BOLD)
     } else {
-        Style::default().fg(Color::Red)
+        theme::muted()
     };
 
     let cancel_button = Paragraph::new(Line::from(vec![

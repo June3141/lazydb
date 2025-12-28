@@ -1,9 +1,9 @@
 //! Columns sub-tab rendering
 
 use crate::app::App;
+use crate::ui::theme;
 use ratatui::{
     layout::{Constraint, Rect},
-    style::{Color, Modifier, Style},
     widgets::{Cell, Paragraph, Row, Table as RatatuiTable},
     Frame,
 };
@@ -27,13 +27,7 @@ pub fn draw_columns_content(frame: &mut Frame, app: &App, area: Rect) {
             .iter()
             .zip(visibility_flags.iter())
             .filter(|(_, &visible)| visible)
-            .map(|(h, _)| {
-                Cell::from(*h).style(
-                    Style::default()
-                        .fg(Color::Yellow)
-                        .add_modifier(Modifier::BOLD),
-                )
-            })
+            .map(|(h, _)| Cell::from(*h).style(theme::header()))
             .collect();
         let header = Row::new(header_cells).height(1);
 
@@ -62,9 +56,9 @@ pub fn draw_columns_content(frame: &mut Frame, app: &App, area: Rect) {
                 let default_str = col.default_value.as_deref().unwrap_or("-");
 
                 let name_style = if col.is_primary_key {
-                    Style::default().fg(Color::Yellow)
+                    theme::header()
                 } else {
-                    Style::default().fg(Color::White)
+                    theme::text()
                 };
 
                 let all_cells = [
@@ -74,23 +68,23 @@ pub fn draw_columns_content(frame: &mut Frame, app: &App, area: Rect) {
                         vis.show_name,
                     ),
                     (
-                        Cell::from(col.data_type.clone()).style(Style::default().fg(Color::Cyan)),
+                        Cell::from(col.data_type.clone()).style(theme::selected()),
                         vis.show_type,
                     ),
                     (
                         Cell::from(null_str).style(if col.is_nullable {
-                            Style::default().fg(Color::DarkGray)
+                            theme::muted()
                         } else {
-                            Style::default().fg(Color::Red)
+                            theme::text()
                         }),
                         vis.show_nullable,
                     ),
                     (
-                        Cell::from(default_str).style(Style::default().fg(Color::Green)),
+                        Cell::from(default_str).style(theme::muted()),
                         vis.show_default,
                     ),
                     (
-                        Cell::from(key_info).style(Style::default().fg(Color::Magenta)),
+                        Cell::from(key_info).style(theme::selected()),
                         vis.show_key,
                     ),
                 ];
@@ -123,12 +117,11 @@ pub fn draw_columns_content(frame: &mut Frame, app: &App, area: Rect) {
 
         let table_widget = RatatuiTable::new(rows, widths)
             .header(header)
-            .row_highlight_style(Style::default().bg(Color::DarkGray));
+            .row_highlight_style(theme::row_highlight());
 
         frame.render_widget(table_widget, area);
     } else {
-        let empty = Paragraph::new("Select a table to view columns")
-            .style(Style::default().fg(Color::DarkGray));
+        let empty = Paragraph::new("Select a table to view columns").style(theme::muted());
         frame.render_widget(empty, area);
     }
 }
