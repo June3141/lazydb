@@ -10,8 +10,8 @@ pub enum ExportError {
         path: PathBuf,
         source: std::io::Error,
     },
-    /// Directory does not exist
-    DirectoryNotFound { path: PathBuf },
+    /// Path not found (typically means parent directory doesn't exist when creating a file)
+    PathNotFound { path: PathBuf },
     /// Permission denied when writing file
     PermissionDenied { path: PathBuf },
     /// Disk full or quota exceeded
@@ -31,10 +31,10 @@ impl std::fmt::Display for ExportError {
                     source
                 )
             }
-            ExportError::DirectoryNotFound { path } => {
+            ExportError::PathNotFound { path } => {
                 write!(
                     f,
-                    "Directory not found: '{}' (Create the directory first or choose a different location)",
+                    "Path not found: '{}' (Create the parent directory first or choose a different location)",
                     path.display()
                 )
             }
@@ -74,7 +74,7 @@ impl ExportError {
         use std::io::ErrorKind;
 
         match err.kind() {
-            ErrorKind::NotFound => ExportError::DirectoryNotFound { path },
+            ErrorKind::NotFound => ExportError::PathNotFound { path },
             ErrorKind::PermissionDenied => ExportError::PermissionDenied { path },
             // StorageFull is not stable yet, so we check the raw_os_error
             _ if Self::is_disk_full_error(&err) => ExportError::DiskFull { path },
@@ -127,15 +127,15 @@ mod tests {
     }
 
     #[test]
-    fn test_directory_not_found_displays_user_friendly_message() {
-        let err = ExportError::DirectoryNotFound {
+    fn test_path_not_found_displays_user_friendly_message() {
+        let err = ExportError::PathNotFound {
             path: PathBuf::from("/nonexistent/dir/file.csv"),
         };
         let display = err.to_string();
 
         assert!(
-            display.contains("Directory not found"),
-            "Expected directory not found message, got: {}",
+            display.contains("Path not found"),
+            "Expected path not found message, got: {}",
             display
         );
         assert!(
@@ -212,7 +212,7 @@ mod tests {
         let io_err = io::Error::new(io::ErrorKind::NotFound, "no such file or directory");
         let err = ExportError::from_io_error(io_err, PathBuf::from("/test/path"));
 
-        assert!(matches!(err, ExportError::DirectoryNotFound { .. }));
+        assert!(matches!(err, ExportError::PathNotFound { .. }));
     }
 
     #[test]

@@ -187,8 +187,9 @@ fn format_connection_error(msg: &str) -> String {
             msg
         )
     } else if msg_lower.contains("authentication failed")
-        || msg_lower.contains("password")
-        || msg_lower.contains("auth")
+        || msg_lower.contains("invalid password")
+        || ((msg_lower.contains("password") || msg_lower.contains("auth"))
+            && (msg_lower.contains("fail") || msg_lower.contains("denied")))
     {
         format!(
             "Authentication failed: Invalid username or password. \
@@ -270,7 +271,9 @@ fn format_query_error(msg: &str) -> String {
              (Details: {})",
             msg
         )
-    } else if msg_lower.contains("foreign key") || msg_lower.contains("violates") {
+    } else if msg_lower.contains("foreign key")
+        || (msg_lower.contains("violates") && msg_lower.contains("constraint"))
+    {
         format!(
             "Foreign key constraint violation: The operation conflicts with a foreign key. \
              (Details: {})",
@@ -283,7 +286,10 @@ fn format_query_error(msg: &str) -> String {
              (Details: {})",
             msg
         )
-    } else if msg_lower.contains("out of memory") || msg_lower.contains("memory") {
+    } else if msg_lower.contains("out of memory")
+        || msg_lower.contains("memory limit")
+        || msg_lower.contains("insufficient memory")
+    {
         format!(
             "Memory error: The query requires more memory than available. \
              Try simplifying the query or contact your administrator. \
