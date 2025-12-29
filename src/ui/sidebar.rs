@@ -179,7 +179,8 @@ fn draw_connections_view(frame: &mut Frame, app: &App, area: Rect, proj_idx: usi
             // Draw tables
             for (table_idx, table) in conn.tables.iter().enumerate() {
                 let is_selected_table = conn_idx == app.selected_connection_idx
-                    && app.selected_table_idx == Some(table_idx);
+                    && app.selected_table_idx == Some(table_idx)
+                    && app.selected_routine_idx.is_none();
 
                 let table_style = if is_selected_table && is_focused {
                     theme::focused()
@@ -220,7 +221,8 @@ fn draw_connections_view(frame: &mut Frame, app: &App, area: Rect, proj_idx: usi
             // Draw routines (stored procedures and functions)
             for (routine_idx, routine) in conn.routines.iter().enumerate() {
                 let is_selected_routine = conn_idx == app.selected_connection_idx
-                    && app.selected_routine_idx == Some(routine_idx);
+                    && app.selected_routine_idx == Some(routine_idx)
+                    && app.selected_table_idx.is_none();
 
                 let routine_style = if is_selected_routine && is_focused {
                     theme::focused()

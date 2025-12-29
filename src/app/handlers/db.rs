@@ -338,6 +338,9 @@ impl App {
     }
 
     /// Send a command to fetch routines (stored procedures and functions) asynchronously
+    ///
+    /// Note: Currently uses "public" schema by default, same as table fetching.
+    /// TODO: Support configurable schema selection in connection settings.
     pub(crate) fn send_fetch_routines(
         &mut self,
         conn: &Connection,
@@ -347,6 +350,7 @@ impl App {
         let request_id = self.next_request_id();
         let connection = ConnectionParams::from_connection(conn);
 
+        // Use "public" schema by default (consistent with send_fetch_tables)
         let cmd = DbCommand::FetchRoutines {
             request_id,
             connection,

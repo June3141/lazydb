@@ -23,11 +23,21 @@ pub fn draw_routine_content(frame: &mut Frame, app: &App, area: Rect) {
         return;
     };
 
+    // Calculate header height dynamically based on content
+    // Base: 2 lines (name + type)
+    let mut header_height: u16 = 2;
+    if routine.is_function() {
+        header_height += 1; // Returns line
+    }
+    if !routine.language.is_empty() {
+        header_height += 1; // Language line
+    }
+
     // Split area: header + parameters + definition
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(4),  // Header (name, type, return)
+            Constraint::Length(header_height),
             Constraint::Length(8),  // Parameters table
             Constraint::Min(5),     // Definition
         ])
