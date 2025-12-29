@@ -22,9 +22,7 @@ impl DatabaseProvider for PostgresProvider {
             ORDER BY schema_name
         "#;
 
-        let mut client = self.client.lock().map_err(|e| {
-            ProviderError::InternalError(format!("Failed to acquire client lock: {}", e))
-        })?;
+        let mut client = self.get_connection()?;
 
         let rows = client
             .query(query, &[])
@@ -52,9 +50,7 @@ impl DatabaseProvider for PostgresProvider {
             ORDER BY t.table_name
         "#;
 
-        let mut client = self.client.lock().map_err(|e| {
-            ProviderError::InternalError(format!("Failed to acquire client lock: {}", e))
-        })?;
+        let mut client = self.get_connection()?;
 
         let rows = client
             .query(query, &[&schema])
@@ -102,9 +98,7 @@ impl DatabaseProvider for PostgresProvider {
             WHERE t.table_schema = $1 AND t.table_name = $2
         "#;
 
-        let mut client = self.client.lock().map_err(|e| {
-            ProviderError::InternalError(format!("Failed to acquire client lock: {}", e))
-        })?;
+        let mut client = self.get_connection()?;
 
         let table_rows = client
             .query(table_query, &[&schema_str, &table_name])
@@ -162,9 +156,7 @@ impl DatabaseProvider for PostgresProvider {
     fn execute_query(&self, query: &str) -> Result<QueryResult, ProviderError> {
         let start = Instant::now();
 
-        let mut client = self.client.lock().map_err(|e| {
-            ProviderError::InternalError(format!("Failed to acquire client lock: {}", e))
-        })?;
+        let mut client = self.get_connection()?;
 
         let rows = client
             .query(query, &[])
@@ -232,9 +224,7 @@ impl DatabaseProvider for PostgresProvider {
             quote_identifier(table_name)
         );
 
-        let mut client = self.client.lock().map_err(|e| {
-            ProviderError::InternalError(format!("Failed to acquire client lock: {}", e))
-        })?;
+        let mut client = self.get_connection()?;
 
         let rows = client
             .query(&query, &[])
@@ -254,9 +244,7 @@ impl DatabaseProvider for PostgresProvider {
             )
         "#;
 
-        let mut client = self.client.lock().map_err(|e| {
-            ProviderError::InternalError(format!("Failed to acquire client lock: {}", e))
-        })?;
+        let mut client = self.get_connection()?;
 
         let rows = client
             .query(query, &[&schema, &table_name])
@@ -273,9 +261,7 @@ impl DatabaseProvider for PostgresProvider {
     }
 
     fn test_connection(&self) -> Result<(), ProviderError> {
-        let mut client = self.client.lock().map_err(|e| {
-            ProviderError::InternalError(format!("Failed to acquire client lock: {}", e))
-        })?;
+        let mut client = self.get_connection()?;
 
         client
             .query("SELECT 1", &[])
@@ -284,9 +270,7 @@ impl DatabaseProvider for PostgresProvider {
     }
 
     fn get_version(&self) -> Result<String, ProviderError> {
-        let mut client = self.client.lock().map_err(|e| {
-            ProviderError::InternalError(format!("Failed to acquire client lock: {}", e))
-        })?;
+        let mut client = self.get_connection()?;
 
         let rows = client
             .query("SELECT version()", &[])

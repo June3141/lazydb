@@ -3,6 +3,7 @@
 use std::env;
 
 use super::helpers::{is_valid_identifier, parse_column_sort_order, quote_identifier};
+use super::pool::{ConnectionPool, PoolConfig};
 use super::{PostgresProvider, ProviderError};
 use crate::db::provider::DatabaseProvider;
 use crate::model::schema::SortOrder;
@@ -48,7 +49,7 @@ fn test_parameterized_query() {
     let provider = create_test_provider();
 
     // Test parameterized query
-    let mut client = provider.client.lock().unwrap();
+    let mut client = provider.get_connection().unwrap();
     let schema = "public".to_string();
     let table_name = "users".to_string();
 
@@ -371,7 +372,7 @@ use super::queries::InternalQueries;
 #[ignore] // Requires database connection
 fn test_get_columns_returns_all_columns() {
     let provider = create_test_provider();
-    let mut client = provider.client.lock().unwrap();
+    let mut client = provider.get_connection().expect("Failed to get connection");
 
     let columns = InternalQueries::get_columns(&mut client, "users", "public")
         .expect("Failed to get columns");
@@ -387,7 +388,7 @@ fn test_get_columns_returns_all_columns() {
 #[ignore] // Requires database connection
 fn test_get_columns_ordinal_position() {
     let provider = create_test_provider();
-    let mut client = provider.client.lock().unwrap();
+    let mut client = provider.get_connection().expect("Failed to get connection");
 
     let columns = InternalQueries::get_columns(&mut client, "users", "public")
         .expect("Failed to get columns");
@@ -408,7 +409,7 @@ fn test_get_columns_ordinal_position() {
 #[ignore] // Requires database connection
 fn test_get_columns_primary_key_detection() {
     let provider = create_test_provider();
-    let mut client = provider.client.lock().unwrap();
+    let mut client = provider.get_connection().expect("Failed to get connection");
 
     let columns = InternalQueries::get_columns(&mut client, "users", "public")
         .expect("Failed to get columns");
@@ -427,7 +428,7 @@ fn test_get_columns_primary_key_detection() {
 #[ignore] // Requires database connection
 fn test_get_columns_nullable_detection() {
     let provider = create_test_provider();
-    let mut client = provider.client.lock().unwrap();
+    let mut client = provider.get_connection().expect("Failed to get connection");
 
     let columns = InternalQueries::get_columns(&mut client, "users", "public")
         .expect("Failed to get columns");
@@ -444,7 +445,7 @@ fn test_get_columns_nullable_detection() {
 #[ignore] // Requires database connection
 fn test_get_columns_auto_increment_detection() {
     let provider = create_test_provider();
-    let mut client = provider.client.lock().unwrap();
+    let mut client = provider.get_connection().expect("Failed to get connection");
 
     // Use 'categories' table which has SERIAL id (auto-increment)
     let columns = InternalQueries::get_columns(&mut client, "categories", "public")
@@ -463,7 +464,7 @@ fn test_get_columns_auto_increment_detection() {
 #[ignore] // Requires database connection
 fn test_get_columns_nonexistent_table() {
     let provider = create_test_provider();
-    let mut client = provider.client.lock().unwrap();
+    let mut client = provider.get_connection().expect("Failed to get connection");
 
     let columns = InternalQueries::get_columns(&mut client, "nonexistent_table_12345", "public")
         .expect("Query should succeed even for nonexistent table");
@@ -478,7 +479,7 @@ fn test_get_columns_nonexistent_table() {
 #[ignore] // Requires database connection
 fn test_get_constraints_returns_constraints() {
     let provider = create_test_provider();
-    let mut client = provider.client.lock().unwrap();
+    let mut client = provider.get_connection().expect("Failed to get connection");
 
     let constraints = InternalQueries::get_constraints(&mut client, "users", "public")
         .expect("Failed to get constraints");
@@ -495,7 +496,7 @@ fn test_get_constraints_primary_key() {
     use crate::model::schema::ConstraintType;
 
     let provider = create_test_provider();
-    let mut client = provider.client.lock().unwrap();
+    let mut client = provider.get_connection().expect("Failed to get connection");
 
     // Use categories table which has a simple SERIAL PRIMARY KEY
     let constraints = InternalQueries::get_constraints(&mut client, "categories", "public")
@@ -524,7 +525,7 @@ fn test_get_constraints_unique() {
     use crate::model::schema::ConstraintType;
 
     let provider = create_test_provider();
-    let mut client = provider.client.lock().unwrap();
+    let mut client = provider.get_connection().expect("Failed to get connection");
 
     // Use categories table
     let constraints = InternalQueries::get_constraints(&mut client, "categories", "public")
@@ -555,7 +556,7 @@ fn test_get_constraints_foreign_key() {
     use crate::model::schema::ConstraintType;
 
     let provider = create_test_provider();
-    let mut client = provider.client.lock().unwrap();
+    let mut client = provider.get_connection().expect("Failed to get connection");
 
     // orders table should have foreign key to users
     let constraints = InternalQueries::get_constraints(&mut client, "orders", "public")
@@ -576,7 +577,7 @@ fn test_get_constraints_foreign_key() {
 #[ignore] // Requires database connection
 fn test_get_constraints_nonexistent_table() {
     let provider = create_test_provider();
-    let mut client = provider.client.lock().unwrap();
+    let mut client = provider.get_connection().expect("Failed to get connection");
 
     let constraints =
         InternalQueries::get_constraints(&mut client, "nonexistent_table_12345", "public")
@@ -594,7 +595,7 @@ fn test_get_constraints_columns_ordering() {
     use crate::model::schema::ConstraintType;
 
     let provider = create_test_provider();
-    let mut client = provider.client.lock().unwrap();
+    let mut client = provider.get_connection().expect("Failed to get connection");
 
     // Use categories table which has a simple schema
     let constraints = InternalQueries::get_constraints(&mut client, "categories", "public")
@@ -617,4 +618,91 @@ fn test_get_constraints_columns_ordering() {
             pk.columns
         );
     }
+}
+
+// ==================== Connection Pool Tests ====================
+
+fn create_test_pool() -> ConnectionPool {
+    ConnectionPool::with_defaults("localhost", 5432, "lazydb_dev", "lazydb", "lazydb")
+        .expect("Failed to create pool")
+}
+
+#[test]
+#[ignore] // Requires database connection
+fn test_provider_with_pool() {
+    let pool = create_test_pool();
+    let provider = PostgresProvider::with_pool(pool);
+
+    // Test that provider works with pooled connection
+    provider.test_connection().expect("Connection test failed");
+
+    let version = provider.get_version().expect("Failed to get version");
+    println!("PostgreSQL version: {}", version);
+    assert!(version.contains("PostgreSQL"));
+}
+
+#[test]
+#[ignore] // Requires database connection
+fn test_provider_with_pool_multiple_operations() {
+    let pool = create_test_pool();
+    let provider = PostgresProvider::with_pool(pool);
+
+    // Perform multiple operations to verify connection reuse
+    for i in 0..5 {
+        let schemas = provider.get_schemas().expect("Failed to get schemas");
+        assert!(
+            !schemas.is_empty(),
+            "Iteration {}: schemas should not be empty",
+            i
+        );
+    }
+}
+
+#[test]
+#[ignore] // Requires database connection
+fn test_provider_with_pool_execute_query() {
+    let pool = create_test_pool();
+    let provider = PostgresProvider::with_pool(pool);
+
+    let result = provider
+        .execute_query("SELECT 1 as value, 'test' as name")
+        .expect("Failed to execute query");
+
+    assert_eq!(result.columns, vec!["value", "name"]);
+    assert_eq!(result.rows.len(), 1);
+}
+
+#[test]
+#[ignore] // Requires database connection
+fn test_provider_pool_state() {
+    let pool = ConnectionPool::with_defaults("localhost", 5432, "lazydb_dev", "lazydb", "lazydb")
+        .expect("Failed to create pool");
+
+    let provider = PostgresProvider::with_pool(pool);
+
+    // Get pool state
+    let state = provider
+        .pool_state()
+        .expect("Provider should have pool state");
+    println!(
+        "Pool state: {} connections, {} idle",
+        state.connections, state.idle_connections
+    );
+    assert!(state.connections >= 1);
+}
+
+#[test]
+#[ignore] // Requires database connection
+fn test_provider_with_custom_pool_config() {
+    let config = PoolConfig {
+        max_size: 3,
+        min_idle: Some(1),
+        ..Default::default()
+    };
+
+    let pool = ConnectionPool::new("localhost", 5432, "lazydb_dev", "lazydb", "lazydb", config)
+        .expect("Failed to create pool");
+
+    let provider = PostgresProvider::with_pool(pool);
+    provider.test_connection().expect("Connection test failed");
 }
