@@ -1,9 +1,9 @@
 //! Query editor rendering
 
 use crate::app::{App, Focus};
+use crate::ui::theme;
 use ratatui::{
     layout::Rect,
-    style::{Color, Style},
     widgets::{Block, Borders, Paragraph, Wrap},
     Frame,
 };
@@ -11,9 +11,9 @@ use ratatui::{
 pub fn draw_query_editor(frame: &mut Frame, app: &App, area: Rect) {
     let is_focused = app.focus == Focus::QueryEditor;
     let border_style = if is_focused {
-        Style::default().fg(Color::Cyan)
+        theme::border_focused()
     } else {
-        Style::default().fg(Color::DarkGray)
+        theme::border_inactive()
     };
 
     let block = Block::default()
@@ -23,7 +23,7 @@ pub fn draw_query_editor(frame: &mut Frame, app: &App, area: Rect) {
 
     let query_text = Paragraph::new(app.query.as_str())
         .block(block)
-        .style(Style::default().fg(Color::Green))
+        .style(theme::text())
         .wrap(Wrap { trim: false });
 
     frame.render_widget(query_text, area);

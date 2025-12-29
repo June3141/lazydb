@@ -1,9 +1,9 @@
 //! Data tab rendering with pagination
 
 use crate::app::App;
+use crate::ui::theme;
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
-    style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{
         Block, Borders, Cell, Paragraph, Row, Scrollbar, ScrollbarOrientation, ScrollbarState,
@@ -15,8 +15,7 @@ use ratatui::{
 pub fn draw_data_content(frame: &mut Frame, app: &mut App, area: Rect) {
     if let Some(result) = &app.result {
         if result.rows.is_empty() {
-            let empty = Paragraph::new("Query returned no rows")
-                .style(Style::default().fg(Color::DarkGray));
+            let empty = Paragraph::new("Query returned no rows").style(theme::muted());
             frame.render_widget(empty, area);
             return;
         }
@@ -54,13 +53,10 @@ pub fn draw_data_content(frame: &mut Frame, app: &mut App, area: Rect) {
             .split(chunks[0]);
 
         // Create header row
-        let header_cells = result.columns.iter().map(|col| {
-            Cell::from(col.clone()).style(
-                Style::default()
-                    .fg(Color::Yellow)
-                    .add_modifier(Modifier::BOLD),
-            )
-        });
+        let header_cells = result
+            .columns
+            .iter()
+            .map(|col| Cell::from(col.clone()).style(theme::header()));
         let header = Row::new(header_cells).height(1);
 
         // Create data rows (paginated)
@@ -69,7 +65,7 @@ pub fn draw_data_content(frame: &mut Frame, app: &mut App, area: Rect) {
             .map(|row_data| {
                 let cells = row_data
                     .iter()
-                    .map(|cell| Cell::from(cell.clone()).style(Style::default().fg(Color::White)));
+                    .map(|cell| Cell::from(cell.clone()).style(theme::text()));
                 Row::new(cells).height(1)
             })
             .collect();
@@ -88,11 +84,7 @@ pub fn draw_data_content(frame: &mut Frame, app: &mut App, area: Rect) {
 
         let table = RatatuiTable::new(rows, widths)
             .header(header)
-            .row_highlight_style(
-                Style::default()
-                    .bg(Color::DarkGray)
-                    .add_modifier(Modifier::BOLD),
-            )
+            .row_highlight_style(theme::row_highlight())
             .highlight_symbol("▶ ");
 
         // Render table with state for scrolling
@@ -110,14 +102,13 @@ pub fn draw_data_content(frame: &mut Frame, app: &mut App, area: Rect) {
 
         // Render info bar showing row position
         let info_text = format_info_bar_text(selected_idx, start, page_row_count);
-        let info_bar = Paragraph::new(info_text).style(Style::default().fg(Color::DarkGray));
+        let info_bar = Paragraph::new(info_text).style(theme::muted());
         frame.render_widget(info_bar, chunks[1]);
 
         // Draw pagination bar
         draw_pagination_bar(frame, app, chunks[2]);
     } else {
-        let empty =
-            Paragraph::new("No data to display").style(Style::default().fg(Color::DarkGray));
+        let empty = Paragraph::new("No data to display").style(theme::muted());
         frame.render_widget(empty, area);
     }
 }
@@ -154,15 +145,15 @@ fn draw_pagination_bar(frame: &mut Frame, app: &App, area: Rect) {
 
     // Format: "< [p] Prev | Page 1/10 | Next [n] > | 50 rows | Total: 500 | Size: 50 [z]"
     let prev_style = if pagination.has_prev() {
-        Style::default().fg(Color::Cyan)
+        theme::selected()
     } else {
-        Style::default().fg(Color::DarkGray)
+        theme::muted()
     };
 
     let next_style = if pagination.has_next() {
-        Style::default().fg(Color::Cyan)
+        theme::selected()
     } else {
-        Style::default().fg(Color::DarkGray)
+        theme::muted()
     };
 
     let current_page = pagination.current_page + 1;
@@ -172,47 +163,42 @@ fn draw_pagination_bar(frame: &mut Frame, app: &App, area: Rect) {
 
     let spans = vec![
         Span::styled(" ◀ ", prev_style),
-        Span::styled("[p]", Style::default().fg(Color::DarkGray)),
+        Span::styled("[p]", theme::muted()),
         Span::styled(" Prev ", prev_style),
-        Span::styled("│", Style::default().fg(Color::DarkGray)),
+        Span::styled("│", theme::muted()),
         Span::styled(
             format!(" Page {}/{} ", current_page, total_pages),
-            Style::default()
-                .fg(Color::White)
-                .add_modifier(Modifier::BOLD),
+            theme::text(),
         ),
-        Span::styled("│", Style::default().fg(Color::DarkGray)),
+        Span::styled("│", theme::muted()),
         Span::styled(" Next ", next_style),
-        Span::styled("[n]", Style::default().fg(Color::DarkGray)),
+        Span::styled("[n]", theme::muted()),
         Span::styled(" ▶ ", next_style),
-        Span::styled("│", Style::default().fg(Color::DarkGray)),
+        Span::styled("│", theme::muted()),
         Span::styled(
             format!(" Rows {}-{} ", start_row, end_row),
-            Style::default().fg(Color::Green),
+            theme::selected(),
         ),
-        Span::styled("│", Style::default().fg(Color::DarkGray)),
+        Span::styled("│", theme::muted()),
         Span::styled(
             format!(" Total: {} ", pagination.total_rows),
-            Style::default().fg(Color::Yellow),
+            theme::header(),
         ),
-        Span::styled("│", Style::default().fg(Color::DarkGray)),
-        Span::styled(
-            format!(" Size: {} ", pagination.page_size),
-            Style::default().fg(Color::Magenta),
-        ),
-        Span::styled("[z]", Style::default().fg(Color::DarkGray)),
-        Span::styled("│", Style::default().fg(Color::DarkGray)),
-        Span::styled(" [g]", Style::default().fg(Color::DarkGray)),
-        Span::styled(" First ", Style::default().fg(Color::Cyan)),
-        Span::styled("[G]", Style::default().fg(Color::DarkGray)),
-        Span::styled(" Last ", Style::default().fg(Color::Cyan)),
+        Span::styled("│", theme::muted()),
+        Span::styled(format!(" Size: {} ", pagination.page_size), theme::muted()),
+        Span::styled("[z]", theme::muted()),
+        Span::styled("│", theme::muted()),
+        Span::styled(" [g]", theme::muted()),
+        Span::styled(" First ", theme::selected()),
+        Span::styled("[G]", theme::muted()),
+        Span::styled(" Last ", theme::selected()),
     ];
 
     let line = Line::from(spans);
     let paragraph = Paragraph::new(line).block(
         Block::default()
             .borders(Borders::TOP)
-            .border_style(Style::default().fg(Color::DarkGray)),
+            .border_style(theme::border_inactive()),
     );
 
     frame.render_widget(paragraph, area);

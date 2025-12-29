@@ -31,6 +31,7 @@ mod modal;
 mod panel;
 mod sidebar;
 mod status_bar;
+pub mod theme;
 pub mod utils;
 
 use crate::app::{App, SidebarMode};

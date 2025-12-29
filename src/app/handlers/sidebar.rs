@@ -111,5 +111,8 @@ impl App {
 
         // Send async command to execute query
         self.send_execute_query(&conn_clone, &query, proj_idx);
+
+        // Move focus to main panel after selecting a table
+        self.focus = crate::app::Focus::MainPanel;
     }
 }

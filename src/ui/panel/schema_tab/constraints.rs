@@ -1,9 +1,9 @@
 //! Constraints sub-tab rendering
 
 use crate::app::App;
+use crate::ui::theme;
 use ratatui::{
     layout::{Constraint, Rect},
-    style::{Color, Modifier, Style},
     widgets::{Cell, Paragraph, Row, Table as RatatuiTable},
     Frame,
 };
@@ -11,8 +11,7 @@ use ratatui::{
 pub fn draw_constraints_content(frame: &mut Frame, app: &App, area: Rect) {
     if let Some(table) = app.selected_table_info() {
         if table.constraints.is_empty() {
-            let empty = Paragraph::new("No constraints defined")
-                .style(Style::default().fg(Color::DarkGray));
+            let empty = Paragraph::new("No constraints defined").style(theme::muted());
             frame.render_widget(empty, area);
             return;
         }
@@ -32,13 +31,7 @@ pub fn draw_constraints_content(frame: &mut Frame, app: &App, area: Rect) {
             .iter()
             .zip(visibility_flags.iter())
             .filter(|(_, &visible)| visible)
-            .map(|(h, _)| {
-                Cell::from(*h).style(
-                    Style::default()
-                        .fg(Color::Yellow)
-                        .add_modifier(Modifier::BOLD),
-                )
-            })
+            .map(|(h, _)| Cell::from(*h).style(theme::header()))
             .collect();
         let header = Row::new(header_cells).height(1);
 
@@ -54,32 +47,32 @@ pub fn draw_constraints_content(frame: &mut Frame, app: &App, area: Rect) {
                 };
                 let def_str = c.definition.as_deref().unwrap_or("-");
 
+                // PrimaryKey/Unique use header style, FK uses selected, others use text
                 let type_style = match c.constraint_type {
-                    crate::model::ConstraintType::PrimaryKey => Style::default().fg(Color::Yellow),
-                    crate::model::ConstraintType::Unique => Style::default().fg(Color::Magenta),
-                    crate::model::ConstraintType::ForeignKey => Style::default().fg(Color::Cyan),
-                    crate::model::ConstraintType::Check => Style::default().fg(Color::Green),
-                    crate::model::ConstraintType::NotNull => Style::default().fg(Color::LightBlue),
-                    crate::model::ConstraintType::Default => {
-                        Style::default().fg(Color::LightYellow)
-                    }
-                    crate::model::ConstraintType::Exclusion => {
-                        Style::default().fg(Color::LightMagenta)
-                    }
+                    crate::model::ConstraintType::PrimaryKey => theme::header(),
+                    crate::model::ConstraintType::Unique => theme::header(),
+                    crate::model::ConstraintType::ForeignKey => theme::selected(),
+                    crate::model::ConstraintType::Check
+                    | crate::model::ConstraintType::NotNull
+                    | crate::model::ConstraintType::Default
+                    | crate::model::ConstraintType::Exclusion => theme::text(),
                 };
 
                 let all_cells = [
                     (
-                        Cell::from(c.name.clone()).style(Style::default().fg(Color::Cyan)),
+                        Cell::from(c.name.clone()).style(theme::selected()),
                         vis.show_name,
                     ),
                     (
                         Cell::from(c.constraint_type.to_string()).style(type_style),
                         vis.show_type,
                     ),
-                    (Cell::from(columns_str), vis.show_columns),
                     (
-                        Cell::from(def_str).style(Style::default().fg(Color::DarkGray)),
+                        Cell::from(columns_str).style(theme::text()),
+                        vis.show_columns,
+                    ),
+                    (
+                        Cell::from(def_str).style(theme::muted()),
                         vis.show_definition,
                     ),
                 ];
@@ -110,12 +103,11 @@ pub fn draw_constraints_content(frame: &mut Frame, app: &App, area: Rect) {
 
         let table_widget = RatatuiTable::new(rows, widths)
             .header(header)
-            .row_highlight_style(Style::default().bg(Color::DarkGray));
+            .row_highlight_style(theme::row_highlight());
 
         frame.render_widget(table_widget, area);
     } else {
-        let empty = Paragraph::new("Select a table to view constraints")
-            .style(Style::default().fg(Color::DarkGray));
+        let empty = Paragraph::new("Select a table to view constraints").style(theme::muted());
         frame.render_widget(empty, area);
     }
 }

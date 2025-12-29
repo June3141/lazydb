@@ -1,10 +1,12 @@
 use ratatui::{
     layout::Rect,
-    style::{Color, Style},
+    style::Style,
     text::{Line, Span},
     widgets::Paragraph,
     Frame,
 };
+
+use super::theme;
 
 pub fn draw_help_bar(frame: &mut Frame, area: Rect) {
     let help_items = [
@@ -26,14 +28,14 @@ pub fn draw_help_bar(frame: &mut Frame, area: Rect) {
             vec![
                 Span::styled(
                     format!(" {} ", key),
-                    Style::default().fg(Color::Black).bg(Color::Gray),
+                    Style::default().fg(theme::BG).bg(theme::MUTED),
                 ),
-                Span::styled(format!(" {} ", desc), Style::default().fg(Color::Gray)),
+                Span::styled(format!(" {} ", desc), theme::muted()),
             ]
         })
         .collect();
 
-    let help = Paragraph::new(Line::from(spans)).style(Style::default().bg(Color::Black));
+    let help = Paragraph::new(Line::from(spans)).style(Style::default().bg(theme::BG));
 
     frame.render_widget(help, area);
 }

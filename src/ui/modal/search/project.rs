@@ -3,9 +3,9 @@
 use crate::app::SearchProjectModal;
 use crate::model::Project;
 use crate::ui::modal::helpers::{centered_rect, highlight_match};
+use crate::ui::theme;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
-    style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Clear, Paragraph},
     Frame,
@@ -28,7 +28,7 @@ pub fn draw_search_project_modal(
         .title(" Search Projects ")
         .title_alignment(Alignment::Center)
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Green));
+        .border_style(theme::border_focused());
 
     frame.render_widget(block, area);
 
@@ -54,15 +54,11 @@ pub fn draw_search_project_modal(
     // Draw search input field
     let search_display = format!("{}_", modal.query);
     let search_input = Paragraph::new(search_display)
-        .style(
-            Style::default()
-                .fg(Color::Yellow)
-                .add_modifier(Modifier::BOLD),
-        )
+        .style(theme::input_focused())
         .block(
             Block::default()
                 .borders(Borders::ALL)
-                .border_style(Style::default().fg(Color::Yellow))
+                .border_style(theme::input_border_focused())
                 .title(" Search "),
         );
     frame.render_widget(search_input, chunks[0]);
@@ -73,7 +69,7 @@ pub fn draw_search_project_modal(
         modal.filtered_indices.len(),
         projects.len()
     );
-    let count_paragraph = Paragraph::new(count_text).style(Style::default().fg(Color::DarkGray));
+    let count_paragraph = Paragraph::new(count_text).style(theme::muted());
     frame.render_widget(count_paragraph, chunks[1]);
 
     // Draw results list
@@ -89,7 +85,7 @@ pub fn draw_search_project_modal(
 
     let results_block = Block::default()
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Gray))
+        .border_style(theme::border_inactive())
         .title(" Results ");
     let results_inner = results_block.inner(results_area);
     frame.render_widget(results_block, results_area);
@@ -107,12 +103,9 @@ pub fn draw_search_project_modal(
             let is_selected = actual_idx == modal.selected_idx;
 
             let style = if is_selected {
-                Style::default()
-                    .fg(Color::Black)
-                    .bg(Color::Cyan)
-                    .add_modifier(Modifier::BOLD)
+                theme::focused()
             } else {
-                Style::default().fg(Color::White)
+                theme::text()
             };
 
             // Highlight matching text

@@ -1,9 +1,10 @@
 //! Project modal rendering
 
 use crate::app::{ConfirmModalField, DeleteProjectModal, ProjectModal, ProjectModalField};
+use crate::ui::theme;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Clear, Paragraph},
     Frame,
@@ -22,7 +23,7 @@ pub fn draw_project_modal(frame: &mut Frame, modal: &ProjectModal, title: &str) 
         .title(title)
         .title_alignment(Alignment::Center)
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Green));
+        .border_style(theme::border_focused());
 
     frame.render_widget(block, area);
 
@@ -66,12 +67,9 @@ fn draw_project_buttons(frame: &mut Frame, area: Rect, focused_field: ProjectMod
 
     // OK button
     let ok_style = if focused_field == ProjectModalField::ButtonOk {
-        Style::default()
-            .fg(Color::Black)
-            .bg(Color::Green)
-            .add_modifier(Modifier::BOLD)
+        theme::focused()
     } else {
-        Style::default().fg(Color::Green)
+        theme::selected()
     };
 
     let ok_button = Paragraph::new(Line::from(vec![
@@ -84,12 +82,9 @@ fn draw_project_buttons(frame: &mut Frame, area: Rect, focused_field: ProjectMod
 
     // Cancel button
     let cancel_style = if focused_field == ProjectModalField::ButtonCancel {
-        Style::default()
-            .fg(Color::Black)
-            .bg(Color::Red)
-            .add_modifier(Modifier::BOLD)
+        theme::button_cancel_focused()
     } else {
-        Style::default().fg(Color::Red)
+        theme::muted()
     };
 
     let cancel_button = Paragraph::new(Line::from(vec![
@@ -115,7 +110,7 @@ pub fn draw_delete_project_modal(frame: &mut Frame, modal: &DeleteProjectModal) 
         .title(" Delete Project ")
         .title_alignment(Alignment::Center)
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Green));
+        .border_style(theme::border_focused());
 
     frame.render_widget(block, area);
 
@@ -141,7 +136,7 @@ pub fn draw_delete_project_modal(frame: &mut Frame, modal: &DeleteProjectModal) 
     // Warning message
     let warning = Paragraph::new(Line::from(vec![Span::styled(
         "Are you sure you want to delete this project?",
-        Style::default().fg(Color::Yellow),
+        theme::header(),
     )]))
     .alignment(Alignment::Center);
     frame.render_widget(warning, chunks[0]);
@@ -150,7 +145,7 @@ pub fn draw_delete_project_modal(frame: &mut Frame, modal: &DeleteProjectModal) 
     let project_name = Paragraph::new(Line::from(vec![Span::styled(
         format!("\"{}\"", modal.project_name),
         Style::default()
-            .fg(Color::White)
+            .fg(theme::TEXT)
             .add_modifier(Modifier::BOLD),
     )]))
     .alignment(Alignment::Center);
@@ -166,14 +161,14 @@ fn draw_confirm_buttons(frame: &mut Frame, area: Rect, focused_field: ConfirmMod
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
         .split(area);
 
-    // Delete button (danger)
+    // Delete button (using accent for emphasis)
     let delete_style = if focused_field == ConfirmModalField::ButtonOk {
         Style::default()
-            .fg(Color::Black)
-            .bg(Color::Red)
+            .fg(theme::BG)
+            .bg(theme::ACCENT)
             .add_modifier(Modifier::BOLD)
     } else {
-        Style::default().fg(Color::Red)
+        theme::header()
     };
 
     let delete_button = Paragraph::new(Line::from(vec![
@@ -186,12 +181,9 @@ fn draw_confirm_buttons(frame: &mut Frame, area: Rect, focused_field: ConfirmMod
 
     // Cancel button
     let cancel_style = if focused_field == ConfirmModalField::ButtonCancel {
-        Style::default()
-            .fg(Color::Black)
-            .bg(Color::Gray)
-            .add_modifier(Modifier::BOLD)
+        theme::button_cancel_focused()
     } else {
-        Style::default().fg(Color::Gray)
+        theme::muted()
     };
 
     let cancel_button = Paragraph::new(Line::from(vec![
