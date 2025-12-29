@@ -38,8 +38,8 @@ pub fn draw_routine_content(frame: &mut Frame, app: &App, area: Rect) {
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Length(header_height),
-            Constraint::Length(8),  // Parameters table
-            Constraint::Min(5),     // Definition
+            Constraint::Length(8), // Parameters table
+            Constraint::Min(5),    // Definition
         ])
         .split(area);
 
@@ -73,10 +73,7 @@ fn draw_routine_header(frame: &mut Frame, routine: &Routine, area: Rect) {
 
     // Return type (for functions)
     if routine.is_function() {
-        let return_type = routine
-            .return_type
-            .as_deref()
-            .unwrap_or("unknown");
+        let return_type = routine.return_type.as_deref().unwrap_or("unknown");
         lines.push(Line::from(vec![
             Span::styled("Returns: ", theme::muted()),
             Span::styled(return_type, theme::selected()),

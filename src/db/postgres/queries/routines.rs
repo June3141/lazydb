@@ -48,7 +48,10 @@ pub fn get_routines(client: &mut Client, schema: &str) -> Result<Vec<Routine>, P
         .map_err(|e| ProviderError::QueryFailed(e.to_string()))?;
 
     // Collect routine OIDs for batch parameter fetch
-    let routine_oids: Vec<u32> = routine_rows.iter().map(|row| row.get::<_, u32>(9)).collect();
+    let routine_oids: Vec<u32> = routine_rows
+        .iter()
+        .map(|row| row.get::<_, u32>(9))
+        .collect();
 
     // Fetch all parameters in one query and group by routine OID
     let params_map = fetch_all_parameters(client, &routine_oids)?;
@@ -79,10 +82,7 @@ pub fn get_routines(client: &mut Client, schema: &str) -> Result<Vec<Routine>, P
         };
 
         // Get parameters from the pre-fetched map
-        let parameters = params_map
-            .get(&routine_oid)
-            .cloned()
-            .unwrap_or_default();
+        let parameters = params_map.get(&routine_oid).cloned().unwrap_or_default();
 
         let mut routine =
             Routine::new(name, schema_name, routine_type, language).with_volatility(volatility);

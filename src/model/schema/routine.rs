@@ -281,8 +281,7 @@ mod tests {
 
     #[test]
     fn test_routine_parameter_with_position() {
-        let param =
-            RoutineParameter::new("user_id", "integer", ParameterMode::In).with_position(1);
+        let param = RoutineParameter::new("user_id", "integer", ParameterMode::In).with_position(1);
 
         assert_eq!(param.ordinal_position, 1);
     }
@@ -390,10 +389,7 @@ mod tests {
         let routine = Routine::new("get_user", "public", RoutineType::Function, "plpgsql")
             .with_comment("Retrieves a user by ID");
 
-        assert_eq!(
-            routine.comment,
-            Some("Retrieves a user by ID".to_string())
-        );
+        assert_eq!(routine.comment, Some("Retrieves a user by ID".to_string()));
     }
 
     #[test]
@@ -412,8 +408,10 @@ mod tests {
 
     #[test]
     fn test_routine_parameters_signature_single() {
-        let routine = Routine::new("get_user", "public", RoutineType::Function, "sql")
-            .with_parameter(RoutineParameter::new("user_id", "integer", ParameterMode::In));
+        let routine =
+            Routine::new("get_user", "public", RoutineType::Function, "sql").with_parameter(
+                RoutineParameter::new("user_id", "integer", ParameterMode::In),
+            );
 
         assert_eq!(routine.parameters_signature(), "(user_id integer)");
     }
@@ -421,8 +419,16 @@ mod tests {
     #[test]
     fn test_routine_parameters_signature_multiple() {
         let routine = Routine::new("get_users", "public", RoutineType::Function, "sql")
-            .with_parameter(RoutineParameter::new("offset_val", "integer", ParameterMode::In))
-            .with_parameter(RoutineParameter::new("limit_val", "integer", ParameterMode::In));
+            .with_parameter(RoutineParameter::new(
+                "offset_val",
+                "integer",
+                ParameterMode::In,
+            ))
+            .with_parameter(RoutineParameter::new(
+                "limit_val",
+                "integer",
+                ParameterMode::In,
+            ));
 
         assert_eq!(
             routine.parameters_signature(),
@@ -432,9 +438,22 @@ mod tests {
 
     #[test]
     fn test_routine_parameters_signature_excludes_out_params() {
-        let routine = Routine::new("get_user_with_count", "public", RoutineType::Function, "sql")
-            .with_parameter(RoutineParameter::new("user_id", "integer", ParameterMode::In))
-            .with_parameter(RoutineParameter::new("total_count", "integer", ParameterMode::Out));
+        let routine = Routine::new(
+            "get_user_with_count",
+            "public",
+            RoutineType::Function,
+            "sql",
+        )
+        .with_parameter(RoutineParameter::new(
+            "user_id",
+            "integer",
+            ParameterMode::In,
+        ))
+        .with_parameter(RoutineParameter::new(
+            "total_count",
+            "integer",
+            ParameterMode::Out,
+        ));
 
         assert_eq!(routine.parameters_signature(), "(user_id integer)");
     }
@@ -463,18 +482,23 @@ mod tests {
 
     #[test]
     fn test_routine_full_builder() {
-        let routine = Routine::new("calculate_total", "billing", RoutineType::Function, "plpgsql")
-            .with_parameters(vec![
-                RoutineParameter::new("order_id", "integer", ParameterMode::In).with_position(1),
-                RoutineParameter::new("include_tax", "boolean", ParameterMode::In)
-                    .with_default("true")
-                    .with_position(2),
-            ])
-            .with_return_type("numeric")
-            .with_volatility(Volatility::Stable)
-            .with_security_definer(false)
-            .with_definition("CREATE FUNCTION calculate_total...")
-            .with_comment("Calculates the total amount for an order");
+        let routine = Routine::new(
+            "calculate_total",
+            "billing",
+            RoutineType::Function,
+            "plpgsql",
+        )
+        .with_parameters(vec![
+            RoutineParameter::new("order_id", "integer", ParameterMode::In).with_position(1),
+            RoutineParameter::new("include_tax", "boolean", ParameterMode::In)
+                .with_default("true")
+                .with_position(2),
+        ])
+        .with_return_type("numeric")
+        .with_volatility(Volatility::Stable)
+        .with_security_definer(false)
+        .with_definition("CREATE FUNCTION calculate_total...")
+        .with_comment("Calculates the total amount for an order");
 
         assert_eq!(routine.name, "calculate_total");
         assert_eq!(routine.schema, "billing");

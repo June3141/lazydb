@@ -85,10 +85,7 @@ impl InternalQueries {
     }
 
     /// Retrieves all stored procedures and functions from the specified schema.
-    pub fn get_routines(
-        client: &mut Client,
-        schema: &str,
-    ) -> Result<Vec<Routine>, ProviderError> {
+    pub fn get_routines(client: &mut Client, schema: &str) -> Result<Vec<Routine>, ProviderError> {
         routines::get_routines(client, schema)
     }
 }
