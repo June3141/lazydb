@@ -2,15 +2,22 @@
 
 use crossterm::event::KeyCode;
 
+use crossterm::event::KeyModifiers;
+
 use crate::app::{
     AddConnectionModal, App, ColumnVisibilityModal, ConfirmModalField, ConnectionModalField,
     DeleteProjectModal, HistoryModal, ModalState, ProjectModal, ProjectModalField,
-    SearchConnectionModal, SearchProjectModal, SearchTableModal, UnifiedSearchModal,
+    QueryInputModal, SearchConnectionModal, SearchProjectModal, SearchTableModal,
+    UnifiedSearchModal,
 };
 use crate::message::Message;
 
 /// Handle keyboard input when a modal is open
-pub fn handle_modal_input(app: &App, key_code: KeyCode) -> Option<Message> {
+pub fn handle_modal_input(
+    app: &App,
+    key_code: KeyCode,
+    modifiers: KeyModifiers,
+) -> Option<Message> {
     match &app.modal_state {
         ModalState::None => None,
         ModalState::AddConnection(modal) => handle_connection_modal(key_code, modal),
@@ -24,6 +31,7 @@ pub fn handle_modal_input(app: &App, key_code: KeyCode) -> Option<Message> {
         ModalState::UnifiedSearch(modal) => handle_unified_search_modal(key_code, modal),
         ModalState::History(modal) => handle_history_modal(key_code, modal),
         ModalState::ColumnVisibility(modal) => handle_column_visibility_modal(key_code, modal),
+        ModalState::QueryInput(modal) => handle_query_input_modal(key_code, modifiers, modal),
     }
 }
 
@@ -218,6 +226,42 @@ fn handle_column_visibility_modal(
         KeyCode::Up | KeyCode::Char('k') => Some(Message::ModalPrevField),
         KeyCode::Down | KeyCode::Char('j') => Some(Message::ModalNextField),
         KeyCode::Enter | KeyCode::Char(' ') => Some(Message::ToggleColumnVisibility),
+        _ => None,
+    }
+}
+
+fn handle_query_input_modal(
+    key_code: KeyCode,
+    modifiers: KeyModifiers,
+    _modal: &QueryInputModal,
+) -> Option<Message> {
+    // Check for Ctrl modifier
+    let ctrl = modifiers.contains(KeyModifiers::CONTROL);
+
+    match key_code {
+        // Esc to cancel and close modal
+        KeyCode::Esc => Some(Message::CloseModal),
+        // Ctrl+Enter to execute query
+        KeyCode::Enter if ctrl => Some(Message::QueryInputExecute),
+        // Regular Enter for newline
+        KeyCode::Enter => Some(Message::QueryInputNewline),
+        // Ctrl+r to open history (switches to history modal)
+        KeyCode::Char('r') if ctrl => Some(Message::OpenHistoryModal),
+        // Ctrl+u to clear input
+        KeyCode::Char('u') if ctrl => Some(Message::QueryInputClear),
+        // Backspace to delete character before cursor
+        KeyCode::Backspace => Some(Message::QueryInputBackspace),
+        // Delete to delete character at cursor
+        KeyCode::Delete => Some(Message::QueryInputDelete),
+        // Cursor movement
+        KeyCode::Left => Some(Message::QueryInputCursorLeft),
+        KeyCode::Right => Some(Message::QueryInputCursorRight),
+        KeyCode::Up => Some(Message::QueryInputCursorUp),
+        KeyCode::Down => Some(Message::QueryInputCursorDown),
+        KeyCode::Home => Some(Message::QueryInputCursorHome),
+        KeyCode::End => Some(Message::QueryInputCursorEnd),
+        // Character input
+        KeyCode::Char(c) if !ctrl => Some(Message::QueryInputChar(c)),
         _ => None,
     }
 }
