@@ -10,30 +10,26 @@ pub fn get_constraints(
     table_name: &str,
     schema: &str,
 ) -> Result<Vec<Constraint>, ProviderError> {
+    // Use PostgreSQL system catalogs for more reliable constraint info
     let query = r#"
         SELECT
-            tc.constraint_name,
-            tc.constraint_type,
+            con.conname AS constraint_name,
+            con.contype AS constraint_type,
             COALESCE(
-                array_remove(
-                    array_agg(kcu.column_name ORDER BY kcu.ordinal_position),
-                    NULL
+                (
+                    SELECT array_agg(a.attname ORDER BY array_position(con.conkey, a.attnum))
+                    FROM unnest(con.conkey) AS k(num)
+                    JOIN pg_attribute a ON a.attrelid = con.conrelid AND a.attnum = k.num
                 ),
                 ARRAY[]::varchar[]
-            ) as columns,
-            cc.check_clause
-        FROM information_schema.table_constraints tc
-        LEFT JOIN information_schema.key_column_usage kcu
-            ON tc.constraint_name = kcu.constraint_name
-            AND tc.table_schema = kcu.table_schema
-            AND tc.table_name = kcu.table_name
-        LEFT JOIN information_schema.check_constraints cc
-            ON tc.constraint_name = cc.constraint_name
-            AND tc.constraint_schema = cc.constraint_schema
-        WHERE tc.table_schema = $1
-        AND tc.table_name = $2
-        GROUP BY tc.constraint_name, tc.constraint_type, cc.check_clause
-        ORDER BY tc.constraint_name
+            ) AS columns,
+            pg_get_constraintdef(con.oid) AS definition
+        FROM pg_constraint con
+        JOIN pg_class rel ON rel.oid = con.conrelid
+        JOIN pg_namespace nsp ON nsp.oid = rel.relnamespace
+        WHERE nsp.nspname = $1
+        AND rel.relname = $2
+        ORDER BY con.conname
     "#;
 
     let rows = client
@@ -44,16 +40,17 @@ pub fn get_constraints(
         .iter()
         .map(|row| {
             let name: String = row.get(0);
-            let constraint_type_str: String = row.get(1);
-            // Handle potential NULL array or deserialization issues
+            // pg_constraint.contype is a single character:
+            // p = primary key, u = unique, f = foreign key, c = check, x = exclusion
+            let constraint_type_char: i8 = row.get(1);
             let columns: Vec<String> = row.try_get::<_, Vec<String>>(2).unwrap_or_default();
-            let check_clause: Option<String> = row.get(3);
+            let definition: Option<String> = row.get(3);
 
-            let constraint_type = match constraint_type_str.as_str() {
-                "PRIMARY KEY" => ConstraintType::PrimaryKey,
-                "UNIQUE" => ConstraintType::Unique,
-                "FOREIGN KEY" => ConstraintType::ForeignKey,
-                "CHECK" => ConstraintType::Check,
+            let constraint_type = match constraint_type_char as u8 as char {
+                'p' => ConstraintType::PrimaryKey,
+                'u' => ConstraintType::Unique,
+                'f' => ConstraintType::ForeignKey,
+                'c' => ConstraintType::Check,
                 _ => ConstraintType::Check,
             };
 
@@ -61,7 +58,7 @@ pub fn get_constraints(
                 name,
                 constraint_type,
                 columns,
-                definition: check_clause,
+                definition,
             }
         })
         .collect();
