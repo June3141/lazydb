@@ -2,7 +2,12 @@
 #![allow(dead_code)]
 
 mod csv;
+mod error;
 mod json;
+
+// Re-export for future use when export is integrated with UI
+#[allow(unused_imports)]
+pub use error::ExportError;
 
 use std::path::Path;
 
