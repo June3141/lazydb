@@ -2,9 +2,9 @@
 
 use crate::app::HistoryModal;
 use crate::model::QueryHistory;
-use crate::ui::theme;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
+    style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph},
     Frame,
@@ -23,7 +23,7 @@ pub fn draw_history_modal(frame: &mut Frame, modal: &HistoryModal, history: &Que
         .title(" Query History ")
         .title_alignment(Alignment::Center)
         .borders(Borders::ALL)
-        .border_style(theme::border_focused());
+        .border_style(Style::default().fg(Color::Cyan));
 
     frame.render_widget(block, area);
 
@@ -69,11 +69,14 @@ pub fn draw_history_modal(frame: &mut Frame, modal: &HistoryModal, history: &Que
             };
 
             let style = if idx == modal.selected_idx {
-                theme::focused()
+                Style::default()
+                    .fg(Color::Black)
+                    .bg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD)
             } else if entry.is_success() {
-                theme::text()
+                Style::default().fg(Color::White)
             } else {
-                theme::header() // Failed queries use accent color for visibility
+                Style::default().fg(Color::Red)
             };
 
             ListItem::new(Line::from(vec![
@@ -87,7 +90,7 @@ pub fn draw_history_modal(frame: &mut Frame, modal: &HistoryModal, history: &Que
     let list = List::new(items).block(
         Block::default()
             .borders(Borders::ALL)
-            .border_style(theme::border_inactive())
+            .border_style(Style::default().fg(Color::Gray))
             .title(format!(" {} queries ", history.len())),
     );
 
@@ -98,13 +101,13 @@ pub fn draw_history_modal(frame: &mut Frame, modal: &HistoryModal, history: &Que
 
     // Help text
     let help = Paragraph::new(Line::from(vec![
-        Span::styled("Enter", theme::header()),
+        Span::styled("Enter", Style::default().fg(Color::Yellow)),
         Span::raw(": select  "),
-        Span::styled("j/k", theme::header()),
+        Span::styled("j/k", Style::default().fg(Color::Yellow)),
         Span::raw(": navigate  "),
-        Span::styled("c", theme::header()),
+        Span::styled("c", Style::default().fg(Color::Yellow)),
         Span::raw(": clear  "),
-        Span::styled("Esc/q", theme::header()),
+        Span::styled("Esc/q", Style::default().fg(Color::Yellow)),
         Span::raw(": close"),
     ]))
     .alignment(Alignment::Center);

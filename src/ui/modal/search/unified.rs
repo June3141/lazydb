@@ -3,9 +3,9 @@
 use crate::app::{UnifiedSearchModal, UnifiedSearchSection};
 use crate::model::{Connection, Table};
 use crate::ui::modal::helpers::{centered_rect, highlight_match};
-use crate::ui::theme;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
+    style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Clear, Paragraph},
     Frame,
@@ -27,7 +27,7 @@ pub fn draw_unified_search_modal(
         .title(" Search ")
         .title_alignment(Alignment::Center)
         .borders(Borders::ALL)
-        .border_style(theme::border_focused());
+        .border_style(Style::default().fg(Color::Cyan));
 
     frame.render_widget(block, area);
 
@@ -52,11 +52,15 @@ pub fn draw_unified_search_modal(
     // Draw search input field
     let search_display = format!("{}_", modal.query);
     let search_input = Paragraph::new(search_display)
-        .style(theme::input_focused())
+        .style(
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        )
         .block(
             Block::default()
                 .borders(Borders::ALL)
-                .border_style(theme::input_border_focused())
+                .border_style(Style::default().fg(Color::Yellow))
                 .title(" Search "),
         );
     frame.render_widget(search_input, chunks[0]);
@@ -108,13 +112,13 @@ pub fn draw_unified_search_modal(
 
     // Draw help text
     let help_text = Line::from(vec![
-        Span::styled("Enter", theme::header()),
+        Span::styled("Enter", Style::default().fg(Color::Green)),
         Span::raw(": select  "),
-        Span::styled("Tab", theme::header()),
+        Span::styled("Tab", Style::default().fg(Color::Magenta)),
         Span::raw(": switch  "),
-        Span::styled("Esc", theme::header()),
+        Span::styled("Esc", Style::default().fg(Color::Red)),
         Span::raw(": cancel  "),
-        Span::styled("↑/↓", theme::header()),
+        Span::styled("↑/↓", Style::default().fg(Color::Cyan)),
         Span::raw(": navigate"),
     ]);
     let help = Paragraph::new(help_text).alignment(Alignment::Center);
@@ -130,15 +134,15 @@ fn draw_unified_section(
     query: &str,
     is_active: bool,
 ) {
-    let border_style = if is_active {
-        theme::border_focused()
+    let border_color = if is_active {
+        Color::Cyan
     } else {
-        theme::border_inactive()
+        Color::DarkGray
     };
 
     let block = Block::default()
         .borders(Borders::ALL)
-        .border_style(border_style)
+        .border_style(Style::default().fg(border_color))
         .title(title);
 
     let inner = block.inner(area);
@@ -146,7 +150,7 @@ fn draw_unified_section(
 
     if items.is_empty() {
         let empty_msg = Paragraph::new("No results")
-            .style(theme::muted())
+            .style(Style::default().fg(Color::DarkGray))
             .alignment(Alignment::Center);
         frame.render_widget(empty_msg, inner);
         return;
@@ -169,11 +173,14 @@ fn draw_unified_section(
         let is_selected = is_active && actual_idx == selected_idx;
 
         let style = if is_selected {
-            theme::focused()
+            Style::default()
+                .fg(Color::Black)
+                .bg(Color::Cyan)
+                .add_modifier(Modifier::BOLD)
         } else if is_active {
-            theme::text()
+            Style::default().fg(Color::White)
         } else {
-            theme::muted()
+            Style::default().fg(Color::DarkGray)
         };
 
         let line = if !query.is_empty() && is_active {

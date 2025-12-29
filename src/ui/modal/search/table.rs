@@ -3,9 +3,9 @@
 use crate::app::SearchTableModal;
 use crate::model::Table;
 use crate::ui::modal::helpers::{centered_rect, highlight_match};
-use crate::ui::theme;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
+    style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Clear, Paragraph},
     Frame,
@@ -24,7 +24,7 @@ pub fn draw_search_table_modal(frame: &mut Frame, modal: &SearchTableModal, tabl
         .title(" Search Tables ")
         .title_alignment(Alignment::Center)
         .borders(Borders::ALL)
-        .border_style(theme::border_focused());
+        .border_style(Style::default().fg(Color::Green));
 
     frame.render_widget(block, area);
 
@@ -50,11 +50,15 @@ pub fn draw_search_table_modal(frame: &mut Frame, modal: &SearchTableModal, tabl
     // Draw search input field
     let search_display = format!("{}_", modal.query);
     let search_input = Paragraph::new(search_display)
-        .style(theme::input_focused())
+        .style(
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        )
         .block(
             Block::default()
                 .borders(Borders::ALL)
-                .border_style(theme::input_border_focused())
+                .border_style(Style::default().fg(Color::Yellow))
                 .title(" Search "),
         );
     frame.render_widget(search_input, chunks[0]);
@@ -65,7 +69,7 @@ pub fn draw_search_table_modal(frame: &mut Frame, modal: &SearchTableModal, tabl
         modal.filtered_indices.len(),
         tables.len()
     );
-    let count_paragraph = Paragraph::new(count_text).style(theme::muted());
+    let count_paragraph = Paragraph::new(count_text).style(Style::default().fg(Color::DarkGray));
     frame.render_widget(count_paragraph, chunks[1]);
 
     // Draw results list
@@ -81,7 +85,7 @@ pub fn draw_search_table_modal(frame: &mut Frame, modal: &SearchTableModal, tabl
 
     let results_block = Block::default()
         .borders(Borders::ALL)
-        .border_style(theme::border_inactive())
+        .border_style(Style::default().fg(Color::Gray))
         .title(" Results ");
     let results_inner = results_block.inner(results_area);
     frame.render_widget(results_block, results_area);
@@ -99,9 +103,12 @@ pub fn draw_search_table_modal(frame: &mut Frame, modal: &SearchTableModal, tabl
             let is_selected = actual_idx == modal.selected_idx;
 
             let style = if is_selected {
-                theme::focused()
+                Style::default()
+                    .fg(Color::Black)
+                    .bg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD)
             } else {
-                theme::text()
+                Style::default().fg(Color::White)
             };
 
             // Highlight matching text

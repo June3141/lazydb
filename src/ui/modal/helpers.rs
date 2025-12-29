@@ -2,12 +2,11 @@
 
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
+    style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
     Frame,
 };
-
-use crate::ui::theme;
 
 /// Create a centered rectangle with given percentage of width and height
 pub fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
@@ -40,15 +39,17 @@ pub fn draw_input_field(
     is_password: bool,
 ) {
     let style = if focused {
-        theme::input_focused()
+        Style::default()
+            .fg(Color::Yellow)
+            .add_modifier(Modifier::BOLD)
     } else {
-        theme::text()
+        Style::default().fg(Color::White)
     };
 
     let border_style = if focused {
-        theme::input_border_focused()
+        Style::default().fg(Color::Yellow)
     } else {
-        theme::input_border_inactive()
+        Style::default().fg(Color::Gray)
     };
 
     // Mask password field
@@ -81,15 +82,20 @@ pub fn highlight_match(text: &str, query: &str, is_selected: bool) -> Line<'stat
     let query_lower = query.to_lowercase();
 
     let base_style = if is_selected {
-        theme::focused()
+        Style::default().fg(Color::Black).bg(Color::Cyan)
     } else {
-        theme::text()
+        Style::default().fg(Color::White)
     };
 
     let highlight_style = if is_selected {
-        theme::highlight_match_selected()
+        Style::default()
+            .fg(Color::Yellow)
+            .bg(Color::Cyan)
+            .add_modifier(Modifier::BOLD)
     } else {
-        theme::highlight_match()
+        Style::default()
+            .fg(Color::Yellow)
+            .add_modifier(Modifier::BOLD)
     };
 
     if let Some(start) = text_lower.find(&query_lower) {
@@ -108,13 +114,15 @@ pub fn highlight_match(text: &str, query: &str, is_selected: bool) -> Line<'stat
     }
 }
 
-/// Draw standard OK/Cancel buttons
+/// Draw standard OK/Cancel buttons with custom styles
 #[allow(dead_code)]
 pub fn draw_ok_cancel_buttons(
     frame: &mut Frame,
     area: Rect,
     ok_focused: bool,
     cancel_focused: bool,
+    ok_style_base: (Color, Color),
+    cancel_style_base: (Color, Color),
 ) {
     let button_chunks = Layout::default()
         .direction(Direction::Horizontal)
@@ -123,9 +131,12 @@ pub fn draw_ok_cancel_buttons(
 
     // OK button
     let ok_style = if ok_focused {
-        theme::focused()
+        Style::default()
+            .fg(Color::Black)
+            .bg(ok_style_base.0)
+            .add_modifier(Modifier::BOLD)
     } else {
-        theme::selected()
+        Style::default().fg(ok_style_base.0)
     };
 
     let ok_button = Paragraph::new(Line::from(vec![
@@ -138,9 +149,12 @@ pub fn draw_ok_cancel_buttons(
 
     // Cancel button
     let cancel_style = if cancel_focused {
-        theme::button_cancel_focused()
+        Style::default()
+            .fg(Color::Black)
+            .bg(cancel_style_base.0)
+            .add_modifier(Modifier::BOLD)
     } else {
-        theme::muted()
+        Style::default().fg(cancel_style_base.0)
     };
 
     let cancel_button = Paragraph::new(Line::from(vec![

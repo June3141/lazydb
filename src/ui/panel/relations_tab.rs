@@ -2,10 +2,9 @@
 
 use crate::app::App;
 use crate::model::{ForeignKey, Table};
-use crate::ui::theme;
 use ratatui::{
     layout::Rect,
-    style::Modifier,
+    style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Paragraph, Wrap},
     Frame,
@@ -15,7 +14,8 @@ use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 pub fn draw_relations_content(frame: &mut Frame, app: &App, area: Rect) {
     if let Some(tables) = app.current_connection_tables() {
         if tables.is_empty() {
-            let empty = Paragraph::new("No tables in this connection").style(theme::muted());
+            let empty = Paragraph::new("No tables in this connection")
+                .style(Style::default().fg(Color::DarkGray));
             frame.render_widget(empty, area);
             return;
         }
@@ -25,7 +25,8 @@ pub fn draw_relations_content(frame: &mut Frame, app: &App, area: Rect) {
         let paragraph = Paragraph::new(lines).wrap(Wrap { trim: false });
         frame.render_widget(paragraph, area);
     } else {
-        let empty = Paragraph::new("Select a connection to view relations").style(theme::muted());
+        let empty = Paragraph::new("Select a connection to view relations")
+            .style(Style::default().fg(Color::DarkGray));
         frame.render_widget(empty, area);
     }
 }
@@ -106,7 +107,9 @@ fn build_er_diagram(tables: &[Table]) -> Vec<Line<'static>> {
     // Title
     lines.push(Line::from(vec![Span::styled(
         "  Entity Relationship Diagram",
-        theme::header(),
+        Style::default()
+            .fg(Color::Yellow)
+            .add_modifier(Modifier::BOLD),
     )]));
     lines.push(Line::from(""));
 
@@ -141,14 +144,16 @@ fn build_er_diagram(tables: &[Table]) -> Vec<Line<'static>> {
 
         lines.push(Line::from(vec![
             Span::raw("  "),
-            Span::styled("┌─ ", theme::selected()),
+            Span::styled("┌─ ", Style::default().fg(Color::Cyan)),
             Span::styled(
                 table_name_display,
-                theme::selected().add_modifier(Modifier::BOLD),
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
             ),
-            Span::styled(" ", theme::selected()),
-            Span::styled("─".repeat(header_dashes), theme::selected()),
-            Span::styled("┐", theme::selected()),
+            Span::styled(" ", Style::default().fg(Color::Cyan)),
+            Span::styled("─".repeat(header_dashes), Style::default().fg(Color::Cyan)),
+            Span::styled("┐", Style::default().fg(Color::Cyan)),
         ]));
 
         // Columns (limited to first 5 for brevity)
@@ -168,11 +173,11 @@ fn build_er_diagram(tables: &[Table]) -> Vec<Line<'static>> {
             };
 
             let col_style = if is_pk {
-                theme::header()
+                Style::default().fg(Color::Yellow)
             } else if is_fk {
-                theme::selected()
+                Style::default().fg(Color::Magenta)
             } else {
-                theme::text()
+                Style::default().fg(Color::White)
             };
 
             let col_name_padded = pad_to_width(&col.name, NAME_WIDTH);
@@ -180,12 +185,12 @@ fn build_er_diagram(tables: &[Table]) -> Vec<Line<'static>> {
 
             lines.push(Line::from(vec![
                 Span::raw("  "),
-                Span::styled("│ ", theme::selected()),
+                Span::styled("│ ", Style::default().fg(Color::Cyan)),
                 Span::raw(marker),
                 Span::raw(" "),
                 Span::styled(col_name_padded, col_style),
-                Span::styled(col_type_padded, theme::muted()),
-                Span::styled("│", theme::selected()),
+                Span::styled(col_type_padded, Style::default().fg(Color::DarkGray)),
+                Span::styled("│", Style::default().fg(Color::Cyan)),
             ]));
         }
 
@@ -195,10 +200,10 @@ fn build_er_diagram(tables: &[Table]) -> Vec<Line<'static>> {
             let padding = BOX_CONTENT_WIDTH.saturating_sub(display_width(&more_text));
             lines.push(Line::from(vec![
                 Span::raw("  "),
-                Span::styled("│ ", theme::selected()),
-                Span::styled(more_text, theme::muted()),
+                Span::styled("│ ", Style::default().fg(Color::Cyan)),
+                Span::styled(more_text, Style::default().fg(Color::DarkGray)),
                 Span::raw(" ".repeat(padding)),
-                Span::styled("│", theme::selected()),
+                Span::styled("│", Style::default().fg(Color::Cyan)),
             ]));
         }
 
@@ -209,7 +214,7 @@ fn build_er_diagram(tables: &[Table]) -> Vec<Line<'static>> {
             Span::raw("  "),
             Span::styled(
                 format!("└{}┘", "─".repeat(BOX_TOTAL_WIDTH - 2)),
-                theme::selected(),
+                Style::default().fg(Color::Cyan),
             ),
         ]));
 
@@ -217,7 +222,7 @@ fn build_er_diagram(tables: &[Table]) -> Vec<Line<'static>> {
         for fk in &table.foreign_keys {
             lines.push(Line::from(vec![
                 Span::raw("        "),
-                Span::styled("│", theme::selected()),
+                Span::styled("│", Style::default().fg(Color::Green)),
             ]));
             lines.push(Line::from(vec![
                 Span::raw("        "),
@@ -227,18 +232,18 @@ fn build_er_diagram(tables: &[Table]) -> Vec<Line<'static>> {
                         truncate_to_width(&fk.referenced_table, REF_TABLE_MAX_WIDTH),
                         fk.referenced_columns.join(", ")
                     ),
-                    theme::selected(),
+                    Style::default().fg(Color::Green),
                 ),
             ]));
             lines.push(Line::from(vec![
                 Span::raw("             "),
-                Span::styled(fk.name.clone(), theme::muted()),
+                Span::styled(fk.name.clone(), Style::default().fg(Color::DarkGray)),
             ]));
             lines.push(Line::from(vec![
                 Span::raw("             "),
                 Span::styled(
                     format!("ON DELETE: {} | ON UPDATE: {}", fk.on_delete, fk.on_update),
-                    theme::muted(),
+                    Style::default().fg(Color::DarkGray),
                 ),
             ]));
         }
@@ -249,24 +254,24 @@ fn build_er_diagram(tables: &[Table]) -> Vec<Line<'static>> {
     // Summary section
     lines.push(Line::from(""));
     lines.push(Line::from(vec![
-        Span::styled("  Summary: ", theme::text().add_modifier(Modifier::BOLD)),
+        Span::styled("  Summary: ", Style::default().add_modifier(Modifier::BOLD)),
         Span::styled(
             format!(
                 "{} tables, {} relationships",
                 tables.len(),
                 relationships.len()
             ),
-            theme::selected(),
+            Style::default().fg(Color::Cyan),
         ),
     ]));
 
     // Legend
     lines.push(Line::from(""));
     lines.push(Line::from(vec![
-        Span::styled("  Legend: ", theme::text().add_modifier(Modifier::BOLD)),
-        Span::styled("[PK] Primary Key  ", theme::header()),
-        Span::styled("[FK] Foreign Key  ", theme::selected()),
-        Span::styled("[PF] Both", theme::header()),
+        Span::styled("  Legend: ", Style::default().add_modifier(Modifier::BOLD)),
+        Span::styled("[PK] Primary Key  ", Style::default().fg(Color::Yellow)),
+        Span::styled("[FK] Foreign Key  ", Style::default().fg(Color::Magenta)),
+        Span::styled("[PF] Both", Style::default().fg(Color::Yellow)),
     ]));
 
     lines

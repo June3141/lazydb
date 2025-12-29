@@ -1,9 +1,9 @@
 //! Indexes sub-tab rendering
 
 use crate::app::App;
-use crate::ui::theme;
 use ratatui::{
     layout::{Constraint, Rect},
+    style::{Color, Modifier, Style},
     widgets::{Cell, Paragraph, Row, Table as RatatuiTable},
     Frame,
 };
@@ -11,7 +11,8 @@ use ratatui::{
 pub fn draw_indexes_content(frame: &mut Frame, app: &App, area: Rect) {
     if let Some(table) = app.selected_table_info() {
         if table.indexes.is_empty() {
-            let empty = Paragraph::new("No indexes defined").style(theme::muted());
+            let empty =
+                Paragraph::new("No indexes defined").style(Style::default().fg(Color::DarkGray));
             frame.render_widget(empty, area);
             return;
         }
@@ -31,7 +32,13 @@ pub fn draw_indexes_content(frame: &mut Frame, app: &App, area: Rect) {
             .iter()
             .zip(visibility_flags.iter())
             .filter(|(_, &visible)| visible)
-            .map(|(h, _)| Cell::from(*h).style(theme::header()))
+            .map(|(h, _)| {
+                Cell::from(*h).style(
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
+                )
+            })
             .collect();
         let header = Row::new(header_cells).height(1);
 
@@ -53,16 +60,15 @@ pub fn draw_indexes_content(frame: &mut Frame, app: &App, area: Rect) {
                     .collect::<Vec<_>>()
                     .join(", ");
 
-                // Primary/Unique use header style, others use text
                 let type_style = match idx.index_type {
-                    crate::model::IndexType::Primary => theme::header(),
-                    crate::model::IndexType::Unique => theme::header(),
-                    _ => theme::text(),
+                    crate::model::IndexType::Primary => Style::default().fg(Color::Yellow),
+                    crate::model::IndexType::Unique => Style::default().fg(Color::Magenta),
+                    _ => Style::default().fg(Color::White),
                 };
 
                 let all_cells = [
                     (
-                        Cell::from(idx.name.clone()).style(theme::selected()),
+                        Cell::from(idx.name.clone()).style(Style::default().fg(Color::Cyan)),
                         vis.show_name,
                     ),
                     (
@@ -70,13 +76,11 @@ pub fn draw_indexes_content(frame: &mut Frame, app: &App, area: Rect) {
                         vis.show_type,
                     ),
                     (
-                        Cell::from(idx.method.to_string()).style(theme::muted()),
+                        Cell::from(idx.method.to_string())
+                            .style(Style::default().fg(Color::DarkGray)),
                         vis.show_method,
                     ),
-                    (
-                        Cell::from(columns_str).style(theme::text()),
-                        vis.show_columns,
-                    ),
+                    (Cell::from(columns_str), vis.show_columns),
                 ];
 
                 let visible_cells: Vec<Cell> = all_cells
@@ -105,11 +109,12 @@ pub fn draw_indexes_content(frame: &mut Frame, app: &App, area: Rect) {
 
         let table_widget = RatatuiTable::new(rows, widths)
             .header(header)
-            .row_highlight_style(theme::row_highlight());
+            .row_highlight_style(Style::default().bg(Color::DarkGray));
 
         frame.render_widget(table_widget, area);
     } else {
-        let empty = Paragraph::new("Select a table to view indexes").style(theme::muted());
+        let empty = Paragraph::new("Select a table to view indexes")
+            .style(Style::default().fg(Color::DarkGray));
         frame.render_widget(empty, area);
     }
 }

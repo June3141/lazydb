@@ -8,9 +8,9 @@ mod indexes;
 mod triggers;
 
 use crate::app::{App, SchemaSubTab};
-use crate::ui::theme;
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
+    style::{Color, Modifier, Style},
     widgets::Tabs,
     Frame,
 };
@@ -68,8 +68,12 @@ pub fn draw_schema_content(frame: &mut Frame, app: &App, area: Rect) {
 
     let sub_tabs = Tabs::new(sub_tab_titles)
         .select(selected_sub_tab)
-        .style(theme::muted())
-        .highlight_style(theme::header())
+        .style(Style::default().fg(Color::DarkGray))
+        .highlight_style(
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )
         .divider(" | ");
 
     frame.render_widget(sub_tabs, chunks[0]);

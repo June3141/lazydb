@@ -8,9 +8,9 @@ mod relations_tab;
 mod schema_tab;
 
 use crate::app::{App, Focus, MainPanelTab};
-use crate::ui::theme;
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
+    style::{Color, Modifier, Style},
     widgets::{Block, Borders, Tabs},
     Frame,
 };
@@ -21,9 +21,9 @@ pub use query_editor::draw_query_editor;
 pub fn draw_panel(frame: &mut Frame, app: &mut App, area: Rect) {
     let is_focused = app.focus == Focus::MainPanel;
     let border_style = if is_focused {
-        theme::border_focused()
+        Style::default().fg(Color::Cyan)
     } else {
-        theme::border_inactive()
+        Style::default().fg(Color::DarkGray)
     };
 
     // Split area for tabs and content
@@ -45,8 +45,12 @@ pub fn draw_panel(frame: &mut Frame, app: &mut App, area: Rect) {
 
     let tabs = Tabs::new(tab_titles)
         .select(selected_tab)
-        .style(theme::muted())
-        .highlight_style(theme::header())
+        .style(Style::default().fg(Color::DarkGray))
+        .highlight_style(
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        )
         .divider("|");
 
     frame.render_widget(tabs, chunks[0]);

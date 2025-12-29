@@ -1,9 +1,9 @@
 //! Foreign Keys sub-tab rendering
 
 use crate::app::App;
-use crate::ui::theme;
 use ratatui::{
     layout::{Constraint, Rect},
+    style::{Color, Modifier, Style},
     widgets::{Cell, Paragraph, Row, Table as RatatuiTable},
     Frame,
 };
@@ -11,7 +11,8 @@ use ratatui::{
 pub fn draw_foreign_keys_content(frame: &mut Frame, app: &App, area: Rect) {
     if let Some(table) = app.selected_table_info() {
         if table.foreign_keys.is_empty() {
-            let empty = Paragraph::new("No foreign keys defined").style(theme::muted());
+            let empty = Paragraph::new("No foreign keys defined")
+                .style(Style::default().fg(Color::DarkGray));
             frame.render_widget(empty, area);
             return;
         }
@@ -32,7 +33,13 @@ pub fn draw_foreign_keys_content(frame: &mut Frame, app: &App, area: Rect) {
             .iter()
             .zip(visibility_flags.iter())
             .filter(|(_, &visible)| visible)
-            .map(|(h, _)| Cell::from(*h).style(theme::header()))
+            .map(|(h, _)| {
+                Cell::from(*h).style(
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
+                )
+            })
             .collect();
         let header = Row::new(header_cells).height(1);
 
@@ -50,23 +57,21 @@ pub fn draw_foreign_keys_content(frame: &mut Frame, app: &App, area: Rect) {
 
                 let all_cells = [
                     (
-                        Cell::from(fk.name.clone()).style(theme::selected()),
+                        Cell::from(fk.name.clone()).style(Style::default().fg(Color::Cyan)),
                         vis.show_name,
                     ),
+                    (Cell::from(columns_str), vis.show_column),
                     (
-                        Cell::from(columns_str).style(theme::text()),
-                        vis.show_column,
-                    ),
-                    (
-                        Cell::from(ref_str).style(theme::header()),
+                        Cell::from(ref_str).style(Style::default().fg(Color::Green)),
                         vis.show_references,
                     ),
                     (
-                        Cell::from(fk.on_delete.to_string()).style(theme::header()), // Emphasize potentially destructive action
+                        Cell::from(fk.on_delete.to_string()).style(Style::default().fg(Color::Red)),
                         vis.show_on_delete,
                     ),
                     (
-                        Cell::from(fk.on_update.to_string()).style(theme::muted()),
+                        Cell::from(fk.on_update.to_string())
+                            .style(Style::default().fg(Color::Magenta)),
                         vis.show_on_update,
                     ),
                 ];
@@ -98,11 +103,12 @@ pub fn draw_foreign_keys_content(frame: &mut Frame, app: &App, area: Rect) {
 
         let table_widget = RatatuiTable::new(rows, widths)
             .header(header)
-            .row_highlight_style(theme::row_highlight());
+            .row_highlight_style(Style::default().bg(Color::DarkGray));
 
         frame.render_widget(table_widget, area);
     } else {
-        let empty = Paragraph::new("Select a table to view foreign keys").style(theme::muted());
+        let empty = Paragraph::new("Select a table to view foreign keys")
+            .style(Style::default().fg(Color::DarkGray));
         frame.render_widget(empty, area);
     }
 }

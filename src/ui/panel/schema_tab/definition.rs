@@ -1,10 +1,9 @@
 //! View Definition sub-tab rendering
 
 use crate::app::App;
-use crate::ui::theme;
 use ratatui::{
     layout::Rect,
-    style::Modifier,
+    style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::Paragraph,
     Frame,
@@ -15,7 +14,7 @@ pub fn draw_definition_content(frame: &mut Frame, app: &App, area: Rect) {
         if !table.table_type.is_view() {
             let msg =
                 Paragraph::new("Definition is only available for Views and Materialized Views")
-                    .style(theme::muted());
+                    .style(Style::default().fg(Color::DarkGray));
             frame.render_widget(msg, area);
             return;
         }
@@ -32,15 +31,17 @@ pub fn draw_definition_content(frame: &mut Frame, app: &App, area: Rect) {
                 .collect();
 
             let paragraph = Paragraph::new(lines)
-                .style(theme::text())
+                .style(Style::default().fg(Color::White))
                 .wrap(ratatui::widgets::Wrap { trim: false });
             frame.render_widget(paragraph, area);
         } else {
-            let empty = Paragraph::new("View definition not loaded").style(theme::muted());
+            let empty = Paragraph::new("View definition not loaded")
+                .style(Style::default().fg(Color::DarkGray));
             frame.render_widget(empty, area);
         }
     } else {
-        let empty = Paragraph::new("Select a view to see its definition").style(theme::muted());
+        let empty = Paragraph::new("Select a view to see its definition")
+            .style(Style::default().fg(Color::DarkGray));
         frame.render_widget(empty, area);
     }
 }
@@ -113,7 +114,7 @@ fn highlight_sql_line(line: &str) -> Vec<Span<'static>> {
             }
             spans.push(Span::styled(
                 remaining[..end_pos].to_string(),
-                theme::header(), // String literals use accent color (Yellow)
+                Style::default().fg(Color::Green),
             ));
             pos += end_pos;
             continue;
@@ -133,7 +134,9 @@ fn highlight_sql_line(line: &str) -> Vec<Span<'static>> {
                 if is_word_boundary {
                     spans.push(Span::styled(
                         remaining[..keyword.len()].to_string(),
-                        theme::selected().add_modifier(Modifier::BOLD), // SQL keywords use Cyan with bold (no background)
+                        Style::default()
+                            .fg(Color::Cyan)
+                            .add_modifier(Modifier::BOLD),
                     ));
                     pos += keyword.len();
                     found = true;
@@ -146,9 +149,9 @@ fn highlight_sql_line(line: &str) -> Vec<Span<'static>> {
             // Handle single character
             let ch = remaining.chars().next().unwrap();
             let style = if ch.is_ascii_digit() {
-                theme::header() // Numbers use accent color (Yellow)
+                Style::default().fg(Color::Yellow)
             } else {
-                theme::text() // Regular text
+                Style::default().fg(Color::White)
             };
             spans.push(Span::styled(ch.to_string(), style));
             pos += ch.len_utf8();
