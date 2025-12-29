@@ -6,9 +6,8 @@ use crossterm::event::KeyModifiers;
 
 use crate::app::{
     AddConnectionModal, App, ColumnVisibilityModal, ConfirmModalField, ConnectionModalField,
-    DeleteProjectModal, HistoryModal, ModalState, ProjectModal, ProjectModalField,
-    QueryInputModal, SearchConnectionModal, SearchProjectModal, SearchTableModal,
-    UnifiedSearchModal,
+    DeleteProjectModal, HistoryModal, ModalState, ProjectModal, ProjectModalField, QueryInputModal,
+    SearchConnectionModal, SearchProjectModal, SearchTableModal, UnifiedSearchModal,
 };
 use crate::message::Message;
 

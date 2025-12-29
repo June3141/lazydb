@@ -180,7 +180,7 @@ impl App {
             ModalState::ColumnVisibility(modal) => {
                 modal.navigate_down();
             }
-            ModalState::None | ModalState::History(_) => {}
+            ModalState::None | ModalState::History(_) | ModalState::QueryInput(_) => {}
         }
     }
 
@@ -211,7 +211,7 @@ impl App {
             ModalState::ColumnVisibility(modal) => {
                 modal.navigate_up();
             }
-            ModalState::None | ModalState::History(_) => {}
+            ModalState::None | ModalState::History(_) | ModalState::QueryInput(_) => {}
         }
     }
 
@@ -288,7 +288,7 @@ impl App {
                 // ColumnVisibility uses ToggleColumnVisibility, just close on confirm
                 self.modal_state = ModalState::None;
             }
-            ModalState::None | ModalState::History(_) => {}
+            ModalState::None | ModalState::History(_) | ModalState::QueryInput(_) => {}
         }
     }
 
@@ -602,5 +602,58 @@ impl App {
         }
         self.modal_state = ModalState::None;
         self.status_message = "Query history cleared".to_string();
+    }
+
+    // ========================================================================
+    // Query Input Modal Handlers
+    // ========================================================================
+
+    /// Open the query input modal
+    pub(crate) fn open_query_input_modal(&mut self) {
+        use crate::app::QueryInputModal;
+        // Open with the current query (from query pane) as initial text
+        self.modal_state = ModalState::QueryInput(QueryInputModal::new(&self.query));
+    }
+
+    /// Execute query from the modal and close it
+    pub(crate) fn execute_query_from_modal(&mut self) {
+        // Get the query from modal
+        let query = if let ModalState::QueryInput(modal) = &self.modal_state {
+            if modal.is_empty() {
+                self.status_message = "Query is empty".to_string();
+                return;
+            }
+            modal.query.clone()
+        } else {
+            return;
+        };
+
+        // Update the query pane with the executed query
+        self.query = query.clone();
+
+        // Get current connection info
+        if let SidebarMode::Connections(proj_idx) = self.sidebar_mode {
+            if let Some(project) = self.projects.get(proj_idx) {
+                if let Some(conn) = project.connections.get(self.selected_connection_idx) {
+                    // Clone connection for use after modal closes
+                    let conn_clone = conn.clone();
+
+                    // Close modal first
+                    self.modal_state = ModalState::None;
+
+                    // Switch to Data tab to show results
+                    self.panel_tab = MainPanelTab::Data;
+
+                    // Execute the query
+                    self.send_execute_query(&conn_clone, &query, proj_idx);
+                    return;
+                }
+            }
+        }
+
+        // No connection selected
+        self.modal_state = ModalState::None;
+        self.status_message =
+            "No connection selected. Please select a connection first.".to_string();
     }
 }

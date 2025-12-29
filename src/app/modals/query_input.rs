@@ -137,6 +137,7 @@ impl QueryInputModal {
     }
 
     /// Get the current query text
+    #[allow(dead_code)]
     pub fn get_query(&self) -> &str {
         &self.query
     }
