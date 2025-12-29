@@ -156,9 +156,7 @@ impl DatabaseProvider for PostgresProvider {
     fn get_routines(&self, schema: Option<&str>) -> Result<Vec<Routine>, ProviderError> {
         let schema_str = schema.unwrap_or("public");
 
-        let mut client = self.client.lock().map_err(|e| {
-            ProviderError::InternalError(format!("Failed to acquire client lock: {}", e))
-        })?;
+        let mut client = self.get_connection()?;
 
         InternalQueries::get_routines(&mut client, schema_str)
     }

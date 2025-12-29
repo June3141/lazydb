@@ -61,12 +61,6 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
-      - name: Debug - Show file contents
-        run: |
-          echo "=== provider.rs ==="
-          head -15 src/db/postgres/provider.rs
-          echo "=== trait_impl.rs line 155-175 ==="
-          sed -n '155,175p' src/db/postgres/trait_impl.rs
       - name: Run Clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
 
