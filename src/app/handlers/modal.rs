@@ -320,6 +320,8 @@ impl App {
             password: modal.password.clone(),
             expanded: false,
             tables: vec![],
+            routines: vec![],
+            routines_loaded: false,
         })
     }
 

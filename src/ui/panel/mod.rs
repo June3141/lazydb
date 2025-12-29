@@ -1,10 +1,12 @@
 //! Main panel rendering
 //!
 //! This module handles the main content panel including Schema, Data, and Relations tabs.
+//! When a routine (stored procedure/function) is selected, it displays the routine details instead.
 
 mod data_tab;
 mod query_editor;
 mod relations_tab;
+mod routine_tab;
 mod schema_tab;
 
 use crate::app::{App, Focus, MainPanelTab};
@@ -25,6 +27,20 @@ pub fn draw_panel(frame: &mut Frame, app: &mut App, area: Rect) {
     } else {
         theme::border_inactive()
     };
+
+    // Check if a routine is selected - if so, show routine detail view instead of tabs
+    if app.selected_routine_info().is_some() {
+        let content_block = Block::default()
+            .title(" Routine Details ")
+            .borders(Borders::ALL)
+            .border_style(border_style);
+
+        let inner_area = content_block.inner(area);
+        frame.render_widget(content_block, area);
+
+        routine_tab::draw_routine_content(frame, app, inner_area);
+        return;
+    }
 
     // Split area for tabs and content
     let chunks = Layout::default()

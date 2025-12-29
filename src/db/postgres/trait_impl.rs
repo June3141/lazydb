@@ -2,7 +2,7 @@
 
 use std::time::Instant;
 
-use crate::model::schema::{Table, TableType};
+use crate::model::schema::{Routine, Table, TableType};
 use crate::model::QueryResult;
 
 use super::helpers::{convert_value_to_string, is_valid_identifier, quote_identifier};
@@ -151,6 +151,16 @@ impl DatabaseProvider for PostgresProvider {
         table.comment = comment;
 
         Ok(table)
+    }
+
+    fn get_routines(&self, schema: Option<&str>) -> Result<Vec<Routine>, ProviderError> {
+        let schema_str = schema.unwrap_or("public");
+
+        let mut client = self.client.lock().map_err(|e| {
+            ProviderError::InternalError(format!("Failed to acquire client lock: {}", e))
+        })?;
+
+        InternalQueries::get_routines(&mut client, schema_str)
     }
 
     fn execute_query(&self, query: &str) -> Result<QueryResult, ProviderError> {

@@ -9,6 +9,8 @@ pub struct LoadingState {
     pub fetching_tables: Option<usize>,
     /// (project_idx, connection_idx, table_idx) currently fetching table details
     pub fetching_details: Option<(usize, usize, usize)>,
+    /// Connection index currently fetching routines list
+    pub fetching_routines: Option<usize>,
     /// Whether a query is currently executing
     pub executing_query: bool,
     /// Status message to display
@@ -18,13 +20,17 @@ pub struct LoadingState {
 impl LoadingState {
     /// Returns true if any loading operation is in progress
     pub fn is_loading(&self) -> bool {
-        self.fetching_tables.is_some() || self.fetching_details.is_some() || self.executing_query
+        self.fetching_tables.is_some()
+            || self.fetching_details.is_some()
+            || self.fetching_routines.is_some()
+            || self.executing_query
     }
 
     /// Clear all loading states
     pub fn clear(&mut self) {
         self.fetching_tables = None;
         self.fetching_details = None;
+        self.fetching_routines = None;
         self.executing_query = false;
         self.message = None;
     }
@@ -65,6 +71,17 @@ impl LoadingState {
         table_idx: usize,
     ) -> bool {
         self.fetching_details == Some((proj_idx, conn_idx, table_idx))
+    }
+
+    /// Set routines fetching state for a connection
+    pub fn start_fetching_routines(&mut self, conn_idx: usize) {
+        self.fetching_routines = Some(conn_idx);
+        self.message = Some("Loading routines...".to_string());
+    }
+
+    /// Check if routines are being fetched for a specific connection
+    pub fn is_fetching_routines_for(&self, conn_idx: usize) -> bool {
+        self.fetching_routines == Some(conn_idx)
     }
 }
 
@@ -117,6 +134,7 @@ mod tests {
         let mut state = LoadingState {
             fetching_tables: Some(0),
             fetching_details: Some((0, 1, 2)),
+            fetching_routines: Some(1),
             executing_query: true,
             message: Some("test".to_string()),
         };
@@ -126,6 +144,7 @@ mod tests {
         assert!(!state.is_loading());
         assert!(state.fetching_tables.is_none());
         assert!(state.fetching_details.is_none());
+        assert!(state.fetching_routines.is_none());
         assert!(!state.executing_query);
         assert!(state.message.is_none());
     }
