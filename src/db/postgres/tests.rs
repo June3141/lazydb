@@ -1,13 +1,23 @@
 //! Tests for PostgreSQL provider
 
+use std::env;
+
 use super::helpers::{is_valid_identifier, parse_column_sort_order, quote_identifier};
 use super::{PostgresProvider, ProviderError};
 use crate::db::provider::DatabaseProvider;
 use crate::model::schema::SortOrder;
 
 fn create_test_provider() -> PostgresProvider {
-    PostgresProvider::connect("localhost", 5432, "lazydb_dev", "lazydb", "lazydb")
-        .expect("Failed to connect")
+    let host = env::var("POSTGRES_HOST").unwrap_or_else(|_| "localhost".to_string());
+    let port: u16 = env::var("POSTGRES_PORT")
+        .unwrap_or_else(|_| "15432".to_string())
+        .parse()
+        .expect("POSTGRES_PORT must be a valid port number");
+    let database = env::var("POSTGRES_DB").unwrap_or_else(|_| "lazydb_dev".to_string());
+    let user = env::var("POSTGRES_USER").unwrap_or_else(|_| "lazydb".to_string());
+    let password = env::var("POSTGRES_PASSWORD").unwrap_or_else(|_| "lazydb".to_string());
+
+    PostgresProvider::connect(&host, port, &database, &user, &password).expect("Failed to connect")
 }
 
 #[test]
@@ -125,10 +135,10 @@ fn test_get_foreign_keys() {
     let provider = create_test_provider();
 
     let table = provider
-        .get_table_details("posts", Some("public"))
+        .get_table_details("orders", Some("public"))
         .expect("Failed to get table details");
 
-    println!("Foreign keys for posts:");
+    println!("Foreign keys for orders:");
     for fk in &table.foreign_keys {
         println!(
             "  - {} ({:?} -> {} ({:?}))",
@@ -350,4 +360,261 @@ fn test_parse_column_sort_order_unit() {
     // Test malformed index definition (no parentheses)
     let index_def = "CREATE INDEX idx ON schema.table";
     assert_eq!(parse_column_sort_order(index_def, "col1"), SortOrder::Asc);
+}
+
+// ==================== Query Module Tests ====================
+// Tests for internal query functions (get_columns, get_constraints)
+
+use super::queries::InternalQueries;
+
+#[test]
+#[ignore] // Requires database connection
+fn test_get_columns_returns_all_columns() {
+    let provider = create_test_provider();
+    let mut client = provider.client.lock().unwrap();
+
+    let columns = InternalQueries::get_columns(&mut client, "users", "public")
+        .expect("Failed to get columns");
+
+    assert!(!columns.is_empty(), "Should return at least one column");
+
+    // Verify column names exist
+    let column_names: Vec<&str> = columns.iter().map(|c| c.name.as_str()).collect();
+    assert!(column_names.contains(&"id"), "Should contain 'id' column");
+}
+
+#[test]
+#[ignore] // Requires database connection
+fn test_get_columns_ordinal_position() {
+    let provider = create_test_provider();
+    let mut client = provider.client.lock().unwrap();
+
+    let columns = InternalQueries::get_columns(&mut client, "users", "public")
+        .expect("Failed to get columns");
+
+    // Verify ordinal positions are sequential starting from 1
+    for (i, col) in columns.iter().enumerate() {
+        assert_eq!(
+            col.ordinal_position,
+            i + 1,
+            "Column '{}' should have ordinal_position {}",
+            col.name,
+            i + 1
+        );
+    }
+}
+
+#[test]
+#[ignore] // Requires database connection
+fn test_get_columns_primary_key_detection() {
+    let provider = create_test_provider();
+    let mut client = provider.client.lock().unwrap();
+
+    let columns = InternalQueries::get_columns(&mut client, "users", "public")
+        .expect("Failed to get columns");
+
+    let id_column = columns.iter().find(|c| c.name == "id");
+    assert!(id_column.is_some(), "Should find 'id' column");
+
+    let id_column = id_column.unwrap();
+    assert!(
+        id_column.is_primary_key,
+        "'id' column should be marked as primary key"
+    );
+}
+
+#[test]
+#[ignore] // Requires database connection
+fn test_get_columns_nullable_detection() {
+    let provider = create_test_provider();
+    let mut client = provider.client.lock().unwrap();
+
+    let columns = InternalQueries::get_columns(&mut client, "users", "public")
+        .expect("Failed to get columns");
+
+    // Primary key columns should not be nullable
+    let id_column = columns.iter().find(|c| c.name == "id").unwrap();
+    assert!(
+        !id_column.is_nullable,
+        "Primary key 'id' should not be nullable"
+    );
+}
+
+#[test]
+#[ignore] // Requires database connection
+fn test_get_columns_auto_increment_detection() {
+    let provider = create_test_provider();
+    let mut client = provider.client.lock().unwrap();
+
+    // Use 'categories' table which has SERIAL id (auto-increment)
+    let columns = InternalQueries::get_columns(&mut client, "categories", "public")
+        .expect("Failed to get columns");
+
+    // Check if 'id' column has auto-increment (serial type)
+    let id_column = columns.iter().find(|c| c.name == "id").unwrap();
+    // Serial columns have default value starting with "nextval("
+    assert!(
+        id_column.is_auto_increment,
+        "SERIAL 'id' column should be detected as auto_increment"
+    );
+}
+
+#[test]
+#[ignore] // Requires database connection
+fn test_get_columns_nonexistent_table() {
+    let provider = create_test_provider();
+    let mut client = provider.client.lock().unwrap();
+
+    let columns = InternalQueries::get_columns(&mut client, "nonexistent_table_12345", "public")
+        .expect("Query should succeed even for nonexistent table");
+
+    assert!(
+        columns.is_empty(),
+        "Should return empty for nonexistent table"
+    );
+}
+
+#[test]
+#[ignore] // Requires database connection
+fn test_get_constraints_returns_constraints() {
+    let provider = create_test_provider();
+    let mut client = provider.client.lock().unwrap();
+
+    let constraints = InternalQueries::get_constraints(&mut client, "users", "public")
+        .expect("Failed to get constraints");
+
+    assert!(
+        !constraints.is_empty(),
+        "Should return at least one constraint (primary key)"
+    );
+}
+
+#[test]
+#[ignore] // Requires database connection
+fn test_get_constraints_primary_key() {
+    use crate::model::schema::ConstraintType;
+
+    let provider = create_test_provider();
+    let mut client = provider.client.lock().unwrap();
+
+    // Use categories table which has a simple SERIAL PRIMARY KEY
+    let constraints = InternalQueries::get_constraints(&mut client, "categories", "public")
+        .expect("Failed to get constraints");
+
+    let pk_constraint = constraints
+        .iter()
+        .find(|c| c.constraint_type == ConstraintType::PrimaryKey);
+
+    assert!(
+        pk_constraint.is_some(),
+        "Should have a PRIMARY KEY constraint"
+    );
+
+    let pk = pk_constraint.unwrap();
+    assert!(
+        pk.columns.contains(&"id".to_string()),
+        "Primary key should include 'id' column, got: {:?}",
+        pk.columns
+    );
+}
+
+#[test]
+#[ignore] // Requires database connection
+fn test_get_constraints_unique() {
+    use crate::model::schema::ConstraintType;
+
+    let provider = create_test_provider();
+    let mut client = provider.client.lock().unwrap();
+
+    // Use categories table
+    let constraints = InternalQueries::get_constraints(&mut client, "categories", "public")
+        .expect("Failed to get constraints");
+
+    // Check if there are any UNIQUE constraints (categories doesn't have any, just verify no crash)
+    let unique_constraints: Vec<_> = constraints
+        .iter()
+        .filter(|c| c.constraint_type == ConstraintType::Unique)
+        .collect();
+
+    // Verify query works - categories may not have unique constraints
+    // Just ensure the function doesn't panic
+    for constraint in &unique_constraints {
+        // If there are unique constraints, they should have columns
+        assert!(
+            !constraint.columns.is_empty(),
+            "Unique constraint '{}' should have columns, got: {:?}",
+            constraint.name,
+            constraint.columns
+        );
+    }
+}
+
+#[test]
+#[ignore] // Requires database connection
+fn test_get_constraints_foreign_key() {
+    use crate::model::schema::ConstraintType;
+
+    let provider = create_test_provider();
+    let mut client = provider.client.lock().unwrap();
+
+    // orders table should have foreign key to users
+    let constraints = InternalQueries::get_constraints(&mut client, "orders", "public")
+        .expect("Failed to get constraints");
+
+    let fk_constraints: Vec<_> = constraints
+        .iter()
+        .filter(|c| c.constraint_type == ConstraintType::ForeignKey)
+        .collect();
+
+    assert!(
+        !fk_constraints.is_empty(),
+        "orders table should have foreign key constraint"
+    );
+}
+
+#[test]
+#[ignore] // Requires database connection
+fn test_get_constraints_nonexistent_table() {
+    let provider = create_test_provider();
+    let mut client = provider.client.lock().unwrap();
+
+    let constraints =
+        InternalQueries::get_constraints(&mut client, "nonexistent_table_12345", "public")
+            .expect("Query should succeed even for nonexistent table");
+
+    assert!(
+        constraints.is_empty(),
+        "Should return empty for nonexistent table"
+    );
+}
+
+#[test]
+#[ignore] // Requires database connection
+fn test_get_constraints_columns_ordering() {
+    use crate::model::schema::ConstraintType;
+
+    let provider = create_test_provider();
+    let mut client = provider.client.lock().unwrap();
+
+    // Use categories table which has a simple schema
+    let constraints = InternalQueries::get_constraints(&mut client, "categories", "public")
+        .expect("Failed to get constraints");
+
+    // Verify constraint names are sorted
+    let names: Vec<&str> = constraints.iter().map(|c| c.name.as_str()).collect();
+    let mut sorted_names = names.clone();
+    sorted_names.sort();
+    assert_eq!(names, sorted_names, "Constraints should be sorted by name");
+
+    // Verify PRIMARY KEY constraint has non-empty columns
+    if let Some(pk) = constraints
+        .iter()
+        .find(|c| c.constraint_type == ConstraintType::PrimaryKey)
+    {
+        assert!(
+            !pk.columns.is_empty(),
+            "Primary key constraint should have columns, got: {:?}",
+            pk.columns
+        );
+    }
 }

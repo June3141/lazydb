@@ -1,0 +1,64 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "src/db/**"
+      - "docker/init/**"
+      - ".github/workflows/integration.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "src/db/**"
+      - "docker/init/**"
+      - ".github/workflows/integration.yml"
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+# Cancel in-progress runs for the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  integration-test:
+    name: Integration Test
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: lazydb
+          POSTGRES_PASSWORD: lazydb
+          POSTGRES_DB: lazydb_dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U lazydb -d lazydb_dev"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Initialize database schema
+        env:
+          PGPASSWORD: lazydb
+        run: |
+          for f in docker/init/*.sql; do
+            psql -h localhost -U lazydb -d lazydb_dev -f "$f"
+          done
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "rust-ci"
+      - name: Run integration tests
+        env:
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_DB: lazydb_dev
+          POSTGRES_USER: lazydb
+          POSTGRES_PASSWORD: lazydb
+        run: cargo test --all-features -- --ignored
