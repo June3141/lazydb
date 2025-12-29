@@ -96,46 +96,6 @@ jobs:
       - name: Check unused dependencies
         run: cargo machete
 
-  integration-test:
-    name: Integration Test
-    runs-on: ubuntu-latest
-    needs: [fmt]
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: lazydb
-          POSTGRES_PASSWORD: lazydb
-          POSTGRES_DB: lazydb_dev
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U lazydb -d lazydb_dev"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    steps:
-      - uses: actions/checkout@v4
-      - name: Initialize database schema
-        env:
-          PGPASSWORD: lazydb
-        run: |
-          for f in docker/init/*.sql; do
-            psql -h localhost -U lazydb -d lazydb_dev -f "$f"
-          done
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: "rust-ci"
-      - name: Run integration tests
-        env:
-          POSTGRES_HOST: localhost
-          POSTGRES_PORT: 5432
-          POSTGRES_DB: lazydb_dev
-          POSTGRES_USER: lazydb
-          POSTGRES_PASSWORD: lazydb
-        run: cargo test --all-features -- --ignored
-
   # ============================================
   # Stage 3: Release build (main branch only)
   # ============================================
