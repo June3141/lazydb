@@ -3,6 +3,7 @@
 use super::connection::AddConnectionModal;
 use super::history::HistoryModal;
 use super::project::{DeleteProjectModal, ProjectModal, SearchProjectModal};
+use super::query_input::QueryInputModal;
 use super::search::{SearchConnectionModal, SearchTableModal, UnifiedSearchModal};
 use super::visibility::ColumnVisibilityModal;
 
@@ -20,4 +21,6 @@ pub enum ModalState {
     UnifiedSearch(UnifiedSearchModal),
     History(HistoryModal),
     ColumnVisibility(ColumnVisibilityModal),
+    /// Query input modal for executing arbitrary SQL queries
+    QueryInput(QueryInputModal),
 }
