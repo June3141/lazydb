@@ -124,39 +124,15 @@ fn fetch_all_parameters(
         return Ok(HashMap::new());
     }
 
-    // Use pg_proc directly to get parameter information
-    // This is more reliable than information_schema.parameters
+    // Use pg_get_function_arguments which provides a reliable, formatted string
+    // of all arguments. This is more reliable than unnesting arrays which can
+    // have mismatched lengths.
     let query = r#"
-        WITH routine_params AS (
-            SELECT
-                p.oid AS routine_oid,
-                unnest(COALESCE(p.proargnames, ARRAY[]::text[])) AS param_name,
-                unnest(COALESCE(p.proargmodes, ARRAY['i']::char[])) AS param_mode,
-                unnest(string_to_array(pg_get_function_identity_arguments(p.oid), ', ')) AS param_sig,
-                generate_series(1, COALESCE(array_length(p.proargnames, 1), pronargs)) AS ordinal
-            FROM pg_proc p
-            WHERE p.oid = ANY($1::oid[])
-        )
         SELECT
-            routine_oid,
-            COALESCE(param_name, '') AS param_name,
-            CASE param_mode
-                WHEN 'i' THEN 'IN'
-                WHEN 'o' THEN 'OUT'
-                WHEN 'b' THEN 'INOUT'
-                WHEN 'v' THEN 'VARIADIC'
-                WHEN 't' THEN 'TABLE'
-                ELSE 'IN'
-            END AS param_mode,
-            -- Extract type from signature (format: "name type" or just "type")
-            CASE
-                WHEN param_sig ~ ' ' THEN regexp_replace(param_sig, '^[^ ]+ ', '')
-                ELSE param_sig
-            END AS data_type,
-            ordinal
-        FROM routine_params
-        WHERE param_sig IS NOT NULL AND param_sig != ''
-        ORDER BY routine_oid, ordinal
+            p.oid AS routine_oid,
+            pg_get_function_arguments(p.oid) AS args_string
+        FROM pg_proc p
+        WHERE p.oid = ANY($1::oid[])
     "#;
 
     let oids_i64: Vec<i64> = routine_oids.iter().map(|&oid| oid as i64).collect();
@@ -169,28 +145,133 @@ fn fetch_all_parameters(
 
     for row in rows {
         let routine_oid: i64 = row.get(0);
-        let name: String = row.get(1);
-        let mode_str: String = row.get(2);
-        let data_type: String = row.get(3);
-        let ordinal: i32 = row.get(4);
+        let args_string: String = row.get(1);
 
-        let mode = match mode_str.as_str() {
-            "OUT" => ParameterMode::Out,
-            "INOUT" => ParameterMode::InOut,
-            "VARIADIC" => ParameterMode::Variadic,
-            "TABLE" => ParameterMode::Out, // TABLE parameters are similar to OUT
-            _ => ParameterMode::In,
-        };
-
-        let param = RoutineParameter::new(name, data_type, mode).with_position(ordinal as u32);
-
-        params_map
-            .entry(routine_oid as u32)
-            .or_default()
-            .push(param);
+        let parameters = parse_function_arguments(&args_string);
+        if !parameters.is_empty() {
+            params_map.insert(routine_oid as u32, parameters);
+        }
     }
 
     Ok(params_map)
+}
+
+/// Parse the function arguments string returned by pg_get_function_arguments.
+/// Format: "arg1 type1, arg2 type2" or "IN arg1 type1, OUT arg2 type2"
+/// Also handles: "VARIADIC args text[]", defaults like "arg1 integer DEFAULT 0"
+fn parse_function_arguments(args_string: &str) -> Vec<RoutineParameter> {
+    if args_string.trim().is_empty() {
+        return Vec::new();
+    }
+
+    let mut parameters = Vec::new();
+    let mut position = 1u32;
+
+    // Split by comma, but be careful of commas inside type definitions like "numeric(10,2)"
+    for arg in split_arguments(args_string) {
+        let arg = arg.trim();
+        if arg.is_empty() {
+            continue;
+        }
+
+        if let Some(param) = parse_single_argument(arg, position) {
+            parameters.push(param);
+            position += 1;
+        }
+    }
+
+    parameters
+}
+
+/// Split argument string by commas, respecting parentheses for types like numeric(10,2)
+fn split_arguments(args_string: &str) -> Vec<String> {
+    let mut result = Vec::new();
+    let mut current = String::new();
+    let mut paren_depth = 0;
+
+    for ch in args_string.chars() {
+        match ch {
+            '(' => {
+                paren_depth += 1;
+                current.push(ch);
+            }
+            ')' => {
+                paren_depth -= 1;
+                current.push(ch);
+            }
+            ',' if paren_depth == 0 => {
+                result.push(current.trim().to_string());
+                current = String::new();
+            }
+            _ => current.push(ch),
+        }
+    }
+
+    if !current.trim().is_empty() {
+        result.push(current.trim().to_string());
+    }
+
+    result
+}
+
+/// Parse a single argument definition.
+/// Formats:
+/// - "name type"
+/// - "IN name type"
+/// - "OUT name type"
+/// - "INOUT name type"
+/// - "VARIADIC name type"
+/// - "name type DEFAULT value"
+fn parse_single_argument(arg: &str, position: u32) -> Option<RoutineParameter> {
+    let parts: Vec<&str> = arg.split_whitespace().collect();
+    if parts.is_empty() {
+        return None;
+    }
+
+    let (mode, name_idx) = match parts[0].to_uppercase().as_str() {
+        "IN" => (ParameterMode::In, 1),
+        "OUT" => (ParameterMode::Out, 1),
+        "INOUT" => (ParameterMode::InOut, 1),
+        "VARIADIC" => (ParameterMode::Variadic, 1),
+        _ => (ParameterMode::In, 0),
+    };
+
+    if parts.len() <= name_idx {
+        return None;
+    }
+
+    // Find DEFAULT keyword to separate type from default value
+    let default_idx = parts.iter().position(|&p| p.to_uppercase() == "DEFAULT");
+
+    let (name, data_type, default_value) = if let Some(def_idx) = default_idx {
+        // Has default value
+        let type_end = def_idx;
+        let name = parts.get(name_idx).unwrap_or(&"").to_string();
+        let data_type = parts[name_idx + 1..type_end].join(" ");
+        let default_val = parts[def_idx + 1..].join(" ");
+        (name, data_type, Some(default_val))
+    } else {
+        // No default value
+        let name = parts.get(name_idx).unwrap_or(&"").to_string();
+        let data_type = parts[name_idx + 1..].join(" ");
+        (name, data_type, None)
+    };
+
+    // Handle case where there's only type (no name) - PostgreSQL allows this
+    let (final_name, final_type) = if data_type.is_empty() {
+        // The "name" is actually the type
+        (String::new(), name)
+    } else {
+        (name, data_type)
+    };
+
+    let mut param = RoutineParameter::new(final_name, final_type, mode).with_position(position);
+
+    if let Some(def) = default_value {
+        param = param.with_default(def);
+    }
+
+    Some(param)
 }
 
 #[cfg(test)]
@@ -290,5 +371,87 @@ mod tests {
             },
             ParameterMode::Variadic
         ));
+    }
+
+    #[test]
+    fn test_split_arguments_simple() {
+        let args = "x integer, y text";
+        let result = split_arguments(args);
+        assert_eq!(result, vec!["x integer", "y text"]);
+    }
+
+    #[test]
+    fn test_split_arguments_with_parentheses() {
+        let args = "x numeric(10,2), y text";
+        let result = split_arguments(args);
+        assert_eq!(result, vec!["x numeric(10,2)", "y text"]);
+    }
+
+    #[test]
+    fn test_split_arguments_empty() {
+        let args = "";
+        let result = split_arguments(args);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_parse_function_arguments_simple() {
+        let args = "x integer, y text";
+        let params = parse_function_arguments(args);
+        assert_eq!(params.len(), 2);
+        assert_eq!(params[0].name, "x");
+        assert_eq!(params[0].data_type, "integer");
+        assert_eq!(params[1].name, "y");
+        assert_eq!(params[1].data_type, "text");
+    }
+
+    #[test]
+    fn test_parse_function_arguments_with_modes() {
+        let args = "IN x integer, OUT y text, INOUT z boolean";
+        let params = parse_function_arguments(args);
+        assert_eq!(params.len(), 3);
+        assert!(matches!(params[0].mode, ParameterMode::In));
+        assert!(matches!(params[1].mode, ParameterMode::Out));
+        assert!(matches!(params[2].mode, ParameterMode::InOut));
+    }
+
+    #[test]
+    fn test_parse_function_arguments_with_default() {
+        let args = "x integer DEFAULT 0, y text DEFAULT 'hello'";
+        let params = parse_function_arguments(args);
+        assert_eq!(params.len(), 2);
+        assert_eq!(params[0].default_value, Some("0".to_string()));
+        assert_eq!(params[1].default_value, Some("'hello'".to_string()));
+    }
+
+    #[test]
+    fn test_parse_function_arguments_variadic() {
+        let args = "VARIADIC args text[]";
+        let params = parse_function_arguments(args);
+        assert_eq!(params.len(), 1);
+        assert!(matches!(params[0].mode, ParameterMode::Variadic));
+        assert_eq!(params[0].name, "args");
+        assert_eq!(params[0].data_type, "text[]");
+    }
+
+    #[test]
+    fn test_parse_function_arguments_no_name() {
+        // PostgreSQL allows unnamed parameters
+        let args = "integer, text";
+        let params = parse_function_arguments(args);
+        assert_eq!(params.len(), 2);
+        assert_eq!(params[0].name, "");
+        assert_eq!(params[0].data_type, "integer");
+        assert_eq!(params[1].name, "");
+        assert_eq!(params[1].data_type, "text");
+    }
+
+    #[test]
+    fn test_parse_function_arguments_complex_types() {
+        let args = "x numeric(10,2), y character varying(255)";
+        let params = parse_function_arguments(args);
+        assert_eq!(params.len(), 2);
+        assert_eq!(params[0].data_type, "numeric(10,2)");
+        assert_eq!(params[1].data_type, "character varying(255)");
     }
 }
