@@ -3,6 +3,9 @@
 use crate::app::enums::SidebarMode;
 use crate::app::App;
 
+/// Sidebar navigation item: (connection_idx, table_idx, routine_idx)
+type NavItem = (usize, Option<usize>, Option<usize>);
+
 impl App {
     /// Navigate up based on current sidebar mode
     pub(crate) fn navigate_up(&mut self) {
@@ -36,44 +39,51 @@ impl App {
         }
     }
 
-    fn navigate_connections_up(&mut self, proj_idx: usize) {
+    /// Build a flat list of navigation items for the connections view
+    fn build_nav_items(&self, proj_idx: usize) -> Vec<NavItem> {
         let Some(project) = self.projects.get(proj_idx) else {
-            return;
+            return Vec::new();
         };
 
-        // Build flat list of (conn_idx, Option<table_idx>)
-        let items: Vec<(usize, Option<usize>)> = project
+        project
             .connections
             .iter()
             .enumerate()
             .flat_map(|(conn_idx, conn)| {
-                let mut v = vec![(conn_idx, None)];
+                let mut v: Vec<NavItem> = vec![(conn_idx, None, None)];
                 if conn.expanded {
+                    // Add tables
                     for table_idx in 0..conn.tables.len() {
-                        v.push((conn_idx, Some(table_idx)));
+                        v.push((conn_idx, Some(table_idx), None));
+                    }
+                    // Add routines
+                    for routine_idx in 0..conn.routines.len() {
+                        v.push((conn_idx, None, Some(routine_idx)));
                     }
                 }
                 v
             })
-            .collect();
+            .collect()
+    }
 
-        if items.is_empty() {
-            return;
-        }
-
-        let current = items
+    /// Find current position in navigation items
+    fn find_current_nav_position(&self, items: &[NavItem]) -> usize {
+        items
             .iter()
-            .position(|(c, t)| *c == self.selected_connection_idx && *t == self.selected_table_idx)
-            .unwrap_or(0);
+            .position(|(c, t, r)| {
+                *c == self.selected_connection_idx
+                    && *t == self.selected_table_idx
+                    && *r == self.selected_routine_idx
+            })
+            .unwrap_or(0)
+    }
 
-        let new_idx = if current == 0 {
-            items.len() - 1
-        } else {
-            current - 1
-        };
-        let (conn_idx, table_idx) = items[new_idx];
+    /// Apply navigation selection
+    fn apply_nav_selection(&mut self, item: NavItem, proj_idx: usize) {
+        let (conn_idx, table_idx, routine_idx) = item;
         self.selected_connection_idx = conn_idx;
         self.selected_table_idx = table_idx;
+        self.selected_routine_idx = routine_idx;
 
         // Fetch table details if a table is selected
         if table_idx.is_some() {
@@ -81,48 +91,36 @@ impl App {
         }
     }
 
-    fn navigate_connections_down(&mut self, proj_idx: usize) {
-        let Some(project) = self.projects.get(proj_idx) else {
-            return;
-        };
-
-        let items: Vec<(usize, Option<usize>)> = project
-            .connections
-            .iter()
-            .enumerate()
-            .flat_map(|(conn_idx, conn)| {
-                let mut v = vec![(conn_idx, None)];
-                if conn.expanded {
-                    for table_idx in 0..conn.tables.len() {
-                        v.push((conn_idx, Some(table_idx)));
-                    }
-                }
-                v
-            })
-            .collect();
-
+    fn navigate_connections_up(&mut self, proj_idx: usize) {
+        let items = self.build_nav_items(proj_idx);
         if items.is_empty() {
             return;
         }
 
-        let current = items
-            .iter()
-            .position(|(c, t)| *c == self.selected_connection_idx && *t == self.selected_table_idx)
-            .unwrap_or(0);
+        let current = self.find_current_nav_position(&items);
+        let new_idx = if current == 0 {
+            items.len() - 1
+        } else {
+            current - 1
+        };
 
+        self.apply_nav_selection(items[new_idx], proj_idx);
+    }
+
+    fn navigate_connections_down(&mut self, proj_idx: usize) {
+        let items = self.build_nav_items(proj_idx);
+        if items.is_empty() {
+            return;
+        }
+
+        let current = self.find_current_nav_position(&items);
         let new_idx = if current + 1 >= items.len() {
             0
         } else {
             current + 1
         };
-        let (conn_idx, table_idx) = items[new_idx];
-        self.selected_connection_idx = conn_idx;
-        self.selected_table_idx = table_idx;
 
-        // Fetch table details if a table is selected
-        if table_idx.is_some() {
-            self.fetch_table_details_if_needed(proj_idx);
-        }
+        self.apply_nav_selection(items[new_idx], proj_idx);
     }
 
     /// Navigate data table by the given delta (positive = down, negative = up)
