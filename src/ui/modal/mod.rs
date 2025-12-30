@@ -6,6 +6,7 @@ mod connection_modal;
 mod helpers;
 mod history_modal;
 mod project_modal;
+mod query_input_modal;
 mod search;
 mod visibility_modal;
 
@@ -59,6 +60,9 @@ pub fn draw_modal(
         }
         ModalState::ColumnVisibility(modal) => {
             visibility_modal::draw_column_visibility_modal(frame, modal, column_visibility);
+        }
+        ModalState::QueryInput(modal) => {
+            query_input_modal::draw_query_input_modal(frame, modal);
         }
     }
 }

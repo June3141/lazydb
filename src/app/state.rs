@@ -420,6 +420,69 @@ impl App {
                 self.handle_clear_history();
             }
 
+            // Query input modal messages
+            Message::OpenQueryInputModal => {
+                self.open_query_input_modal();
+            }
+            Message::QueryInputChar(c) => {
+                if let ModalState::QueryInput(modal) = &mut self.modal_state {
+                    modal.insert_char(c);
+                }
+            }
+            Message::QueryInputBackspace => {
+                if let ModalState::QueryInput(modal) = &mut self.modal_state {
+                    modal.delete_char_before();
+                }
+            }
+            Message::QueryInputDelete => {
+                if let ModalState::QueryInput(modal) = &mut self.modal_state {
+                    modal.delete_char_at();
+                }
+            }
+            Message::QueryInputNewline => {
+                if let ModalState::QueryInput(modal) = &mut self.modal_state {
+                    modal.insert_newline();
+                }
+            }
+            Message::QueryInputCursorLeft => {
+                if let ModalState::QueryInput(modal) = &mut self.modal_state {
+                    modal.move_cursor_left();
+                }
+            }
+            Message::QueryInputCursorRight => {
+                if let ModalState::QueryInput(modal) = &mut self.modal_state {
+                    modal.move_cursor_right();
+                }
+            }
+            Message::QueryInputCursorUp => {
+                if let ModalState::QueryInput(modal) = &mut self.modal_state {
+                    modal.move_cursor_up();
+                }
+            }
+            Message::QueryInputCursorDown => {
+                if let ModalState::QueryInput(modal) = &mut self.modal_state {
+                    modal.move_cursor_down();
+                }
+            }
+            Message::QueryInputCursorHome => {
+                if let ModalState::QueryInput(modal) = &mut self.modal_state {
+                    modal.move_cursor_home();
+                }
+            }
+            Message::QueryInputCursorEnd => {
+                if let ModalState::QueryInput(modal) = &mut self.modal_state {
+                    modal.move_cursor_end();
+                }
+            }
+            Message::QueryInputClear => {
+                if let ModalState::QueryInput(modal) = &mut self.modal_state {
+                    modal.clear();
+                }
+            }
+            Message::QueryInputExecute => {
+                self.execute_query_from_modal();
+            }
+
             // Pagination messages
             Message::PageNext => {
                 self.pagination.next_page();
