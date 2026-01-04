@@ -42,6 +42,7 @@ pub enum Message {
     SwitchToDefinition,
     // Connection modal messages
     OpenAddConnectionModal,
+    OpenEditConnectionModal,
     // Project modal messages
     OpenAddProjectModal,
     OpenEditProjectModal,

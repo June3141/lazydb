@@ -285,6 +285,10 @@ impl App {
             Message::OpenAddConnectionModal => {
                 self.modal_state = ModalState::AddConnection(AddConnectionModal::default());
             }
+            Message::OpenEditConnectionModal => {
+                // TODO: Implement connection editing modal
+                // This is a placeholder to make the tests compile
+            }
             Message::OpenAddProjectModal => {
                 self.modal_state = ModalState::AddProject(ProjectModal::default());
             }
