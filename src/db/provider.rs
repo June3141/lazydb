@@ -1,4 +1,4 @@
-use crate::model::schema::{Column, Constraint, ForeignKey, Index, Table};
+use crate::model::schema::{Column, Constraint, ForeignKey, Index, Routine, Table};
 use crate::model::QueryResult;
 
 /// Supported database types
@@ -122,6 +122,12 @@ pub trait DatabaseProvider: Send + Sync {
     ) -> Result<Vec<Constraint>, ProviderError> {
         Ok(self.get_table_details(table_name, schema)?.constraints)
     }
+
+    /// Get stored procedures and functions in a schema.
+    ///
+    /// Returns all user-defined functions and procedures excluding internal
+    /// and C language functions.
+    fn get_routines(&self, schema: Option<&str>) -> Result<Vec<Routine>, ProviderError>;
 
     /// Execute a query and return results
     fn execute_query(&self, query: &str) -> Result<QueryResult, ProviderError>;

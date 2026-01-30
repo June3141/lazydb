@@ -6,12 +6,13 @@ mod columns;
 mod constraints;
 mod foreign_keys;
 mod indexes;
+mod routines;
 mod stats;
 mod triggers;
 
 use postgres::Client;
 
-use crate::model::schema::{Column, Constraint, ForeignKey, Index, Trigger};
+use crate::model::schema::{Column, Constraint, ForeignKey, Index, Routine, Trigger};
 
 use super::ProviderError;
 
@@ -81,5 +82,10 @@ impl InternalQueries {
         schema: &str,
     ) -> Result<Vec<Trigger>, ProviderError> {
         triggers::get_triggers(client, table_name, schema)
+    }
+
+    /// Retrieves all stored procedures and functions from the specified schema.
+    pub fn get_routines(client: &mut Client, schema: &str) -> Result<Vec<Routine>, ProviderError> {
+        routines::get_routines(client, schema)
     }
 }

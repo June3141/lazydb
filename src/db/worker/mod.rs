@@ -90,6 +90,20 @@ impl DbWorker {
                 });
             }
 
+            DbCommand::FetchRoutines {
+                request_id,
+                connection,
+                schema,
+                target,
+            } => {
+                let result = self.fetch_routines(&connection, schema.as_deref());
+                let _ = self.response_tx.send(DbResponse::RoutinesLoaded {
+                    request_id,
+                    result,
+                    target,
+                });
+            }
+
             DbCommand::Shutdown => {
                 // Already handled in run()
             }
@@ -127,6 +141,16 @@ impl DbWorker {
     ) -> Result<crate::model::QueryResult, String> {
         let provider = self.create_provider(conn)?;
         provider.execute_query(query).map_err(|e| e.to_string())
+    }
+
+    /// Create a provider connection and fetch routines
+    fn fetch_routines(
+        &self,
+        conn: &ConnectionParams,
+        schema: Option<&str>,
+    ) -> Result<Vec<crate::model::schema::Routine>, String> {
+        let provider = self.create_provider(conn)?;
+        provider.get_routines(schema).map_err(|e| e.to_string())
     }
 
     /// Create a new database provider from connection parameters

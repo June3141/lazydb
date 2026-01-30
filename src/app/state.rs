@@ -22,6 +22,7 @@ pub struct App {
     pub selected_project_idx: usize,
     pub selected_connection_idx: usize,
     pub selected_table_idx: Option<usize>,
+    pub selected_routine_idx: Option<usize>,
     pub query: String,
     pub result: Option<QueryResult>,
     pub pagination: Pagination,
@@ -58,6 +59,7 @@ impl App {
             selected_project_idx: 0,
             selected_connection_idx: 0,
             selected_table_idx: None,
+            selected_routine_idx: None,
             query: String::new(),
             result: None,
             pagination: Pagination::default(),
@@ -85,6 +87,7 @@ impl App {
             selected_project_idx: 0,
             selected_connection_idx: 0,
             selected_table_idx: None,
+            selected_routine_idx: None,
             query: String::new(),
             result: None,
             pagination: Pagination::default(),
@@ -128,6 +131,18 @@ impl App {
             let conn = project.connections.get(self.selected_connection_idx)?;
             let table_idx = self.selected_table_idx?;
             conn.tables.get(table_idx)
+        } else {
+            None
+        }
+    }
+
+    /// Get currently selected routine (stored procedure/function) if any
+    pub fn selected_routine_info(&self) -> Option<&crate::model::schema::Routine> {
+        if let SidebarMode::Connections(proj_idx) = self.sidebar_mode {
+            let project = self.projects.get(proj_idx)?;
+            let conn = project.connections.get(self.selected_connection_idx)?;
+            let routine_idx = self.selected_routine_idx?;
+            conn.routines.get(routine_idx)
         } else {
             None
         }
@@ -805,6 +820,8 @@ mod tests {
                 password: "".to_string(),
                 database: "db".to_string(),
                 tables: vec![],
+                routines: vec![],
+                routines_loaded: false,
                 expanded: false,
             },
             Connection {
@@ -815,6 +832,8 @@ mod tests {
                 password: "".to_string(),
                 database: "db".to_string(),
                 tables: vec![],
+                routines: vec![],
+                routines_loaded: false,
                 expanded: false,
             },
             Connection {
@@ -825,6 +844,8 @@ mod tests {
                 password: "".to_string(),
                 database: "db".to_string(),
                 tables: vec![],
+                routines: vec![],
+                routines_loaded: false,
                 expanded: false,
             },
         ]

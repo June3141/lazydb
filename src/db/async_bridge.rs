@@ -5,6 +5,7 @@
 
 use std::fmt;
 
+use crate::model::schema::Routine;
 use crate::model::{Connection, QueryResult, Table};
 
 /// Parameters needed to establish a database connection.
@@ -75,6 +76,15 @@ pub enum DbCommand {
         project_idx: usize,
     },
 
+    /// Fetch stored procedures and functions for a connection
+    FetchRoutines {
+        request_id: u64,
+        connection: ConnectionParams,
+        schema: Option<String>,
+        /// Project and connection index to update when complete
+        target: (usize, usize),
+    },
+
     /// Shutdown the worker thread
     Shutdown,
 }
@@ -105,6 +115,14 @@ pub enum DbResponse {
         /// Project index for result storage
         project_idx: usize,
     },
+
+    /// Routines list was loaded
+    RoutinesLoaded {
+        request_id: u64,
+        result: Result<Vec<Routine>, String>,
+        /// Project and connection index to update
+        target: (usize, usize),
+    },
 }
 
 impl DbCommand {
@@ -114,6 +132,7 @@ impl DbCommand {
             DbCommand::FetchTables { request_id, .. } => Some(*request_id),
             DbCommand::FetchTableDetails { request_id, .. } => Some(*request_id),
             DbCommand::ExecuteQuery { request_id, .. } => Some(*request_id),
+            DbCommand::FetchRoutines { request_id, .. } => Some(*request_id),
             DbCommand::Shutdown => None,
         }
     }
@@ -126,6 +145,7 @@ impl DbResponse {
             DbResponse::TablesLoaded { request_id, .. } => *request_id,
             DbResponse::TableDetailsLoaded { request_id, .. } => *request_id,
             DbResponse::QueryExecuted { request_id, .. } => *request_id,
+            DbResponse::RoutinesLoaded { request_id, .. } => *request_id,
         }
     }
 
@@ -135,6 +155,7 @@ impl DbResponse {
             DbResponse::TablesLoaded { result, .. } => result.is_ok(),
             DbResponse::TableDetailsLoaded { result, .. } => result.is_ok(),
             DbResponse::QueryExecuted { result, .. } => result.is_ok(),
+            DbResponse::RoutinesLoaded { result, .. } => result.is_ok(),
         }
     }
 }
@@ -153,6 +174,8 @@ mod tests {
             password: "testpass".to_string(),
             expanded: false,
             tables: Vec::new(),
+            routines: Vec::new(),
+            routines_loaded: false,
         }
     }
 

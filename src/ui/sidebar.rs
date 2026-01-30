@@ -154,8 +154,9 @@ fn draw_connections_view(frame: &mut Frame, app: &App, area: Rect, proj_idx: usi
         .unwrap_or(&[]);
 
     for (conn_idx, conn) in connections.iter().enumerate() {
-        let is_selected_conn =
-            conn_idx == app.selected_connection_idx && app.selected_table_idx.is_none();
+        let is_selected_conn = conn_idx == app.selected_connection_idx
+            && app.selected_table_idx.is_none()
+            && app.selected_routine_idx.is_none();
         let expand_icon = if conn.expanded { "▼" } else { "▶" };
 
         let conn_style = if is_selected_conn && is_focused {
@@ -172,9 +173,14 @@ fn draw_connections_view(frame: &mut Frame, app: &App, area: Rect, proj_idx: usi
         ]));
 
         if conn.expanded {
+            let total_items = conn.tables.len() + conn.routines.len();
+            let mut item_idx = 0;
+
+            // Draw tables
             for (table_idx, table) in conn.tables.iter().enumerate() {
                 let is_selected_table = conn_idx == app.selected_connection_idx
-                    && app.selected_table_idx == Some(table_idx);
+                    && app.selected_table_idx == Some(table_idx)
+                    && app.selected_routine_idx.is_none();
 
                 let table_style = if is_selected_table && is_focused {
                     theme::focused()
@@ -188,7 +194,8 @@ fn draw_connections_view(frame: &mut Frame, app: &App, area: Rect, proj_idx: usi
                 // Icon style matches table style for consistency
                 let icon_style = table_style;
 
-                let prefix = if table_idx == conn.tables.len() - 1 {
+                item_idx += 1;
+                let prefix = if item_idx == total_items {
                     "  └─ "
                 } else {
                     "  ├─ "
@@ -205,6 +212,45 @@ fn draw_connections_view(frame: &mut Frame, app: &App, area: Rect, proj_idx: usi
 
                 // If table is selected and focused, apply background to entire line
                 if is_selected_table && is_focused {
+                    lines.push(line.style(theme::focused()));
+                } else {
+                    lines.push(line);
+                }
+            }
+
+            // Draw routines (stored procedures and functions)
+            for (routine_idx, routine) in conn.routines.iter().enumerate() {
+                let is_selected_routine = conn_idx == app.selected_connection_idx
+                    && app.selected_routine_idx == Some(routine_idx)
+                    && app.selected_table_idx.is_none();
+
+                let routine_style = if is_selected_routine && is_focused {
+                    theme::focused()
+                } else if is_selected_routine {
+                    theme::text().add_modifier(Modifier::BOLD)
+                } else {
+                    theme::muted()
+                };
+
+                let icon_style = routine_style;
+
+                item_idx += 1;
+                let prefix = if item_idx == total_items {
+                    "  └─ "
+                } else {
+                    "  ├─ "
+                };
+
+                // Icon: ƒ for functions, ⚙ for procedures
+                let icon = if routine.is_function() { "ƒ" } else { "⚙" };
+
+                let line = Line::from(vec![
+                    Span::styled(prefix, theme::muted()),
+                    Span::styled(format!("{} ", icon), icon_style),
+                    Span::styled(&routine.name, routine_style),
+                ]);
+
+                if is_selected_routine && is_focused {
                     lines.push(line.style(theme::focused()));
                 } else {
                     lines.push(line);
@@ -230,7 +276,70 @@ pub fn draw_table_summary(frame: &mut Frame, app: &App, area: Rect) {
     let inner_area = block.inner(area);
     frame.render_widget(block, area);
 
-    let lines = if let Some(table) = app.selected_table_info() {
+    let lines = if let Some(routine) = app.selected_routine_info() {
+        // Routine selected - show routine info
+        let routine_type = if routine.is_function() {
+            "Function"
+        } else {
+            "Procedure"
+        };
+        let icon = if routine.is_function() { "ƒ" } else { "⚙" };
+
+        let mut info_lines = vec![
+            Line::from(vec![
+                Span::styled(format!("{} ", icon), theme::header()),
+                Span::styled(
+                    &routine.name,
+                    Style::default()
+                        .fg(theme::ACCENT)
+                        .add_modifier(Modifier::BOLD),
+                ),
+            ]),
+            Line::from(vec![Span::styled(routine_type, theme::muted())]),
+        ];
+
+        // Show schema
+        if !routine.schema.is_empty() {
+            info_lines.push(Line::from(vec![
+                Span::styled("Schema: ", theme::muted()),
+                Span::styled(&routine.schema, theme::text()),
+            ]));
+        }
+
+        // Show return type for functions
+        if routine.is_function() {
+            if let Some(return_type) = &routine.return_type {
+                info_lines.push(Line::from(vec![
+                    Span::styled("Returns: ", theme::muted()),
+                    Span::styled(return_type, theme::selected()),
+                ]));
+            }
+        }
+
+        // Show parameter count
+        let param_count = routine.parameters.len();
+        if param_count > 0 {
+            info_lines.push(Line::from(vec![Span::styled(
+                format!("{} parameter(s)", param_count),
+                theme::muted(),
+            )]));
+        } else {
+            info_lines.push(Line::from(vec![Span::styled(
+                "No parameters",
+                theme::muted(),
+            )]));
+        }
+
+        // Show language
+        if !routine.language.is_empty() {
+            info_lines.push(Line::from(vec![
+                Span::styled("Language: ", theme::muted()),
+                Span::styled(&routine.language, theme::text()),
+            ]));
+        }
+
+        info_lines
+    } else if let Some(table) = app.selected_table_info() {
         let pk_name = table
             .columns
             .iter()

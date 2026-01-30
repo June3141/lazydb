@@ -1,4 +1,4 @@
-use super::schema::Table;
+use super::schema::{Routine, Table};
 use crate::config::ConnectionConfig;
 
 #[derive(Debug, Clone)]
@@ -11,6 +11,10 @@ pub struct Connection {
     pub password: String,
     pub expanded: bool,
     pub tables: Vec<Table>,
+    /// Stored procedures and functions
+    pub routines: Vec<Routine>,
+    /// Whether routines have been loaded
+    pub routines_loaded: bool,
 }
 
 impl From<ConnectionConfig> for Connection {
@@ -25,6 +29,8 @@ impl From<ConnectionConfig> for Connection {
             password,
             expanded: false,
             tables: Vec::new(),
+            routines: Vec::new(),
+            routines_loaded: false,
         }
     }
 }

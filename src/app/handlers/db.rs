@@ -2,6 +2,7 @@
 
 use crate::app::App;
 use crate::db::{ConnectionParams, DbCommand, DbResponse, DbWorkerHandle};
+use crate::model::schema::Routine;
 use crate::model::{Connection, HistoryEntry, Pagination, QueryResult, Table};
 
 impl App {
@@ -53,6 +54,9 @@ impl App {
                 ..
             } => {
                 self.handle_query_executed(result, project_idx);
+            }
+            DbResponse::RoutinesLoaded { result, target, .. } => {
+                self.handle_routines_loaded(result, target);
             }
         }
     }
@@ -301,5 +305,67 @@ impl App {
             conn_idx,
             table_idx,
         );
+    }
+
+    /// Handle routines loaded response
+    fn handle_routines_loaded(
+        &mut self,
+        result: Result<Vec<Routine>, String>,
+        target: (usize, usize),
+    ) {
+        let (proj_idx, conn_idx) = target;
+
+        // Clear loading state
+        self.loading.fetching_routines = None;
+
+        match result {
+            Ok(routines) => {
+                if let Some(project) = self.projects.get_mut(proj_idx) {
+                    if let Some(conn) = project.connections.get_mut(conn_idx) {
+                        let routine_count = routines.len();
+                        conn.routines = routines;
+                        conn.routines_loaded = true;
+                        self.status_message = format!("Loaded {} routines", routine_count);
+                        self.loading.message = None;
+                    }
+                }
+            }
+            Err(e) => {
+                self.status_message = format!("Failed to get routines: {}", e);
+                self.loading.message = None;
+            }
+        }
+    }
+
+    /// Send a command to fetch routines (stored procedures and functions) asynchronously
+    ///
+    /// Note: Currently uses "public" schema by default, same as table fetching.
+    /// TODO: Support configurable schema selection in connection settings.
+    pub(crate) fn send_fetch_routines(
+        &mut self,
+        conn: &Connection,
+        proj_idx: usize,
+        conn_idx: usize,
+    ) {
+        let request_id = self.next_request_id();
+        let connection = ConnectionParams::from_connection(conn);
+
+        // Use "public" schema by default (consistent with send_fetch_tables)
+        let cmd = DbCommand::FetchRoutines {
+            request_id,
+            connection,
+            schema: Some("public".to_string()),
+            target: (proj_idx, conn_idx),
+        };
+
+        if let Some(worker) = self.db_worker.as_ref() {
+            if worker.send(cmd).is_ok() {
+                self.loading.start_fetching_routines(conn_idx);
+            } else {
+                self.status_message = "Failed to send command to DB worker".to_string();
+            }
+        } else {
+            self.status_message = "DB worker not initialized".to_string();
+        }
     }
 }
