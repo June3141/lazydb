@@ -30,7 +30,10 @@ pub fn draw_modal(
     match modal_state {
         ModalState::None => {}
         ModalState::AddConnection(modal) => {
-            connection_modal::draw_add_connection_modal(frame, modal);
+            connection_modal::draw_connection_modal(frame, modal, " Add Connection ");
+        }
+        ModalState::EditConnection(_, modal) => {
+            connection_modal::draw_connection_modal(frame, modal, " Edit Connection ");
         }
         ModalState::AddProject(modal) => {
             project_modal::draw_project_modal(frame, modal, " Add Project ");

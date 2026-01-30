@@ -89,11 +89,17 @@ pub fn handle_normal_input(
             SidebarMode::Connections(_) => Some(Message::OpenAddConnectionModal),
         },
 
-        // Project edit: 'e' key in Projects view
+        // Edit: 'e' key in sidebar (Project or Connection depending on mode)
         (KeyCode::Char('e'), _)
             if app.focus == Focus::Sidebar && matches!(app.sidebar_mode, SidebarMode::Projects) =>
         {
             Some(Message::OpenEditProjectModal)
+        }
+        (KeyCode::Char('e'), _)
+            if app.focus == Focus::Sidebar
+                && matches!(app.sidebar_mode, SidebarMode::Connections(_)) =>
+        {
+            Some(Message::OpenEditConnectionModal)
         }
 
         // Project delete: 'd' key in Projects view

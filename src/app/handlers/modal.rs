@@ -14,19 +14,21 @@ impl App {
     /// Handle character input for modals
     pub(crate) fn handle_modal_input_char(&mut self, c: char) {
         match &mut self.modal_state {
-            ModalState::AddConnection(modal) => match modal.focused_field {
-                ConnectionModalField::Name => modal.name.push(c),
-                ConnectionModalField::Host => modal.host.push(c),
-                ConnectionModalField::Port => {
-                    if c.is_ascii_digit() && modal.port.len() < 5 {
-                        modal.port.push(c);
+            ModalState::AddConnection(modal) | ModalState::EditConnection(_, modal) => {
+                match modal.focused_field {
+                    ConnectionModalField::Name => modal.name.push(c),
+                    ConnectionModalField::Host => modal.host.push(c),
+                    ConnectionModalField::Port => {
+                        if c.is_ascii_digit() && modal.port.len() < 5 {
+                            modal.port.push(c);
+                        }
                     }
+                    ConnectionModalField::User => modal.user.push(c),
+                    ConnectionModalField::Password => modal.password.push(c),
+                    ConnectionModalField::Database => modal.database.push(c),
+                    ConnectionModalField::ButtonOk | ConnectionModalField::ButtonCancel => {}
                 }
-                ConnectionModalField::User => modal.user.push(c),
-                ConnectionModalField::Password => modal.password.push(c),
-                ConnectionModalField::Database => modal.database.push(c),
-                ConnectionModalField::ButtonOk | ConnectionModalField::ButtonCancel => {}
-            },
+            }
             ModalState::AddProject(modal) | ModalState::EditProject(_, modal) => {
                 if modal.focused_field == ProjectModalField::Name {
                     modal.name.push(c);
@@ -81,27 +83,29 @@ impl App {
     /// Handle backspace for modals
     pub(crate) fn handle_modal_backspace(&mut self) {
         match &mut self.modal_state {
-            ModalState::AddConnection(modal) => match modal.focused_field {
-                ConnectionModalField::Name => {
-                    modal.name.pop();
+            ModalState::AddConnection(modal) | ModalState::EditConnection(_, modal) => {
+                match modal.focused_field {
+                    ConnectionModalField::Name => {
+                        modal.name.pop();
+                    }
+                    ConnectionModalField::Host => {
+                        modal.host.pop();
+                    }
+                    ConnectionModalField::Port => {
+                        modal.port.pop();
+                    }
+                    ConnectionModalField::User => {
+                        modal.user.pop();
+                    }
+                    ConnectionModalField::Password => {
+                        modal.password.pop();
+                    }
+                    ConnectionModalField::Database => {
+                        modal.database.pop();
+                    }
+                    ConnectionModalField::ButtonOk | ConnectionModalField::ButtonCancel => {}
                 }
-                ConnectionModalField::Host => {
-                    modal.host.pop();
-                }
-                ConnectionModalField::Port => {
-                    modal.port.pop();
-                }
-                ConnectionModalField::User => {
-                    modal.user.pop();
-                }
-                ConnectionModalField::Password => {
-                    modal.password.pop();
-                }
-                ConnectionModalField::Database => {
-                    modal.database.pop();
-                }
-                ConnectionModalField::ButtonOk | ConnectionModalField::ButtonCancel => {}
-            },
+            }
             ModalState::AddProject(modal) | ModalState::EditProject(_, modal) => {
                 if modal.focused_field == ProjectModalField::Name {
                     modal.name.pop();
@@ -156,7 +160,7 @@ impl App {
     /// Handle modal next field navigation
     pub(crate) fn handle_modal_next_field(&mut self) {
         match &mut self.modal_state {
-            ModalState::AddConnection(modal) => {
+            ModalState::AddConnection(modal) | ModalState::EditConnection(_, modal) => {
                 modal.focused_field = modal.focused_field.next();
             }
             ModalState::AddProject(modal) | ModalState::EditProject(_, modal) => {
@@ -187,7 +191,7 @@ impl App {
     /// Handle modal prev field navigation
     pub(crate) fn handle_modal_prev_field(&mut self) {
         match &mut self.modal_state {
-            ModalState::AddConnection(modal) => {
+            ModalState::AddConnection(modal) | ModalState::EditConnection(_, modal) => {
                 modal.focused_field = modal.focused_field.prev();
             }
             ModalState::AddProject(modal) | ModalState::EditProject(_, modal) => {
@@ -233,6 +237,29 @@ impl App {
                         "Invalid: fill name, host, user, database and valid port (1-65535)"
                             .to_string();
                     // Keep modal open for user to correct input
+                }
+            }
+            ModalState::EditConnection(conn_idx, modal) => {
+                if let Some(conn) = self.create_connection_from_modal(modal) {
+                    let conn_idx = *conn_idx;
+                    if let SidebarMode::Connections(proj_idx) = self.sidebar_mode {
+                        if let Some(project) = self.projects.get_mut(proj_idx) {
+                            if let Some(existing) = project.connections.get_mut(conn_idx) {
+                                existing.name = conn.name;
+                                existing.host = conn.host;
+                                existing.port = conn.port;
+                                existing.database = conn.database;
+                                existing.username = conn.username;
+                                existing.password = conn.password;
+                                self.status_message = "Connection updated".to_string();
+                            }
+                        }
+                    }
+                    self.modal_state = ModalState::None;
+                } else {
+                    self.status_message =
+                        "Invalid: fill name, host, user, database and valid port (1-65535)"
+                            .to_string();
                 }
             }
             ModalState::AddProject(modal) => {

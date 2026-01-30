@@ -300,3 +300,9 @@ $RECYCLE.BIN/
 
 # Serena MCP settings
 .serena/
+
+# Claude Code auto-generated CLAUDE.md in subdirectories (not tracked)
+**/CLAUDE.md
+
+# Worktree artifacts
+lazydb/

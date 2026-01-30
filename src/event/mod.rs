@@ -5,6 +5,9 @@
 mod modal;
 mod normal;
 
+#[cfg(test)]
+mod tests;
+
 use crossterm::event::KeyCode;
 
 use crate::app::App;

@@ -27,3 +27,18 @@ impl Default for AddConnectionModal {
         }
     }
 }
+
+impl AddConnectionModal {
+    /// Create a modal pre-filled with existing connection data (for editing)
+    pub fn from_connection(conn: &crate::model::Connection) -> Self {
+        Self {
+            name: conn.name.clone(),
+            host: conn.host.clone(),
+            port: conn.port.to_string(),
+            user: conn.username.clone(),
+            password: conn.password.clone(),
+            database: conn.database.clone(),
+            focused_field: ConnectionModalField::Name,
+        }
+    }
+}
