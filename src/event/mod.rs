@@ -20,7 +20,7 @@ pub fn key_to_message(
     modifiers: crossterm::event::KeyModifiers,
 ) -> Option<Message> {
     if app.is_modal_open() {
-        handle_modal_input(app, key_code)
+        handle_modal_input(app, key_code, modifiers)
     } else {
         handle_normal_input(app, key_code, modifiers)
     }

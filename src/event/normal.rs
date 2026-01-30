@@ -49,6 +49,10 @@ pub fn handle_normal_input(
         (KeyCode::Down | KeyCode::Char('j'), _) => Some(Message::NavigateDown),
         (KeyCode::Tab, _) => Some(Message::NextFocus),
         (KeyCode::BackTab, _) => Some(Message::PrevFocus),
+        // Enter key: Open query input modal when in QueryEditor, otherwise activate
+        (KeyCode::Enter, _) if app.focus == Focus::QueryEditor => {
+            Some(Message::OpenQueryInputModal)
+        }
         (KeyCode::Enter, _) => Some(Message::Activate),
         (KeyCode::Backspace, _) if app.focus == Focus::Sidebar => Some(Message::GoBack),
 

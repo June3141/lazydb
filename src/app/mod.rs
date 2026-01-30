@@ -18,8 +18,8 @@ pub use loading::LoadingState;
 pub use modal_fields::{ConfirmModalField, ConnectionModalField, ProjectModalField};
 pub use modals::{
     AddConnectionModal, ColumnVisibilityModal, DeleteProjectModal, HistoryModal, ModalState,
-    ProjectModal, SearchConnectionModal, SearchProjectModal, SearchTableModal, UnifiedSearchModal,
-    UnifiedSearchSection,
+    ProjectModal, QueryInputModal, SearchConnectionModal, SearchProjectModal, SearchTableModal,
+    UnifiedSearchModal, UnifiedSearchSection,
 };
 pub use state::App;
 pub use visibility::{
