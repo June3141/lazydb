@@ -23,6 +23,8 @@ fn create_test_app_with_connections() -> App {
         password: "pass".to_string(),
         expanded: false,
         tables: vec![],
+        routines: vec![],
+        routines_loaded: false,
     });
 
     let mut app = App::new(vec![project]);

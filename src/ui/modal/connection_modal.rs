@@ -11,7 +11,7 @@ use ratatui::{
 
 use super::helpers::{centered_rect, draw_input_field};
 
-pub fn draw_add_connection_modal(frame: &mut Frame, modal: &AddConnectionModal) {
+pub fn draw_connection_modal(frame: &mut Frame, modal: &AddConnectionModal, title: &str) {
     let area = centered_rect(50, 70, frame.area());
 
     // Clear the area behind the modal
@@ -19,7 +19,7 @@ pub fn draw_add_connection_modal(frame: &mut Frame, modal: &AddConnectionModal) 
 
     // Modal container
     let block = Block::default()
-        .title(" Add Connection ")
+        .title(title)
         .title_alignment(Alignment::Center)
         .borders(Borders::ALL)
         .border_style(theme::border_focused());

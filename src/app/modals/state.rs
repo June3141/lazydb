@@ -12,6 +12,7 @@ use super::visibility::ColumnVisibilityModal;
 pub enum ModalState {
     None,
     AddConnection(AddConnectionModal),
+    EditConnection(usize, AddConnectionModal), // (connection index, modal)
     AddProject(ProjectModal),
     EditProject(usize, ProjectModal), // (project index, modal)
     DeleteProject(DeleteProjectModal),

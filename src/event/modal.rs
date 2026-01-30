@@ -19,7 +19,9 @@ pub fn handle_modal_input(
 ) -> Option<Message> {
     match &app.modal_state {
         ModalState::None => None,
-        ModalState::AddConnection(modal) => handle_connection_modal(key_code, modal),
+        ModalState::AddConnection(modal) | ModalState::EditConnection(_, modal) => {
+            handle_connection_modal(key_code, modal)
+        }
         ModalState::AddProject(modal) | ModalState::EditProject(_, modal) => {
             handle_project_modal(key_code, modal)
         }

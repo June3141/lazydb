@@ -286,8 +286,18 @@ impl App {
                 self.modal_state = ModalState::AddConnection(AddConnectionModal::default());
             }
             Message::OpenEditConnectionModal => {
-                // TODO: Implement connection editing modal
-                // This is a placeholder to make the tests compile
+                if let SidebarMode::Connections(proj_idx) = self.sidebar_mode {
+                    if let Some(project) = self.projects.get(proj_idx) {
+                        if let Some(conn) =
+                            project.connections.get(self.selected_connection_idx)
+                        {
+                            self.modal_state = ModalState::EditConnection(
+                                self.selected_connection_idx,
+                                AddConnectionModal::from_connection(conn),
+                            );
+                        }
+                    }
+                }
             }
             Message::OpenAddProjectModal => {
                 self.modal_state = ModalState::AddProject(ProjectModal::default());
