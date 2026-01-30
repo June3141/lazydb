@@ -1,6 +1,6 @@
 {
   // Ignore patterns
-  "ignores": [".claude/**", "node_modules/**", "target/**"],
+  "ignores": [".claude/**", "node_modules/**", "target/**", "**/CLAUDE.md", "lazydb/**"],
 
   // Config for markdownlint
   "config": {
